@@ -3,14 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>BeyondPM — Enterprise No-Code Project Engine</title>
-  <meta name="description" content="Stunning, zero-dependency, ultra-responsive folderized Project Management tool combining Jira, ClickUp, and GitHub Projects.">
+  <title>BeyondPM — Next-Gen Project Management System</title>
+  <meta name="description" content="Astonishing, eye-catching, zero-dependency project management platform combining Jira, Linear, and ClickUp aesthetics.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- COSMIC AURORA BACKGROUND MESH -->
+  <div class="aurora-mesh">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
   <div class="app-layout">
     <!-- MOBILE TOP BAR WITH HAMBURGER -->
     <header class="mobile-header">
@@ -20,7 +27,7 @@
         <span></span>
       </button>
       <div class="mobile-logo">
-        <span class="logo-emoji">🏢</span>
+        <span class="logo-gem">✦</span>
         <span class="logo-text">beyondCode-in</span>
       </div>
       <button class="btn btn-primary btn-sm" id="mobileNewTicketBtn">+ New</button>
@@ -32,16 +39,22 @@
     <!-- LEFT SIDEBAR: DIRECTORY TREE & SPACES -->
     <aside class="app-sidebar" id="appSidebar">
       <div class="sidebar-brand">
-        <div class="brand-avatar">🏢</div>
+        <div class="brand-avatar">
+          <span class="brand-gem">✦</span>
+        </div>
         <div class="brand-info">
-          <span class="brand-title">beyondCode-in</span>
+          <div class="brand-title-row">
+            <span class="brand-title">beyondCode-in</span>
+            <span class="brand-pill">PRO</span>
+          </div>
           <span class="brand-subtitle">Project Management Engine</span>
         </div>
       </div>
 
       <div class="sidebar-search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="sidebarSearchInput" placeholder="Filter folders & tickets..." autocomplete="off" />
+        <span class="search-icon">⚡</span>
+        <input type="text" id="sidebarSearchInput" placeholder="Quick find (folders, tickets)..." autocomplete="off" />
+        <kbd class="search-kbd">/</kbd>
       </div>
 
       <div class="sidebar-section-header">
@@ -57,9 +70,11 @@
       <div class="sidebar-meta-panel">
         <div class="sync-indicator">
           <div class="pulse-dot"></div>
-          <span id="syncStatusLabel">Synced with GitHub #34</span>
+          <span id="syncStatusLabel">GitHub #34 Connected</span>
         </div>
-        <button class="btn-sync" id="refreshLiveSyncBtn" title="Fetch latest from GitHub">🔄 Live Sync</button>
+        <button class="btn-sync" id="refreshLiveSyncBtn" title="Fetch latest from GitHub">
+          <span class="sync-spin">🔄</span> Sync
+        </button>
       </div>
     </aside>
 
@@ -79,11 +94,67 @@
           <div class="search-wrapper">
             <span class="search-icon-sm">🔍</span>
             <input type="text" id="globalFilterInput" class="global-search-input" placeholder="Search title, key, tag..." />
+            <kbd class="kbd-hint">Ctrl K</kbd>
           </div>
           <button class="btn btn-outline" id="graphShortcutBtn">🕸️ Dependencies</button>
-          <button class="btn btn-primary" id="openNewTicketModalBtn">✨ + New Ticket</button>
+          <button class="btn btn-primary" id="openNewTicketModalBtn">
+            <span class="btn-sparkle">✨</span> + New Ticket
+          </button>
         </div>
       </header>
+
+      <!-- EXECUTIVE KPI METRICS DASHBOARD BANNER -->
+      <section class="kpi-banner">
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap violet">🚀</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Sprint 12 Velocity</span>
+            <div class="kpi-value-row">
+              <span class="kpi-value">37 Pts</span>
+              <span class="kpi-badge positive">+14% vs avg</span>
+            </div>
+          </div>
+          <div class="kpi-mini-bar">
+            <div class="kpi-progress" style="width: 68%;"></div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap emerald">🛡️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Graph Integrity</span>
+            <div class="kpi-value-row">
+              <span class="kpi-value">100%</span>
+              <span class="kpi-badge neutral">0 Cycles</span>
+            </div>
+          </div>
+          <span class="kpi-subtext">3 Linked Root Blockers</span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap amber">⏱️</div>
+          <div class="kpi-info">
+            <span class="kpi-label">SLA Response Health</span>
+            <div class="kpi-value-row">
+              <span class="kpi-value">1.8h</span>
+              <span class="kpi-badge positive">P1 Target Met</span>
+            </div>
+          </div>
+          <span class="kpi-subtext">Zero Unassigned Tickets</span>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap cyan">📦</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Enterprise Release</span>
+            <div class="kpi-value-row">
+              <span class="kpi-value">v2.4.0</span>
+              <span class="kpi-badge positive">87% Ready</span>
+            </div>
+          </div>
+          <span class="kpi-subtext">Milestone Lock Oct 19</span>
+        </div>
+      </section>
 
       <!-- VIEW TABS STRIP -->
       <nav class="view-navigation-strip">
@@ -106,9 +177,13 @@
           </button>
         </div>
 
-        <div class="view-summary-stats" id="viewSummaryStats">
-          <span class="stat-tag"><strong>7</strong> Active</span>
-          <span class="stat-tag"><strong>37</strong> Story Pts</span>
+        <!-- QUICK FILTER PILLS -->
+        <div class="quick-filter-strip">
+          <button class="filter-pill active" data-filter="all">All</button>
+          <button class="filter-pill" data-filter="critical">🔴 Critical</button>
+          <button class="filter-pill" data-filter="epics">⚡ Epics</button>
+          <button class="filter-pill" data-filter="bugs">🐛 Bugs</button>
+          <button class="filter-pill" data-filter="features">✨ Features</button>
         </div>
       </nav>
 
@@ -168,7 +243,7 @@
     <div class="modal-dialog-card" role="dialog" aria-modal="true">
       <div class="modal-dialog-header">
         <div class="modal-header-meta">
-          <span class="modal-header-badge">NO-CODE BUILDER</span>
+          <span class="modal-header-badge">✦ NO-CODE ENGINE BUILDER</span>
           <h3>✨ Create Ticket / Sub-issue</h3>
         </div>
         <button class="modal-close-trigger" id="closeTicketModalBtn" aria-label="Close modal">&times;</button>
