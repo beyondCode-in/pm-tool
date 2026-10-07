@@ -1,0 +1,21 @@
+{
+  "name": "Engineering Kanban Project Template",
+  "organization": "beyondCode-in",
+  "isTemplate": true,
+  "visibility": "PRIVATE",
+  "customFields": [
+    { "name": "Story Points", "type": "NUMBER" },
+    { "name": "Sprint", "type": "ITERATION" },
+    { "name": "Release Version", "type": "SINGLE_SELECT", "options": ["v2.4", "v2.5", "v3.0"] },
+    { "name": "Risk Level", "type": "SINGLE_SELECT", "options": ["Critical", "High", "Medium", "Low"] },
+    { "name": "SLA Status", "type": "SINGLE_SELECT", "options": ["Healthy", "At Risk", "Breached", "Paused"] }
+  ],
+  "columns": [
+    { "name": "Backlog", "color": "gray", "wipLimit": null },
+    { "name": "Selected for Dev", "color": "slate", "wipLimit": 10 },
+    { "name": "In Progress", "color": "indigo", "wipLimit": 5 },
+    { "name": "Code Review", "color": "purple", "wipLimit": 3 },
+    { "name": "QA & Testing", "color": "cyan", "wipLimit": 4 },
+    { "name": "Released / Done", "color": "green", "wipLimit": null }
+  ]
+}

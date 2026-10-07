@@ -1,0 +1,30 @@
+name: GitHub Projects Automation & Workflow Sync Engine
+
+on:
+  pull_request:
+    types: [opened, closed, review_submitted]
+  issues:
+    types: [opened, edited, labeled, milestone]
+  workflow_dispatch:
+
+jobs:
+  project-sync:
+    name: GitHub Projects V2 Sync & Automation Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Verify Circular Dependency Graph
+        run: node scripts/validate-circular-dependencies.js
+
+      - name: Enforce WIP Limits & Workflow Restrictions
+        run: node scripts/audit-wip-limits.js
