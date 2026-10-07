@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeyondPM — No-Code Folderized Project Management Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- LEFT SIDEBAR: FOLDER & DIRECTORY TREE -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="org-badge">
+          <div class="org-icon">🏢</div>
+          <div class="org-meta">
+            <span class="org-name">beyondCode-in</span>
+            <span class="org-plan">Enterprise PM Engine</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-search">
+        <input type="text" id="treeSearchInput" placeholder="🔍 Search folders or tickets..." />
+      </div>
+
+      <div class="sidebar-section-title">
+        <span>SPACES & FOLDERS</span>
+        <button class="icon-btn" id="addFolderBtn" title="New Folder">+</button>
+      </div>
+
+      <!-- INTERACTIVE DIRECTORY TREE -->
+      <nav class="tree-nav" id="directoryTreeNav">
+        <!-- Injected via JavaScript -->
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="quick-stats">
+          <div class="stat-pill"><span class="dot green"></span> 7 Active Tickets</div>
+          <div class="stat-pill"><span class="dot purple"></span> 3 Sub-tasks</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE CONTENT -->
+    <main class="main-content">
+      <!-- TOP NAVIGATION BAR -->
+      <header class="top-nav">
+        <div class="nav-breadcrumbs" id="breadcrumbsContainer">
+          <span class="crumb">beyondCode-in</span>
+          <span class="sep">/</span>
+          <span class="crumb">Core Infrastructure</span>
+          <span class="sep">/</span>
+          <span class="crumb active">Sprint 12</span>
+        </div>
+
+        <div class="top-nav-actions">
+          <button class="btn btn-secondary" id="openGraphBtn">🕸️ Dependency Graph</button>
+          <button class="btn btn-primary" id="openCreateTicketModalBtn">+ New Ticket</button>
+        </div>
+      </header>
+
+      <!-- VIEW TABS CONTROLLER -->
+      <div class="view-header">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="directory">📂 Directory & Folder Tree</button>
+          <button class="view-tab" data-view="kanban">📋 Kanban Board</button>
+          <button class="view-tab" data-view="dependencies">🔗 Dependency Matrix</button>
+          <button class="view-tab" data-view="table">📊 Spreadsheet Table</button>
+        </div>
+        <div class="view-filters">
+          <input type="text" id="filterInput" class="filter-input" placeholder="Filter current view..." />
+        </div>
+      </div>
+
+      <!-- VIEW CONTAINER -->
+      <div class="view-body" id="viewBody">
+        <!-- DIRECTORY TREE VIEW -->
+        <section class="view-pane active" id="directoryViewPane">
+          <div class="folder-grid" id="folderGridContainer">
+            <!-- Dynamic Folders rendered here -->
+          </div>
+        </section>
+
+        <!-- KANBAN BOARD VIEW -->
+        <section class="view-pane" id="kanbanViewPane">
+          <div class="kanban-board" id="kanbanBoardContainer">
+            <!-- Dynamic Kanban columns -->
+          </div>
+        </section>
+
+        <!-- DEPENDENCY MATRIX VIEW -->
+        <section class="view-pane" id="dependenciesViewPane">
+          <div class="dependency-container" id="dependencyContainer">
+            <!-- Interactive Visual Graph -->
+          </div>
+        </section>
+
+        <!-- SPREADSHEET TABLE VIEW -->
+        <section class="view-pane" id="tableViewPane">
+          <div class="table-container">
+            <table class="data-table" id="dataTable">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Folder</th>
+                  <th>Type</th>
+                  <th>Title</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Points</th>
+                  <th>Parent / Subtasks</th>
+                  <th>Dependencies</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <!-- Rows injected here -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- NO-CODE TICKET CREATOR MODAL -->
+  <div class="modal-backdrop" id="ticketModalBackdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>✨ Create Ticket (No-Code Form)</h3>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <form id="createTicketForm">
+        <div class="form-group">
+          <label for="ticketTitle">Ticket Title *</label>
+          <input type="text" id="ticketTitle" required placeholder="e.g., Implement rate limiting on API endpoints" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ticketFolder">Folder / Space *</label>
+            <select id="ticketFolder" required>
+              <option value="sprint-12">📁 Sprint 12 (Core Platform)</option>
+              <option value="backlog">📁 Backlog & Spikes</option>
+              <option value="customer-requests">📁 Customer Requests</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ticketParent">Parent Ticket (Optional for Subtasks)</label>
+            <select id="ticketParent">
+              <option value="">None (Top-Level Item)</option>
+              <option value="PM-100">[PM-100] Core Platform Overhaul (Epic #8)</option>
+              <option value="PM-145">[PM-145] DB Connection Starvation (Incident #2)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ticketType">Ticket Type</label>
+            <select id="ticketType">
+              <option value="Feature">✨ Feature</option>
+              <option value="Bug">🐛 Bug</option>
+              <option value="Task">📝 Task</option>
+              <option value="Incident">🚨 Incident</option>
+              <option value="Epic">⚡ Epic</option>
+              <option value="Request">💡 User Request</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ticketPriority">Priority</label>
+            <select id="ticketPriority">
+              <option value="Critical">🔴 Critical</option>
+              <option value="High">🟠 High</option>
+              <option value="Medium" selected>🟡 Medium</option>
+              <option value="Low">🔵 Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ticketPoints">Story Points</label>
+            <input type="number" id="ticketPoints" min="1" max="55" value="3" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="ticketBlockedBy">Blocked By (Dependencies)</label>
+          <select id="ticketBlockedBy">
+            <option value="">None</option>
+            <option value="PM-145">[PM-145] DB Pool Starvation</option>
+            <option value="PM-142">[PM-142] OAuth Race Condition</option>
+            <option value="PM-145-A">[PM-145-A] Redis Rate Limiter</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="ticketDesc">Description & Acceptance Criteria</label>
+          <textarea id="ticketDesc" rows="3" placeholder="Explain the requirement or steps to complete..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Ticket to Folder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "node tests/jira-clickup-adapter.test.js && node scripts/validate-circular-dependencies.js && node scripts/audit-wip-limits.js",
+    "serve": "node scripts/serve-app.js",
     "setup:fields": "node scripts/setup-jira-project-fields.js",
     "setup:views": "node scripts/setup-project-views.js",
     "populate:values": "node scripts/populate-jira-field-values.js"
