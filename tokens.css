@@ -1,0 +1,192 @@
+/**
+ * BeyondPM Design Tokens
+ * Master Theme Architecture: Cosmic Aurora Glassmorphic Design System
+ * Compliant with WCAG AA Contrast Ratios & 4px Spatial Grid
+ */
+
+:root {
+  /* ==========================================================================
+     COLOR SYSTEM (OBSIDIAN DARK THEME - DEFAULT)
+     ========================================================================== */
+  
+  /* Surfaces & Backgrounds */
+  --bg-app: #060911;
+  --bg-sidebar: #090e1c;
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.04);
+  --bg-surface: #0e1526;
+  --bg-surface-elevated: #151f38;
+  --bg-surface-hover: #1c294a;
+  
+  /* Frosted Glass Layers */
+  --bg-glass: rgba(14, 21, 38, 0.78);
+  --bg-glass-card: rgba(21, 31, 56, 0.65);
+  --bg-glass-card-hover: rgba(28, 41, 74, 0.85);
+  --bg-glass-modal: rgba(10, 15, 29, 0.92);
+  --bg-glass-drawer: rgba(9, 14, 28, 0.95);
+  
+  /* Form Inputs */
+  --bg-input: rgba(6, 10, 20, 0.85);
+  --bg-input-focus: rgba(8, 14, 28, 0.98);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --border-focus: #6366f1;
+  --border-active: #06b6d4;
+
+  /* Typography Colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-dim: #475569;
+  --text-highlight: #ffffff;
+  --text-inverse: #060911;
+
+  /* Brand Accents */
+  --accent-indigo: #6366f1;
+  --accent-indigo-glow: rgba(99, 102, 241, 0.4);
+  --accent-purple: #8b5cf6;
+  --accent-purple-glow: rgba(139, 92, 246, 0.4);
+  --accent-cyan: #06b6d4;
+  --accent-cyan-glow: rgba(6, 182, 212, 0.35);
+  --accent-emerald: #10b981;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.35);
+  --accent-amber: #f59e0b;
+  --accent-amber-glow: rgba(245, 158, 11, 0.35);
+  --accent-rose: #f43f5e;
+  --accent-rose-glow: rgba(244, 63, 94, 0.35);
+  --accent-blue: #38bdf8;
+
+  /* Semantic Workflow Status Colors */
+  --status-backlog: #64748b;
+  --status-selected: #0ea5e9;
+  --status-in-progress: #3b82f6;
+  --status-code-review: #a855f7;
+  --status-qa: #f59e0b;
+  --status-done: #10b981;
+  --status-cancelled: #ef4444;
+
+  /* Priority Hex Tokens */
+  --priority-critical: #f43f5e;
+  --priority-high: #f97316;
+  --priority-medium: #eab308;
+  --priority-low: #38bdf8;
+
+  /* Work Item Type Badges */
+  --type-epic: #a855f7;
+  --type-story: #10b981;
+  --type-feature: #06b6d4;
+  --type-task: #3b82f6;
+  --type-subtask: #64748b;
+  --type-bug: #f43f5e;
+  --type-incident: #ef4444;
+  --type-spike: #eab308;
+  --type-request: #8b5cf6;
+
+  /* ==========================================================================
+     TYPOGRAPHY SCALE
+     ========================================================================== */
+  --font-family-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-code: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --font-2xs: 10px;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 14px;
+  --font-md: 16px;
+  --font-lg: 18px;
+  --font-xl: 22px;
+  --font-2xl: 26px;
+  --font-3xl: 32px;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  /* ==========================================================================
+     SPATIAL & LAYOUT GRID (4px Increments)
+     ========================================================================== */
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Elevation & Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.65);
+  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.35);
+
+  /* Backdrop Filters */
+  --blur-glass: blur(16px);
+  --blur-modal: blur(24px);
+
+  /* Transitions & Animation Easing */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 350ms;
+
+  /* Z-Index Hierarchy */
+  --z-base: 1;
+  --z-elevated: 10;
+  --z-header: 100;
+  --z-sidebar: 200;
+  --z-drawer-backdrop: 500;
+  --z-drawer: 600;
+  --z-modal-backdrop: 800;
+  --z-modal: 900;
+  --z-command-palette: 1000;
+  --z-toast: 1100;
+  --z-tooltip: 1200;
+}
+
+/* LIGHT THEME TOKENS (OPTIONAL OVERRIDE) */
+[data-theme="light"] {
+  --bg-app: #f8fafc;
+  --bg-sidebar: #f1f5f9;
+  --bg-sidebar-hover: rgba(0, 0, 0, 0.04);
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-glass-card: rgba(255, 255, 255, 0.9);
+  --bg-glass-card-hover: #ffffff;
+  --bg-glass-modal: rgba(255, 255, 255, 0.98);
+  --bg-glass-drawer: rgba(255, 255, 255, 0.98);
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-glass: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.2);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --text-highlight: #020617;
+  --text-inverse: #ffffff;
+
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
