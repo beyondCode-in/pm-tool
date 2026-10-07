@@ -1,0 +1,20 @@
+name: Epic Specification Template
+description: Large body of work spanning multiple features and stories
+title: "[EPIC]: "
+labels: ["epic", "architecture"]
+assignees: []
+body:
+  - type: textarea
+    id: epic_vision
+    attributes:
+      label: Strategic Vision & High-Level Goal
+      placeholder: "Deliver multi-tenant OAuth refresh engine..."
+    validations:
+      required: true
+  - type: textarea
+    id: feature_breakdown
+    attributes:
+      label: Child Feature & Story Breakdown
+      placeholder: "- [ ] Feature A\n- [ ] Feature B"
+    validations:
+      required: true

@@ -1,0 +1,47 @@
+name: Feature Request
+description: Propose a new feature, functional capability, or enhancement
+title: "[FEATURE]: "
+labels: ["feature", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing a feature for the **beyondCode-in** Project Management Engine!
+  - type: input
+    id: epic_link
+    attributes:
+      label: Parent Epic / Feature Key
+      description: Enter the parent Epic key (e.g. `PM-100` or `#42`).
+      placeholder: "PM-100"
+    validations:
+      required: false
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem Statement / User Need
+      description: Describe the core user requirement from the end-user perspective.
+      placeholder: "As a developer, I want..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution & Acceptance Criteria
+      description: Outline the functional specification and acceptance criteria.
+      placeholder: "1. Acceptance Criteria A\n2. Acceptance Criteria B"
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Ranking
+      options:
+        - Critical
+        - Highest
+        - High
+        - Medium
+        - Low
+        - Lowest
+    validations:
+      required: true

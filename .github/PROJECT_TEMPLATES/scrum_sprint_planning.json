@@ -1,0 +1,10 @@
+{
+  "name": "Scrum Sprint Planning Template",
+  "organization": "beyondCode-in",
+  "isTemplate": true,
+  "visibility": "PRIVATE",
+  "iterations": [
+    { "name": "Sprint 12 — Core Engine", "startDate": "2026-10-01", "durationDays": 14, "capacityPoints": 34 },
+    { "name": "Sprint 13 — GitHub Sync", "startDate": "2026-10-15", "durationDays": 14, "capacityPoints": 40 }
+  ]
+}

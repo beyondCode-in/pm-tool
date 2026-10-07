@@ -1,0 +1,24 @@
+name: Production Incident Report
+description: Report a critical operational disruption or service degradation
+title: "[INCIDENT]: "
+labels: ["incident", "urgent", "sla-critical"]
+assignees: []
+body:
+  - type: textarea
+    id: incident_impact
+    attributes:
+      label: Operational Impact & Affected System
+      description: Describe the customer impact and affected microservices.
+      placeholder: "Database connection pool exhausted on backend auth API..."
+    validations:
+      required: true
+  - type: dropdown
+    id: sla_response
+    attributes:
+      label: Target Response SLA
+      options:
+        - 15 Minutes (P0 Critical)
+        - 1 Hour (P1 High)
+        - 4 Hours (P2 Medium)
+    validations:
+      required: true
