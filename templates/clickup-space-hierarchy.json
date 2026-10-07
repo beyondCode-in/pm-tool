@@ -1,0 +1,40 @@
+{
+  "name": "ClickUp 3.0 Space Hierarchy Template",
+  "version": "3.0.0",
+  "description": "Multi-tier Workspace / Space / Folder / List hierarchy mapping for enterprise engineering, product design, and operations.",
+  "workspace": {
+    "name": "beyondCode-in",
+    "spaces": [
+      {
+        "name": "🚀 Product Engineering",
+        "folders": [
+          {
+            "name": "Core Platform",
+            "lists": ["Auth & Security", "API Engine", "Database & Storage"]
+          },
+          {
+            "name": "Frontend & Apps",
+            "lists": ["Web App UI", "Design Tokens", "Mobile Client"]
+          }
+        ]
+      },
+      {
+        "name": "🎧 Customer Support & Ops",
+        "folders": [
+          {
+            "name": "Incidents & SLAs",
+            "lists": ["Production Alerts", "Escalations"]
+          }
+        ]
+      }
+    ]
+  },
+  "customStatuses": [
+    { "name": "Backlog", "color": "#64748B", "category": "UNSTARTED" },
+    { "name": "Selected for Dev", "color": "#475569", "category": "UNSTARTED" },
+    { "name": "In Progress", "color": "#6366F1", "category": "IN_PROGRESS" },
+    { "name": "Code Review", "color": "#A855F7", "category": "REVIEW" },
+    { "name": "QA & Testing", "color": "#06B6D4", "category": "QA" },
+    { "name": "Done / Released", "color": "#22C55E", "category": "COMPLETED" }
+  ]
+}

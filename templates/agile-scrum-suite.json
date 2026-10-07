@@ -1,0 +1,50 @@
+{
+  "name": "Jira Agile Scrum Suite",
+  "version": "2.4.0",
+  "description": "Standard Scrum Framework template with 2-week sprint cadences, story points estimation, and burndown tracking.",
+  "views": [
+    {
+      "name": "📋 Active Sprint Board",
+      "layout": "BOARD_LAYOUT",
+      "groupBy": "Status",
+      "wipLimits": {
+        "In Progress": 5,
+        "Code Review": 3,
+        "QA & Testing": 4
+      }
+    },
+    {
+      "name": "📊 Product Backlog Drawer",
+      "layout": "TABLE_LAYOUT",
+      "sortBy": "Priority",
+      "filter": "is:open milestone:'Backlog'"
+    },
+    {
+      "name": "🗺️ Release Roadmap",
+      "layout": "ROADMAP_LAYOUT",
+      "groupBy": "Epic"
+    }
+  ],
+  "customFields": [
+    {
+      "name": "Priority",
+      "type": "SINGLE_SELECT",
+      "options": ["🔴 Critical", "🟠 High", "🟡 Medium", "🔵 Low"]
+    },
+    {
+      "name": "Ticket Type",
+      "type": "SINGLE_SELECT",
+      "options": ["⚡ Epic", "✨ Feature", "📝 Task", "🐛 Bug", "🎧 Support", "❓ Question"]
+    },
+    {
+      "name": "Story Points",
+      "type": "NUMBER"
+    },
+    {
+      "name": "Component",
+      "type": "SINGLE_SELECT",
+      "options": ["🎨 UI/UX Design", "⚙️ Backend API", "🗄️ Database", "🔒 Security", "📚 Documentation", "🚀 Ops / Infrastructure"]
+    }
+  ],
+  "sprintCadenceDays": 14
+}

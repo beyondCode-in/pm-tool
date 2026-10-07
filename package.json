@@ -1,26 +1,23 @@
 {
-  "name": "beyondcode-pm-template",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Enterprise Project Management System & GitHub Projects V2 Template Repository for beyondCode-in",
+  "name": "pm-tool",
+  "version": "2.4.0",
+  "description": "Enterprise Project Management & GitHub Projects V2 Engine combining Jira, ClickUp, and Linear workflows",
+  "main": "lib/jira-clickup-adapter.js",
   "type": "module",
   "scripts": {
-    "test": "node scripts/validate-circular-dependencies.js && node scripts/audit-wip-limits.js",
-    "lint": "node scripts/validate-circular-dependencies.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/beyondCode-in/pm-tool.git"
+    "test": "node tests/jira-clickup-adapter.test.js && node scripts/validate-circular-dependencies.js && node scripts/audit-wip-limits.js",
+    "setup:fields": "node scripts/setup-jira-project-fields.js",
+    "setup:views": "node scripts/setup-project-views.js",
+    "populate:values": "node scripts/populate-jira-field-values.js"
   },
   "keywords": [
-    "github-projects",
     "project-management",
-    "linear",
+    "github-projects-v2",
     "jira",
-    "beyondcode-in",
-    "github-template",
-    "automations",
-    "workflows"
+    "clickup",
+    "kanban",
+    "scrum",
+    "agile"
   ],
   "author": "beyondCode-in",
   "license": "MIT"

@@ -1,0 +1,52 @@
+name: "🧩 Subtask / Component Item"
+description: "Create an atomic sub-task linked to a parent Epic or Feature"
+title: "[SUBTASK]: "
+labels: ["subtask", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Subtask Information 🧩
+        Use this template for focused work items linked to a parent Epic or Feature.
+
+  - type: input
+    id: parent_issue
+    attributes:
+      label: "Parent Issue Number or Key"
+      description: "Enter the issue number of the parent Epic/Feature (e.g., #2 or PM-145)."
+      placeholder: "#2"
+    validations:
+      required: true
+
+  - type: input
+    id: subtask_title
+    attributes:
+      label: "Subtask Summary"
+      placeholder: "e.g., Implement Redis rate-limiter middleware"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Implementation Details & Acceptance Criteria"
+      placeholder: |
+        - [ ] Write unit test suite
+        - [ ] Update API configuration schema
+        - [ ] Verify error handling for timeouts
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: "Target Component"
+      options:
+        - "🎨 UI/UX Design"
+        - "⚙️ Backend API"
+        - "🗄️ Database"
+        - "🔒 Security"
+        - "📚 Documentation"
+        - "🚀 Ops / Infrastructure"
+    validations:
+      required: true

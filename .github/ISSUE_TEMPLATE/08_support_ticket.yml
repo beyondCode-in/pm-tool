@@ -1,0 +1,45 @@
+name: "🎧 Customer Support Ticket"
+description: "Customer inquiry or support request with SLA tracking"
+title: "[SUPPORT]: "
+labels: ["support", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Customer Support Ticket 🎧
+        Submit customer support requests, account inquiries, or SLA escalation items.
+
+  - type: input
+    id: client_name
+    attributes:
+      label: "Customer / Organization Name"
+      placeholder: "e.g., Acme Corp / Enterprise Tier"
+    validations:
+      required: true
+
+  - type: input
+    id: issue_summary
+    attributes:
+      label: "Support Issue Summary"
+      placeholder: "e.g., Unable to invite new team members to organization space"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sla_tier
+    attributes:
+      label: "SLA Priority Tier"
+      options:
+        - "🔴 Tier 1 — Critical (2h SLA Response)"
+        - "🟠 Tier 2 — High (4h SLA Response)"
+        - "🟡 Tier 3 — Standard (24h SLA Response)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: "Customer Request Details"
+      placeholder: "Paste customer communications, logs, or steps reported by user..."
+    validations:
+      required: true
