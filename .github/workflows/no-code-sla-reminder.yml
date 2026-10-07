@@ -1,0 +1,55 @@
+name: ⏰ Zero-Effort SLA Monitor & Automated Reminder Bot
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # Daily at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sla-audit:
+    name: Audit Overdue Tickets & Post Auto-Reminders
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Audit Open Issues & Send SLA Reminders
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            const now = Date.now();
+
+            for (const issue of openIssues.data) {
+              if (issue.pull_request) continue; // Skip PRs
+
+              const createdTime = new Date(issue.created_at).getTime();
+              const ageHours = (now - createdTime) / (1000 * 60 * 60);
+
+              const isCritical = issue.labels.some(l => l.name.includes('critical') || l.name.includes('incident'));
+              const isUnassigned = !issue.assignees || issue.assignees.length === 0;
+
+              if (isCritical && ageHours > 2) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🚨 **Zero-Effort SLA Alert**: This Critical Incident has been open for **${Math.round(ageHours)} hours** without resolution. Escalating to @beyondCode-in/incident-commanders!`
+                });
+              } else if (isUnassigned && ageHours > 24) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `⏰ **Zero-Effort Reminder**: This request has been unassigned for **${Math.round(ageHours)} hours**. Auto-assigning lead for triage.`
+                });
+              }
+            }

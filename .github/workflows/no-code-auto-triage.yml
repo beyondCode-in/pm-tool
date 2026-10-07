@@ -1,0 +1,51 @@
+name: 🤖 No-Code Zero-Effort Auto-Triage & Request Bot
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  auto-triage:
+    name: Auto-Triage, Project Sync & Friendly Welcome Bot
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Post Friendly Welcome & Guidance Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const isNonTechRequest = issue.labels.some(l => l.name === 'non-technical' || l.name === 'request');
+
+            const friendlyComment = `
+            ### 👋 Welcome to beyondCode-in PM Tool!
+
+            Thank you for submitting this request! **No further action is required from you.**
+
+            #### 🤖 What happens automatically next:
+            1. 📌 **Auto-Project Board Sync**: Your ticket has been automatically added to **[pm-tool Project Board #34](https://github.com/orgs/beyondCode-in/projects/34)** under **Backlog & Triage**.
+            2. 🏷️ **Auto-Triage & Labeling**: Our automated engine has categorized your request based on your selections.
+            3. 👤 **Team Assignment**: An engineering lead or design lead will be automatically assigned within **2 hours**.
+            4. 🔔 **Progress Notifications**: You will receive automatic updates in this thread as work progresses through **In Progress** ➔ **Code Review** ➔ **QA** ➔ **Released**.
+
+            *Sit back and relax — our automated system will handle everything from here!* 🚀
+            `;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: friendlyComment
+            });
+
+      - name: Add Issue to Project #34 Board
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/orgs/beyondCode-in/projects/34
+          github-token: ${{ secrets.GITHUB_TOKEN }}

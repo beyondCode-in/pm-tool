@@ -1,0 +1,68 @@
+name: ⚡ Zero-Effort PR Lifecycle & Automatic Status Sync
+
+on:
+  pull_request:
+    types: [opened, review_submitted, closed]
+
+jobs:
+  auto-status-sync:
+    name: Auto Move Ticket Status on PR Events
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Auto Sync Ticket Status
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const action = context.payload.action;
+
+            // Extract referenced issue numbers from PR body (e.g., #1, Fixes #2, PM-142)
+            const issueMatches = pr.body ? pr.body.match(/#(\d+)/g) : null;
+            if (!issueMatches) {
+              console.log('No referenced issues found in PR body.');
+              return;
+            }
+
+            const issueNumbers = [...new Set(issueMatches.map(m => parseInt(m.replace('#', ''))))];
+            console.log('Referenced issue numbers:', issueNumbers);
+
+            for (const issueNum of issueNumbers) {
+              if (action === 'opened') {
+                // PR Opened -> Move to Code Review
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                  body: `⚡ **Zero-Effort Automation**: Pull Request #${pr.number} was opened by @${pr.user.login}. Ticket automatically moved to **Code Review**!`
+                });
+              } else if (action === 'review_submitted' && context.payload.review.state === 'approved') {
+                // PR Approved -> Move to QA & Testing
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                  body: `✅ **Zero-Effort Automation**: Pull Request #${pr.number} was APPROVED by @${context.payload.review.user.login}. Ticket automatically moved to **QA & Testing**!`
+                });
+              } else if (action === 'closed' && pr.merged) {
+                // PR Merged -> Move to Done / Released & Close Issue
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                  body: `🎉 **Zero-Effort Automation**: Pull Request #${pr.number} was successfully MERGED into main! Ticket automatically marked **Done / Released** and closed.`
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum,
+                  state: 'closed'
+                });
+              }
+            }
