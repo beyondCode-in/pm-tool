@@ -1,0 +1,74 @@
+name: "💡 Non-Technical Request / Feature Idea"
+description: "Submit a plain-English request, idea, or feedback without technical jargon"
+title: "[REQUEST]: "
+labels: ["request", "triage", "non-technical"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Welcome! 👋
+        Thank you for submitting a request! Please fill out this quick, simple form in your own words. No technical knowledge required.
+
+  - type: input
+    id: request_title
+    attributes:
+      label: "What would you like to request or change?"
+      description: "A short, clear title describing what you need."
+      placeholder: "e.g., Add an export button for monthly sales reports"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: "Which area does this request relate to?"
+      description: "Select the category that best describes your request."
+      options:
+        - "🎨 Visual Design / UI improvement"
+        - "✨ New Feature or Capability"
+        - "⚡ Process / Workflow enhancement"
+        - "📚 Content / Text update"
+        - "❓ General Question / Inquiry"
+        - "🎧 Customer Support issue"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "What are you trying to accomplish?"
+      description: "Describe the goal or problem in your own words. Why is this important to you or your team?"
+      placeholder: "e.g., Every month our finance team spends 2 hours copying data manually into Excel. Having a one-click CSV export would save us hours..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_outcome
+    attributes:
+      label: "What would success look like?"
+      description: "How will you know when this request is successfully completed?"
+      placeholder: "e.g., A button appears on the reports page that downloads a file named monthly-report.csv..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: "How urgent is this request?"
+      description: "Help us prioritize your request appropriately."
+      options:
+        - "🟢 Normal — Can be scheduled in upcoming sprints"
+        - "🟡 High — Important for our team's workflow this month"
+        - "🔴 Critical — Blocking an active client or business launch"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Submission Verification"
+      options:
+        - label: "I have described the request clearly in plain English."
+          required: true
+        - label: "I am available to provide more details if needed."
+          required: true

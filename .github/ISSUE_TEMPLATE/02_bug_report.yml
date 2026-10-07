@@ -1,39 +1,60 @@
-name: Bug Report
-description: Create a report for a defect or unintended software behavior
+name: "🐛 Easy Bug Report"
+description: "Report a problem or something that isn't working as expected"
 title: "[BUG]: "
 labels: ["bug", "triage"]
-assignees: []
 body:
-  - type: textarea
-    id: bug_summary
+  - type: markdown
     attributes:
-      label: Bug Summary & Reproduction Steps
-      description: Describe what happened and step-by-step instructions to reproduce.
-      placeholder: "1. Go to...\n2. Click on...\n3. Observe error..."
-    validations:
-      required: true
-  - type: textarea
-    id: expected_behavior
-    attributes:
-      label: Expected vs Actual Behavior
-      placeholder: "Expected X, but actual behavior was Y."
-    validations:
-      required: true
-  - type: dropdown
-    id: severity
-    attributes:
-      label: Bug Severity
-      options:
-        - Critical (Production Down)
-        - High (Feature Blocked)
-        - Medium (Workaround Available)
-        - Low (Cosmetic)
-    validations:
-      required: true
+      value: |
+        ### Report a Problem 🐛
+        Thank you for reporting an issue! Fill out this form so our team can investigate and fix it quickly.
+
   - type: input
-    id: affected_version
+    id: summary
     attributes:
-      label: Affected Software Version
-      placeholder: "v2.3.4"
+      label: "What went wrong?"
+      description: "A short description of the problem."
+      placeholder: "e.g., Save button does not respond when clicked on profile page"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce the problem"
+      description: "What did you click or do right before the issue happened?"
+      placeholder: |
+        1. Go to Settings > Profile
+        2. Change user display name
+        3. Click 'Save Changes'
+        4. See that nothing happens and no confirmation appears
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What did you expect to happen?"
+      placeholder: "e.g., A green banner saying 'Profile updated successfully' should appear."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: "How severe is this problem?"
+      options:
+        - "🔴 Critical — System completely unusable or data loss"
+        - "🟠 High — Workaround exists but major inconvenience"
+        - "🟡 Medium — Minor glitch, standard feature affected"
+        - "🔵 Low — Visual cosmetic flaw or typo"
+    validations:
+      required: true
+
+  - type: input
+    id: browser_device
+    attributes:
+      label: "What device or browser were you using?"
+      placeholder: "e.g., Chrome on Windows 11 / Safari on iPhone 15"
     validations:
       required: false
