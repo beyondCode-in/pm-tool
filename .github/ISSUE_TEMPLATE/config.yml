@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: beyondCode-in Documentation
-    url: https://github.com/beyondCode-in/pm-tool/tree/main/docs
-    about: Read architectural blueprints, project management workflows, and automation engine docs.
+  - name: "💡 Non-Technical Web Portal"
+    url: "http://localhost:3333/portal.html"
+    about: "Submit a request without logging into GitHub or knowing any technical jargon"
+  - name: "📊 Live Project Board"
+    url: "https://github.com/orgs/beyondCode-in/projects/34"
+    about: "View live progress on all requests across Sprint and Kanban boards"

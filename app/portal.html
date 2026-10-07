@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeyondPM — 1-Click Non-Technical Ticket Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #060911;
+      --bg-surface: rgba(16, 23, 38, 0.85);
+      --bg-card: rgba(22, 31, 51, 0.7);
+      --border: rgba(255, 255, 255, 0.1);
+      --border-focus: #6366f1;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-green: #10b981;
+      --accent-violet: #8b5cf6;
+      --accent-blue: #38bdf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg-base);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* BACKGROUND GLOW */
+    .glow-bg {
+      position: fixed;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .portal-container {
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* HEADER */
+    .portal-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #c7d2fe;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .portal-header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .portal-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* MAIN FORM CARD */
+    .form-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .label-hint {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 12px 14px;
+      background: rgba(8, 12, 22, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.35);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* LIVE PREVIEW TICKET CARD */
+    .preview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+    }
+
+    .preview-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preview-body {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .preview-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .preview-title {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    /* BUTTONS */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(16, 185, 129, 0.6);
+    }
+
+    .footer-links {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 16px;
+    }
+
+    .footer-links a {
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      .form-card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-bg"></div>
+
+  <div class="portal-container">
+    <div class="portal-header">
+      <div class="brand-chip">✦ beyondCode-in Easy Request Portal</div>
+      <h1>Submit a Request</h1>
+      <p>No technical experience required. Just tell us what you need in plain English!</p>
+    </div>
+
+    <div class="form-card">
+      <form id="portalForm">
+        <!-- 1. SUMMARY -->
+        <div class="form-group">
+          <label for="reqTitle">
+            <span>📝 What do you need? *</span>
+            <span class="label-hint">(Short & clear summary)</span>
+          </label>
+          <input type="text" id="reqTitle" required placeholder="e.g., Export monthly client report to Excel with 1 click" />
+        </div>
+
+        <div class="form-row">
+          <!-- 2. TYPE -->
+          <div class="form-group">
+            <label for="reqType">
+              <span>✨ Request Type *</span>
+            </label>
+            <select id="reqType" required>
+              <option value="✨ New Feature">✨ New Feature / Idea</option>
+              <option value="🎨 Look & Feel">🎨 Visual Design / Look & Feel</option>
+              <option value="🐛 Problem / Bug">🐛 Problem / Something Broken</option>
+              <option value="🎧 Client Support">🎧 Customer Support</option>
+              <option value="❓ General Question">❓ General Question</option>
+            </select>
+          </div>
+
+          <!-- 3. URGENCY -->
+          <div class="form-group">
+            <label for="reqUrgency">
+              <span>⏰ Urgency Level *</span>
+            </label>
+            <select id="reqUrgency" required>
+              <option value="🟢 Normal">🟢 Normal — Upcoming Sprint</option>
+              <option value="🟡 Important">🟡 Important — Needed This Month</option>
+              <option value="🔴 Urgent">🔴 Urgent — Blocking Active Work</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 4. AREA -->
+        <div class="form-group">
+          <label for="reqArea">
+            <span>🌐 Which Area / Product? *</span>
+          </label>
+          <select id="reqArea" required>
+            <option value="Core Platform">🚀 Core Platform & APIs</option>
+            <option value="UI & Design">🎨 Website / UI Design</option>
+            <option value="Reports & Analytics">📊 Reports & Analytics</option>
+            <option value="Customer Support">🎧 Client Operations</option>
+            <option value="General">🤷 Other / Not Sure</option>
+          </select>
+        </div>
+
+        <!-- 5. DETAILS -->
+        <div class="form-group">
+          <label for="reqDetails">
+            <span>💬 Additional Details (Optional)</span>
+            <span class="label-hint">(Why is this important? Any steps?)</span>
+          </label>
+          <textarea id="reqDetails" rows="3" placeholder="Explain what you are trying to accomplish, or paste any links..."></textarea>
+        </div>
+
+        <!-- LIVE TICKET PREVIEW -->
+        <div class="preview-card">
+          <div class="preview-header">
+            <span>👁️ Live Project Board Preview</span>
+          </div>
+          <div class="preview-body">
+            <span class="preview-pill" id="prevType" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);">✨ Feature</span>
+            <span class="preview-pill" id="prevUrgency" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);">🟢 Normal</span>
+            <span class="preview-title" id="prevTitle">Export monthly client report to Excel...</span>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span>🚀 1-Click Submit to GitHub Project #34</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="footer-links">
+      <p>Direct Board View: <a href="https://github.com/orgs/beyondCode-in/projects/34" target="_blank">View Live beyondCode-in Project #34 ↗</a> • <a href="http://localhost:3333/" target="_blank">Open Full BeyondPM Dashboard ↗</a></p>
+    </div>
+  </div>
+
+  <script>
+    const reqTitle = document.getElementById('reqTitle');
+    const reqType = document.getElementById('reqType');
+    const reqUrgency = document.getElementById('reqUrgency');
+    const reqArea = document.getElementById('reqArea');
+    const reqDetails = document.getElementById('reqDetails');
+
+    const prevTitle = document.getElementById('prevTitle');
+    const prevType = document.getElementById('prevType');
+    const prevUrgency = document.getElementById('prevUrgency');
+
+    // Live Preview Updates
+    reqTitle.addEventListener('input', () => {
+      prevTitle.textContent = reqTitle.value.trim() || 'Your request summary will appear here...';
+    });
+
+    reqType.addEventListener('change', () => {
+      prevType.textContent = reqType.value;
+    });
+
+    reqUrgency.addEventListener('change', () => {
+      prevUrgency.textContent = reqUrgency.value;
+    });
+
+    // 1-Click Submit
+    document.getElementById('portalForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const title = encodeURIComponent(`[REQUEST]: ${reqTitle.value.trim()}`);
+      const body = encodeURIComponent(`### Request Summary 💡\nSubmitted via **Non-Technical Web Portal**.\n\n- **Type**: ${reqType.value}\n- **Urgency**: ${reqUrgency.value}\n- **Area**: ${reqArea.value}\n\n### Details\n${reqDetails.value.trim() || 'No additional details provided.'}\n\n---\n*Auto-routed to beyondCode-in Project #34.*`);
+
+      const githubIssueUrl = `https://github.com/beyondCode-in/pm-tool/issues/new?title=${title}&body=${body}&labels=request,non-technical,triage`;
+
+      // Open pre-filled GitHub issue in new tab!
+      window.open(githubIssueUrl, '_blank');
+    });
+  </script>
+</body>
+</html>

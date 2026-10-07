@@ -1,0 +1,77 @@
+name: "💡 Submit a Simple Request (Non-Technical)"
+description: "For clients, managers, and non-developers — submit an idea, problem, or request in plain English"
+title: "[REQUEST]: "
+labels: ["request", "non-technical", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 👋 Welcome! We're here to help.
+        No technical knowledge required! Just fill out these 3 simple questions below in your own words, and our team will take care of the rest.
+
+  - type: input
+    id: summary
+    attributes:
+      label: "1. What would you like to request or report?"
+      description: "A short, plain-English summary of what you need."
+      placeholder: "e.g., Change the submit button color to green / Add CSV download option"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: "2. What kind of request is this?"
+      description: "Pick the option that best matches your need."
+      options:
+        - "✨ New Feature or Idea — Something new we should build"
+        - "🎨 Look & Feel — Design, color, or text improvement"
+        - "🐛 Something is Broken — It worked before, but now doesn't"
+        - "🎧 Customer Support — Help with an account or client"
+        - "❓ General Question — Need information or clarification"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: "3. How urgent is this for you?"
+      description: "Helps us schedule and prioritize appropriately."
+      options:
+        - "🟢 Normal — Take your time, whenever the team is free"
+        - "🟡 Important — Needed in the current sprint / this month"
+        - "🔴 Critical — Blocking an active client or business launch"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "4. Which area does this affect?"
+      description: "Select where you noticed this."
+      options:
+        - "🌐 Website / Web App"
+        - "📱 Mobile App"
+        - "⚙️ Backend / Database"
+        - "📊 Reports & Analytics"
+        - "🤷 Not sure — Team will figure it out"
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: "5. Tell us more details (in your own words)"
+      description: "What are you trying to do? Why is this helpful? Feel free to paste any screenshots or links."
+      placeholder: "e.g., When I try to download the monthly report, nothing happens. Here is a screenshot of what I see..."
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        🤖 **What happens after you submit:**
+        - Your ticket is automatically added to **[beyondCode-in Project #34](https://github.com/orgs/beyondCode-in/projects/34)**.
+        - A team lead will be assigned to review it within 2 hours.
+        - You will receive email notifications as work progresses!
