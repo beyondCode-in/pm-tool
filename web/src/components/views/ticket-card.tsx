@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { CardMenu } from "./card-menu";
 import { useWorkspace } from "@/lib/workspace";
 import { StatusIcon } from "../ticket/status-icons";
-import { AvatarStack, cleanTitle, LabelChip, PriorityMark, TicketMeta, TypeIcon } from "../ticket/bits";
+import { AvatarStack, cleanTitle, LabelChip, PriorityChip, TicketMeta, TypeIcon } from "../ticket/bits";
 
 
 // layoutScope keeps animation ids unique when a ticket appears in several swimlanes.
@@ -75,15 +75,20 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
         {shown.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">{shown.slice(0, 3).map((l) => <LabelChip key={l.name} {...l} />)}</div>
         )}
-        <div className="mt-2.5 flex items-center gap-2">
-          {/* Jira-style key row: type tile + key, then size bubble and priority. */}
+        {/* ClickUp-style chip row: priority, dates and counts. */}
+        {(t.fields.Priority || t.fields["Target date"] || t.commentCount > 0 || t.subIssues.total > 0) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 whitespace-nowrap">
+            <PriorityChip value={t.fields.Priority} />
+            <TicketMeta ticket={t} />
+          </div>
+        )}
+        {/* Jira-style key row: type tile + key, size bubble, people. */}
+        <div className="mt-2 flex items-center gap-2 border-t border-dashed pt-2">
           <span className="inline-flex items-center gap-1.5">
-            <TypeIcon ticket={t} />
+            <TypeIcon ticket={t} size={16} />
             <span className={cn("font-mono text-[11px] font-medium text-muted-foreground", isDone(t) && "line-through")}>#{t.number}</span>
           </span>
           {t.fields.Size && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground" title="Size">{t.fields.Size}</span>}
-          <PriorityMark value={t.fields.Priority} />
-          <TicketMeta ticket={t} />
           <span className="ml-auto"><AvatarStack people={t.assignees} size={20} /></span>
         </div>
       </div>

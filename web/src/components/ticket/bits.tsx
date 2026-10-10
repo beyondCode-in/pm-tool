@@ -111,3 +111,13 @@ export function TicketMeta({ ticket }: { ticket: Ticket }) {
 
 // Title without the "[Bug] " prefix the forms add; the type icon says it already.
 export const cleanTitle = (title: string) => title.replace(/^\[[^\]]+\]:?\s*/, "");
+
+// ClickUp-style priority chip: icon + name in a soft bordered pill.
+export function PriorityChip({ value }: { value?: string }) {
+  if (!value) return null;
+  return (
+    <span className="inline-flex h-[20px] items-center gap-1 rounded-md border bg-background/60 px-1.5 text-[11px] font-medium text-muted-foreground" title={`Priority: ${plain(value)}`}>
+      <PriorityIcon value={value} size={12} />{plain(value)}
+    </span>
+  );
+}
