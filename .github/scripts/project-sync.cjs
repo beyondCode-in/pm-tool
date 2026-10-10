@@ -94,4 +94,149 @@ async function setFields(graphql, project, itemId, values, log = () => {}) {
 const linkedIssues = (body = '') =>
   [...new Set([...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s*:?\s+#(\d+)/gi)].map(m => Number(m[1])))];
 
-module.exports = { PROJECT, OWNED, parseForm, labelsFromAnswers, boardValues, loadProject, addItem, setFields, linkedIssues };
+// "#42" (or a full issue URL) in the form's parent field.
+function parentFromAnswers(a) {
+  const v = a['Parent issue'] || a['Parent epic (optional)'] || '';
+  const m = v.match(/(?:^|\s|issues\/)#?(\d+)\b/);
+  return m ? Number(m[1]) : null;
+}
+
+// Questions worth asking once, right after a ticket is opened, when an
+// important answer is missing. Plain language: requesters read these.
+function followUpQuestions(a, labels) {
+  const q = [];
+  const has = (l) => labels.includes(l);
+  const urgent = has('priority: p0') || has('incident');
+  if (urgent && !a['Tell us more (optional)'] && !a["What are you seeing?"] && !a['Steps to reproduce'])
+    q.push('This is marked critical. What exactly is stopped, and roughly how many people are affected?');
+  if (has('bug') && !a['Screenshots, recordings or logs'] && !a['Tell us more (optional)'])
+    q.push('Could you add a screenshot or a short screen recording? Drag it into a comment.');
+  if (a['Who is affected?'] && /customer/i.test(a['Who is affected?']) && !a['Is there a deadline? (optional)'])
+    q.push('Customers are affected. Is there a date by which this needs to be fixed?');
+  if (has('feature') && /^- \[ \]\s*$/m.test(a['Acceptance criteria'] || ''))
+    q.push('The acceptance criteria are still empty. How will we know this is done?');
+  return q;
+}
+
+// Rough title similarity for duplicate hints: shared meaningful words.
+const STOP = new Set('a an the to of for in on and or is it be can cant not does do with when my our we i at by from this that add'.split(' '));
+const words = (s) => new Set(s.toLowerCase().replace(/\[[^\]]*\]/g, ' ').match(/[\p{L}\p{N}]{3,}/gu)?.filter(w => !STOP.has(w)) || []);
+function similarity(a, b) {
+  const A = words(a), B = words(b);
+  if (!A.size || !B.size) return 0;
+  let shared = 0;
+  for (const w of A) if (B.has(w)) shared++;
+  return shared / Math.min(A.size, B.size);
+}
+
+// ── Board model ─────────────────────────────────────────────────────────
+// Items as loaded by loadItems(): { id, number, title, url, state, assignees,
+// status, priority, type, points, target, sprint: { id, title, startDate, duration } }
+
+const DONE = (s) => /done/i.test(s || '');
+const addDays = (iso, n) => new Date(Date.parse(iso) + n * 864e5).toISOString().slice(0, 10);
+
+function currentSprint(iterations, today) {
+  return iterations.find(it => it.startDate <= today && today < addDays(it.startDate, it.duration)) || null;
+}
+
+// What the board-health job should change or report. Pure, so it's testable.
+function healthActions(items, { today, iterations = [], wipLimits = {} }) {
+  const actions = [];
+  const issues = items.filter(i => i.number);
+  for (const i of issues) {
+    if (i.state === 'CLOSED' && !DONE(i.status) && i.stateReason !== 'NOT_PLANNED')
+      actions.push({ kind: 'set-status', item: i, value: 'Done', why: 'issue is closed' });
+    if (i.state === 'OPEN' && DONE(i.status))
+      actions.push({ kind: 'close', item: i, why: 'card is in Done' });
+    if (i.state === 'OPEN' && /progress|review|qa/i.test(i.status || '') && !i.assignees.length)
+      actions.push({ kind: 'flag', item: i, why: `in ${i.status} with nobody assigned` });
+  }
+  // Unfinished work in a finished sprint rolls into the current sprint.
+  const now = currentSprint(iterations, today);
+  if (now) for (const i of issues) {
+    if (i.sprint && i.sprint.id !== now.id && addDays(i.sprint.startDate, i.sprint.duration) <= today
+        && i.state === 'OPEN' && !DONE(i.status))
+      actions.push({ kind: 'set-sprint', item: i, value: now, why: `carried over from ${i.sprint.title}` });
+  }
+  for (const [status, limit] of Object.entries(wipLimits)) {
+    const n = issues.filter(i => i.state === 'OPEN' && (i.status || '').includes(status)).length;
+    if (n > limit) actions.push({ kind: 'wip', status, count: n, limit, why: `${n} cards in ${status} (limit ${limit})` });
+  }
+  return actions;
+}
+
+function weeklyReport(items, { today, iterations = [] }) {
+  const issues = items.filter(i => i.number);
+  const open = issues.filter(i => i.state === 'OPEN');
+  const weekAgo = addDays(today, -7);
+  const doneThisWeek = issues.filter(i => i.closedAt && i.closedAt.slice(0, 10) > weekAgo && i.stateReason !== 'NOT_PLANNED');
+  const overdue = open.filter(i => i.target && i.target < today);
+  const sprint = currentSprint(iterations, today);
+  const link = (i) => `[#${i.number}](${i.url}) ${i.title}`;
+  const out = [`## Weekly report · ${today}`, ''];
+
+  if (sprint) {
+    const inSprint = issues.filter(i => i.sprint?.id === sprint.id);
+    const pts = (xs) => xs.reduce((s, i) => s + (i.points || 0), 0);
+    const done = inSprint.filter(i => DONE(i.status) || i.state === 'CLOSED');
+    const end = addDays(sprint.startDate, sprint.duration - 1);
+    const pct = inSprint.length ? Math.round(done.length / inSprint.length * 100) : 0;
+    out.push(`### 🏃 ${sprint.title} (${sprint.startDate} → ${end})`,
+      `**${done.length} of ${inSprint.length} tickets done (${pct}%)** · ${pts(done)} of ${pts(inSprint)} story points`, '');
+  }
+
+  out.push(`### ✅ Finished this week (${doneThisWeek.length})`, ...(doneThisWeek.length ? doneThisWeek.map(i => `- ${link(i)}`) : ['_Nothing closed this week._']), '');
+  out.push(`### ⏰ Overdue (${overdue.length})`, ...(overdue.length ? overdue.map(i => `- ${link(i)} · due ${i.target}${i.assignees.length ? ` · @${i.assignees.join(', @')}` : ' · **unassigned**'}`) : ['_Nothing overdue._']), '');
+
+  const byStatus = {};
+  for (const i of open) byStatus[i.status || 'No status'] = (byStatus[i.status || 'No status'] || 0) + 1;
+  out.push('### 📊 Open work by status', '| Status | Tickets |', '|---|---|', ...Object.entries(byStatus).map(([s, n]) => `| ${s} | ${n} |`), '');
+
+  const load = {};
+  for (const i of open) for (const a of (i.assignees.length ? i.assignees : ['(unassigned)'])) {
+    load[a] ??= { n: 0, pts: 0 }; load[a].n++; load[a].pts += i.points || 0;
+  }
+  out.push('### 👥 Workload', '| Person | Open tickets | Story points |', '|---|---|---|',
+    ...Object.entries(load).sort((x, y) => y[1].pts - x[1].pts).map(([a, v]) => `| ${a === '(unassigned)' ? a : '@' + a} | ${v.n} | ${v.pts} |`), '');
+
+  const p0 = open.filter(i => /critical/i.test(i.priority || ''));
+  if (p0.length) out.push(`### 🔴 Open critical tickets (${p0.length})`, ...p0.map(i => `- ${link(i)}`), '');
+  return out.join('\n');
+}
+
+async function loadItems(graphql) {
+  const items = [];
+  let after = null, iterations = [];
+  do {
+    const { organization } = await graphql(`query($owner: String!, $number: Int!, $after: String) {
+      organization(login: $owner) { projectV2(number: $number) {
+        field(name: "Sprint") { ... on ProjectV2IterationField { id configuration {
+          iterations { id title startDate duration } completedIterations { id title startDate duration } } } }
+        items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { id
+          content { ... on Issue { number title url state stateReason closedAt assignees(first: 10) { nodes { login } } } }
+          status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          type: fieldValueByName(name: "Ticket Type") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          points: fieldValueByName(name: "Story Points") { ... on ProjectV2ItemFieldNumberValue { number } }
+          target: fieldValueByName(name: "Target date") { ... on ProjectV2ItemFieldDateValue { date } }
+          sprint: fieldValueByName(name: "Sprint") { ... on ProjectV2ItemFieldIterationValue { iterationId title startDate duration } }
+        } } } } }`, { ...PROJECT, after });
+    const p = organization.projectV2;
+    const cfg = p.field?.configuration;
+    if (cfg) iterations = [...cfg.completedIterations, ...cfg.iterations];
+    for (const n of p.items.nodes) {
+      const c = n.content || {};
+      items.push({ id: n.id, number: c.number, title: c.title, url: c.url, state: c.state, stateReason: c.stateReason,
+        closedAt: c.closedAt, assignees: (c.assignees?.nodes || []).map(a => a.login),
+        status: n.status?.name, priority: n.priority?.name, type: n.type?.name, points: n.points?.number,
+        target: n.target?.date, sprint: n.sprint && { id: n.sprint.iterationId, title: n.sprint.title, startDate: n.sprint.startDate, duration: n.sprint.duration },
+        sprintFieldId: p.field?.id });
+    }
+    after = p.items.pageInfo.hasNextPage ? p.items.pageInfo.endCursor : null;
+  } while (after);
+  return { items, iterations };
+}
+
+module.exports = { PROJECT, OWNED, parseForm, labelsFromAnswers, boardValues, loadProject, addItem, setFields, linkedIssues,
+  parentFromAnswers, followUpQuestions, similarity, currentSprint, healthActions, weeklyReport, loadItems };

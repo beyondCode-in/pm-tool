@@ -1,0 +1,83 @@
+name: Board health
+
+# Keeps the board and the issues telling the same story, like Jira's workflow
+# rules and ClickUp's sprint rollover:
+#  - closed issue not in Done      → card moves to Done
+#  - card in Done but issue open   → issue is closed
+#  - In Progress / Review / QA with nobody assigned → one comment on the ticket
+#  - finished sprint, unfinished work → moves into the current sprint
+#  - column over its WIP limit     → reported in the run summary
+# Needs the PROJECT_TOKEN secret.
+
+on:
+  schedule:
+    - cron: '17 */4 * * 1-5' # every 4 hours on weekdays
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would change"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board-health
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
+      # Column name fragment → maximum cards. Edit to suit the team.
+      WIP_LIMITS: '{"In Progress": 5, "Code Review": 3, "QA": 4}'
+    steps:
+      - name: Check for the token
+        if: env.PROJECT_TOKEN == ''
+        run: echo "::warning::PROJECT_TOKEN secret is not set; board health is skipped. See README §7."
+
+      - uses: actions/checkout@v4
+        if: env.PROJECT_TOKEN != ''
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: actions/github-script@v7
+        if: env.PROJECT_TOKEN != ''
+        with:
+          github-token: ${{ env.PROJECT_TOKEN }}
+          script: |
+            const { loadProject, loadItems, setFields, healthActions } = require('./.github/scripts/project-sync.cjs');
+            const dry = process.env.DRY_RUN === 'true';
+            const today = new Date().toISOString().slice(0, 10);
+            const project = await loadProject(github.graphql);
+            const { items, iterations } = await loadItems(github.graphql);
+            const actions = healthActions(items, { today, iterations, wipLimits: JSON.parse(process.env.WIP_LIMITS) });
+
+            const rows = [];
+            for (const a of actions) {
+              const where = a.item ? `#${a.item.number}` : a.status;
+              rows.push([a.kind, where, a.why]);
+              if (dry || a.kind === 'wip') continue;
+              const [owner, repo] = a.item.url.split('/').slice(3, 5);
+              if (a.kind === 'set-status') {
+                await setFields(github.graphql, project, a.item.id, { Status: a.value }, core.info);
+              } else if (a.kind === 'close') {
+                await github.rest.issues.update({ owner, repo, issue_number: a.item.number, state: 'closed', state_reason: 'completed' });
+              } else if (a.kind === 'set-sprint') {
+                await github.graphql(`mutation($p: ID!, $i: ID!, $f: ID!, $it: String!) {
+                  updateProjectV2ItemFieldValue(input: {projectId: $p, itemId: $i, fieldId: $f, value: {iterationId: $it}}) { clientMutationId } }`,
+                  { p: project.id, i: a.item.id, f: a.item.sprintFieldId, it: a.value.id });
+              } else if (a.kind === 'flag') {
+                const marker = `<!-- board-health:unassigned:${a.item.status} -->`;
+                const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: a.item.number, per_page: 100 });
+                if (!comments.some(c => c.body?.includes(marker))) {
+                  await github.rest.issues.createComment({ owner, repo, issue_number: a.item.number,
+                    body: `${marker}\n👀 This is in **${a.item.status}** but nobody is assigned. Who's working on it?` });
+                }
+              }
+            }
+            await core.summary.addHeading(`Board health${dry ? ' (dry run)' : ''}: ${actions.length} finding(s)`)
+              .addTable([[{ data: 'Action', header: true }, { data: 'Ticket / column', header: true }, { data: 'Why', header: true }], ...rows])
+              .write();

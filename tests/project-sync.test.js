@@ -64,3 +64,61 @@ calls.length = 0;
 await setFields(graphql, project, 'ITEM', { Status: 'Code', Priority: 'High' });
 assert.deepEqual(calls.map(c => c.o), ['cr'], 'missing fields are skipped, not errors');
 console.log('✅ board option matching');
+
+// ── Parent links, follow-ups, duplicates ─────────────────────────────────
+const { parentFromAnswers, followUpQuestions, similarity, currentSprint, healthActions, weeklyReport } =
+  require('../.github/scripts/project-sync.cjs');
+
+assert.equal(parentFromAnswers({ 'Parent issue': '#42' }), 42);
+assert.equal(parentFromAnswers({ 'Parent epic (optional)': 'https://github.com/o/r/issues/7' }), 7);
+assert.equal(parentFromAnswers({ 'Parent issue': 'the login epic' }), null);
+assert.equal(parentFromAnswers({}), null);
+console.log('✅ parent issue parsing');
+
+assert.equal(followUpQuestions({}, ['priority: p0']).length, 1, 'critical without details asks what is stopped');
+assert.equal(followUpQuestions({ 'Tell us more (optional)': 'All logins fail' }, ['priority: p0']).length, 0);
+assert.ok(followUpQuestions({}, ['bug']).some(q => /screenshot/.test(q)));
+assert.ok(followUpQuestions({ 'Who is affected?': 'Many customers' }, []).some(q => /date/.test(q)));
+assert.ok(followUpQuestions({ 'Acceptance criteria': '- [ ] \n- [ ] ' }, ['feature']).some(q => /acceptance/.test(q)));
+assert.equal(followUpQuestions({ 'Acceptance criteria': '- [ ] Export works' }, ['feature']).length, 0);
+console.log('✅ follow-up questions');
+
+assert.ok(similarity('[Bug] Report download does nothing', 'Monthly report download broken') >= 0.5);
+assert.ok(similarity('[Bug] Report download does nothing', 'Add dark mode to settings') < 0.5);
+assert.equal(similarity('[Bug]', 'anything'), 0);
+console.log('✅ duplicate similarity');
+
+// ── Board health and weekly report ───────────────────────────────────────
+const iterations = [
+  { id: 's1', title: 'Sprint 1', startDate: '2026-10-12', duration: 14 },
+  { id: 's2', title: 'Sprint 2', startDate: '2026-10-26', duration: 14 },
+];
+assert.equal(currentSprint(iterations, '2026-10-25').id, 's1');
+assert.equal(currentSprint(iterations, '2026-10-26').id, 's2');
+assert.equal(currentSprint(iterations, '2026-12-01'), null);
+
+const item = (o) => ({ number: 1, title: 't', url: 'u', state: 'OPEN', assignees: [], status: '📋 Todo', ...o });
+const kinds = (items, opts) => healthActions(items, { today: '2026-10-27', iterations, ...opts }).map(a => a.kind);
+assert.deepEqual(kinds([item({ state: 'CLOSED', status: '⚡ In Progress' })]), ['set-status']);
+assert.deepEqual(kinds([item({ state: 'CLOSED', stateReason: 'NOT_PLANNED', status: '📋 Todo' })]), [], "won't-do tickets are left alone");
+assert.deepEqual(kinds([item({ status: '✅ Done' })]), ['close']);
+assert.deepEqual(kinds([item({ status: '⚡ In Progress' })]), ['flag']);
+assert.deepEqual(kinds([item({ status: '⚡ In Progress', assignees: ['sam'] })]), []);
+assert.deepEqual(kinds([item({ sprint: iterations[0] })]), ['set-sprint'], 'unfinished work rolls over');
+assert.deepEqual(kinds([item({ sprint: iterations[0], status: '✅ Done', state: 'CLOSED' })]), []);
+assert.deepEqual(kinds([item({ assignees: ['a'], status: 'Code Review' }), item({ number: 2, assignees: ['b'], status: 'Code Review' })], { wipLimits: { 'Code Review': 1 } }), ['wip']);
+assert.deepEqual(kinds([{ id: 'draft', title: 'draft', assignees: [], status: '⚡ In Progress' }]), [], 'draft items are ignored');
+console.log('✅ board health rules');
+
+const report = weeklyReport([
+  item({ number: 5, title: 'Export', sprint: iterations[1], points: 3, target: '2026-10-20', assignees: ['sam'], priority: '🔴 Critical' }),
+  item({ number: 6, title: 'Login', sprint: iterations[1], points: 5, state: 'CLOSED', status: '✅ Done', closedAt: '2026-10-26T10:00:00Z' }),
+], { today: '2026-10-27', iterations });
+assert.match(report, /Sprint 2/);
+assert.match(report, /1 of 2 tickets done \(50%\)/);
+assert.match(report, /5 of 8 story points/);
+assert.match(report, /Overdue \(1\)[\s\S]*#5/);
+assert.match(report, /Finished this week \(1\)[\s\S]*#6/);
+assert.match(report, /\| @sam \| 1 \| 3 \|/);
+assert.match(report, /Open critical tickets \(1\)/);
+console.log('✅ weekly report');

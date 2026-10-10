@@ -8,6 +8,10 @@ permissions:
   issues: write
   contents: read
 
+# Creating an issue with labels fires "opened" plus one "labeled" per label at
+# the same moment, and GitHub keeps only the newest queued run per group. So
+# every step below reads the issue's current state and is safe to repeat:
+# whichever run survives does all the work, and duplicates do nothing.
 concurrency:
   group: triage-${{ github.event.issue.number }}
   cancel-in-progress: false
@@ -23,14 +27,12 @@ jobs:
           sparse-checkout: .github/scripts
 
       - name: Turn form answers into labels
-        # Label events only need the board sync below.
-        if: github.event.action == 'opened' || github.event.action == 'edited'
         uses: actions/github-script@v7
         with:
           script: |
             const { parseForm, labelsFromAnswers, OWNED } = require('./.github/scripts/project-sync.cjs');
-            const issue = context.payload.issue;
-            const wanted = labelsFromAnswers(parseForm(issue.body));
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
+            const wanted = labelsFromAnswers(parseForm(issue.body || ''));
             if (!wanted.size) return core.info('No form answers found; leaving labels alone.');
 
             const current = issue.labels.map(l => l.name);
@@ -42,6 +44,75 @@ jobs:
             if (add.length) await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
             core.info(`Added: ${add.join(', ') || 'none'} · Removed: ${stale.join(', ') || 'none'}`);
 
+      - name: Link to parent issue
+        # Forms with a "Parent issue" field become real sub-issues, so progress rolls up.
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { parseForm, parentFromAnswers } = require('./.github/scripts/project-sync.cjs');
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
+            const parent = parentFromAnswers(parseForm(issue.body || ''));
+            if (!parent || parent === issue.number) return;
+            try {
+              await github.request('GET /repos/{owner}/{repo}/issues/{issue_number}/parent', { ...context.repo, issue_number: issue.number });
+              return core.info('Already has a parent.');
+            } catch (e) { if (e.status !== 404) throw e; }
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', { ...context.repo, issue_number: parent, sub_issue_id: issue.id });
+              core.info(`Linked as a sub-issue of #${parent}`);
+            } catch (e) {
+              core.warning(`Couldn't link to #${parent}: ${e.message}`);
+            }
+
+      - name: Ask follow-up questions and flag duplicates (once, on new tickets)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { parseForm, followUpQuestions, similarity } = require('./.github/scripts/project-sync.cjs');
+            const number = context.payload.issue.number;
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: number });
+            if (Date.now() - Date.parse(issue.created_at) > 864e5) return core.info('Older than a day; skipping.');
+            const marker = '<!-- triage-followup -->';
+            const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: number, per_page: 100 });
+            if (comments.some(c => c.body?.includes(marker))) return core.info('Already asked.');
+
+            const questions = followUpQuestions(parseForm(issue.body || ''), issue.labels.map(l => l.name));
+            const open = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, state: 'open', per_page: 100 });
+            const dupes = open
+              .filter(i => !i.pull_request && i.number !== number)
+              .map(i => ({ i, score: similarity(issue.title, i.title) }))
+              .filter(x => x.score >= 0.6)
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 3);
+
+            if (!questions.length && !dupes.length) return;
+            const body = [marker];
+            if (questions.length) body.push('**A couple of quick questions to help the team:**', ...questions.map(q => `- ${q}`), '');
+            if (dupes.length) body.push('**This might be the same as:**', ...dupes.map(d => `- #${d.i.number} ${d.i.title}`),
+              '', 'If it is, the team will merge them. No action needed from you.');
+            await github.rest.issues.createComment({ ...context.repo, issue_number: number, body: body.join('\n') });
+
+      - name: Welcome requesters (once)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const number = context.payload.issue.number;
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: number });
+            if (!issue.labels.some(l => l.name === 'request')) return;
+            const marker = '<!-- triage-welcome -->';
+            const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: number, per_page: 100 });
+            if (comments.some(c => c.body?.includes(marker))) return core.info('Already welcomed.');
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: [
+                marker,
+                '👋 Thanks! Your request is on the [project board](https://github.com/orgs/beyondCode-in/projects/34).',
+                '',
+                "There's nothing else you need to do. The team will review it and you'll get updates here as it moves along.",
+              ].join('\n'),
+            });
+
       - name: Sync to project board
         # The default token can't write to organisation projects; a PROJECT_TOKEN secret can.
         if: env.PROJECT_TOKEN != ''
@@ -50,27 +121,13 @@ jobs:
           github-token: ${{ env.PROJECT_TOKEN }}
           script: |
             const { loadProject, addItem, setFields, boardValues } = require('./.github/scripts/project-sync.cjs');
-            // Re-read the issue so labels added by the previous step are included.
             const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
             const project = await loadProject(github.graphql);
             const itemId = await addItem(github.graphql, project.id, issue.node_id);
             const values = boardValues(issue.labels.map(l => l.name));
-            if (context.payload.action === 'opened') values['Status'] = 'Backlog';
-            await setFields(github.graphql, project, itemId, values, core.info);
 
-  welcome:
-    if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'request')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.payload.issue.number,
-              body: [
-                '👋 Thanks! Your request is on the [project board](https://github.com/orgs/beyondCode-in/projects/34).',
-                '',
-                "There's nothing else you need to do. The team will review it and you'll get updates here as it moves along.",
-              ].join('\n'),
-            });
+            // New cards start in Backlog; never move a card that already has a status.
+            const { node } = await github.graphql(`query($id: ID!) { node(id: $id) { ... on ProjectV2Item {
+              fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } }`, { id: itemId });
+            if (!node.fieldValueByName) values['Status'] = 'Backlog';
+            await setFields(github.graphql, project, itemId, values, core.info);
