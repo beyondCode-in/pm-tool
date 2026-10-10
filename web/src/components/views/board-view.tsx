@@ -12,6 +12,7 @@ import { ChevronRight, Plus } from "lucide-react";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "../ticket/bits";
+import { DragDock, type DockAction } from "./drag-dock";
 import { TicketCard } from "./ticket-card";
 
 // Work-in-progress limits, matching .github/workflows/board-health.yml.
@@ -44,9 +45,19 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
   const statuses = options(board, "Status");
   const lanes = useMemo(() => lanesFor(board, tickets, group).filter((l) => l.key === "all" || l.tickets.length), [board, tickets, group]);
   // One monitor for the whole board: a card dropped on a column changes its Status.
-  const onDrop = useEffectEvent((number: unknown, status: string) => {
+  const onDrop = useEffectEvent((number: unknown, data: Record<string, unknown>) => {
     const t = tickets.find((x) => x.number === number);
-    if (!t || t.fields.Status === status) return;
+    if (!t) return;
+    const dock = data as DockAction | Record<string, unknown>;
+    if ("action" in dock) {
+      if (dock.action === "assign" && typeof dock.login === "string" && !t.assignees.some((a) => a.login === dock.login))
+        void actions.setAssignees(t, [...t.assignees.map((a) => a.login), dock.login]);
+      if (dock.action === "priority" && typeof dock.value === "string") void actions.setField(t, "Priority", dock.value);
+      if (dock.action === "wontdo") void actions.setState(t, "CLOSED", "NOT_PLANNED");
+      return;
+    }
+    const status = data.status as string;
+    if (!status || t.fields.Status === status) return;
     void actions.move(t, status);
     const n = tickets.filter((x) => x.fields.Status === status).length + 1;
     const limit = wipFor(status);
@@ -55,7 +66,7 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
   useEffect(() => monitorForElements({
     onDrop({ source, location }) {
       const target = location.current.dropTargets[0];
-      if (target) onDrop(source.data.ticket, target.data.status as string);
+      if (target) onDrop(source.data.ticket, target.data);
     },
   }), []);
 
@@ -72,6 +83,7 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
           {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} showTitle={lane.key !== "all"} />)}
         </div>
       </LayoutGroup>
+      <DragDock board={board} />
     </div>
   );
 }

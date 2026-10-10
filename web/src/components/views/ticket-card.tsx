@@ -1,6 +1,8 @@
 "use client";
 
 import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { pointerOutsideOfPreview } from "@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview";
+import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { isDone, options } from "@/lib/board";
@@ -25,7 +27,24 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    return draggable({ element: el, getInitialData: () => ({ ticket: t.number }), onDragStart: () => setDragging(true), onDrop: () => setDragging(false) });
+    return draggable({
+      element: el,
+      getInitialData: () => ({ ticket: t.number }),
+      onGenerateDragPreview: ({ nativeSetDragImage }) => {
+        setCustomNativeDragPreview({
+          nativeSetDragImage,
+          getOffset: pointerOutsideOfPreview({ x: "12px", y: "8px" }),
+          render: ({ container }) => {
+            const clone = el.cloneNode(true) as HTMLElement;
+            clone.style.width = `${el.offsetWidth}px`;
+            clone.classList.add("drag-preview");
+            container.appendChild(clone);
+          },
+        });
+      },
+      onDragStart: () => setDragging(true),
+      onDrop: () => setDragging(false),
+    });
   }, [t.number]);
 
   return (
@@ -33,7 +52,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
       <div ref={ref} role="button" tabIndex={0} aria-label={`#${t.number} ${cleanTitle(t.title)}`}
         onClick={() => void open(t.number)} onKeyDown={(e) => { if (e.key === "Enter") void open(t.number); }}
         className={cn("group relative cursor-grab rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,opacity,border-color] hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
-          dragging && "opacity-40", isDone(t) && "opacity-70")}>
+          dragging && "scale-[0.98] border-dashed border-primary/50 opacity-40", isDone(t) && "opacity-70")}>
         <div className="flex items-start gap-2">
           <TypeIcon ticket={t} />
           <p className={cn("min-w-0 flex-1 text-sm leading-snug font-medium", isDone(t) && "line-through decoration-muted-foreground/50")}>{cleanTitle(t.title)}</p>
