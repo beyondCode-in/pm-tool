@@ -155,8 +155,6 @@ table tbody tr { transition: background-color .12s ease; }
 [data-slot="checkbox"][data-checked] { animation: tick-pop .22s cubic-bezier(.2, 1.4, .4, 1); box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 18%, transparent); }
 @keyframes tick-pop { 0% { transform: scale(.8); } 100% { transform: scale(1); } }
 
-/* ── Scrollbars: thin, rounded, accent on hover ── */
-*::-webkit-scrollbar-thumb:hover { background: linear-gradient(var(--brand-from), var(--brand-to)) !important; background-clip: content-box !important; }
 
 /* ── Primary glow pulse for the main call to action ── */
 @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 0%, transparent), 0 6px 18px -6px color-mix(in oklch, var(--primary) 55%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 10%, transparent), 0 8px 26px -6px color-mix(in oklch, var(--primary) 65%, transparent); } }
