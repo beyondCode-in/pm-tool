@@ -147,6 +147,10 @@ The workflow **owns** the `priority:`, `area:`, `size:` and `severity:` labels. 
 
 ## 7. Set it up in your own organisation
 
+> **Just want the web app on your board?** Open the shared site, sign in and pick
+> your board; no copy needed. See **[Use BeyondPM for your team](docs/SETUP-FOR-YOUR-TEAM.md)**
+> for both options (shared site, or your own copy) and the one-click board setup.
+
 1. **Use this template:** click **Use this template → Create a new repository**.
 2. **Point it at your board.** Replace `beyondCode-in` and `34` with your organisation and project number in:
    - `.github/ISSUE_TEMPLATE/*.yml` (the `projects:` line)

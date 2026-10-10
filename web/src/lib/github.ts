@@ -69,7 +69,7 @@ export function createGitHubSource(token: string): DataSource {
 
     async load() {
       const head = await gql<HeadResult>(HEAD_QUERY, { owner: config.owner, repo: config.repo, number: config.projectNumber });
-      const project = head.organization?.projectV2;
+      const project = head.repositoryOwner?.projectV2;
       if (!project) throw new GitHubError(`Board #${config.projectNumber} wasn't found in ${config.owner}, or you don't have access to it.`);
       const tickets: Ticket[] = [];
       let after: string | null = null;
@@ -270,12 +270,12 @@ const HEAD_QUERY = `query($owner:String!,$repo:String!,$number:Int!){
   repository(owner:$owner,name:$repo){ id
     labels(first:100){nodes{name color description}}
     assignableUsers(first:100){nodes{login avatarUrl name}} }
-  organization(login:$owner){ projectV2(number:$number){ id title
+  repositoryOwner(login:$owner){ ... on ProjectV2Owner{ projectV2(number:$number){ id title
     fields(first:50){nodes{ __typename
       ... on ProjectV2FieldCommon{id name dataType}
       ... on ProjectV2SingleSelectField{options{id name color description}}
       ... on ProjectV2IterationField{configuration{
-        iterations{id title startDate duration} completedIterations{id title startDate duration}}} }} } } }`;
+        iterations{id title startDate duration} completedIterations{id title startDate duration}}} }} } } } }`;
 
 const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV2{
   items(first:100,after:$after){ pageInfo{hasNextPage endCursor} nodes{ id
@@ -291,7 +291,7 @@ const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV
 type HeadResult = {
   viewer: Person;
   repository: { id: string; labels: { nodes: Label[] }; assignableUsers: { nodes: Person[] } };
-  organization: { projectV2: { id: string; title: string; fields: { nodes: RawField[] } } | null } | null;
+  repositoryOwner: { projectV2?: { id: string; title: string; fields: { nodes: RawField[] } } | null } | null;
 };
 type RawField = {
   __typename: string; id: string; name: string; dataType: string;

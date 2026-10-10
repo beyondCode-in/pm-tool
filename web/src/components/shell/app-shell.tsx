@@ -8,13 +8,13 @@ import { signOut } from "@/lib/auth";
 import { markDone } from "@/lib/onboarding";
 import { toggleSidebar, useSidebarCollapsed } from "@/lib/ui-prefs";
 import { useLayout } from "@/lib/layout";
-import { config } from "@/lib/config";
+import { config , hasBoard } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
 import { TICKET_TYPES } from "@/lib/ticket-types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun } from "@/components/icons";
+import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun, Link2, ArrowRightLeft } from "@/components/icons";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,6 +28,8 @@ import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
+import { toast } from "sonner";
+import { currentTenant, shareLink } from "@/lib/tenant";
 import { SidebarSections } from "./sidebar-sections";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -37,7 +39,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [, newTicket] = useNewTicket();
 
-  useEffect(() => { if (source === null) router.replace("/login/"); }, [source, router]);
+  useEffect(() => {
+    if (source === null) router.replace("/login/");
+    // Signed in to GitHub but no board picked yet (shared site): choose one.
+    else if (source?.mode === "github" && !hasBoard()) router.replace("/connect/");
+  }, [source, router]);
 
   // Keyboard: C new · / search · ⌘K palette · ? shortcuts · G then a letter to jump.
   useEffect(() => {
@@ -169,6 +175,11 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
                 </div>
                 <DropdownMenuSeparator />
                 {source?.mode === "github" && <DropdownMenuItem render={<a href={`https://github.com/orgs/${config.owner}/projects/${config.projectNumber}`} target="_blank" rel="noreferrer" />}>Open the board on GitHub</DropdownMenuItem>}
+                {source?.mode === "github" && (() => { const t = currentTenant(); return t && (
+                  <DropdownMenuItem onClick={() => { void navigator.clipboard?.writeText(shareLink(window.location.origin, config.basePath, t)); toast.success("Board link copied", { description: "Teammates with access open straight into this board." }); }}>
+                    <Link2 />Copy board link
+                  </DropdownMenuItem>); })()}
+                {source?.mode === "github" && !config.pinned && <DropdownMenuItem onClick={() => window.location.assign(`${config.basePath}/connect/`)}><ArrowRightLeft />Switch board…</DropdownMenuItem>}
                 <DropdownMenuItem onClick={onHelp}><HelpCircle />Keyboard shortcuts</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { signOut(); window.location.assign(`${config.basePath}/login/`); }}><LogOut />{source?.mode === "demo" ? "Leave demo" : "Sign out"}</DropdownMenuItem>
               </DropdownMenuContent>
