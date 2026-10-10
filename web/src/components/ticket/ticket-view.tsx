@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
 import { isDoneStatus } from "@/lib/workspace";
 import { Skeleton } from "@/components/ui/skeleton";
-import { byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
+import { byPriorityThenNumber, byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
 import { config } from "@/lib/config";
 import { useActions, useAddComment, useBoard, useComments, useHistory, useSource } from "@/lib/data";
 import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
@@ -18,11 +18,11 @@ import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import {
-  ArrowDown, ArrowRight, ArrowUp, Ban, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock, Flag, Layers, LayoutGrid, ListTodo, SlidersHorizontal, Timer, UserRound, Zap, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
+  ArrowDown, ArrowRight, ArrowUp, Ban, ChevronsDownUp, ChevronsUpDown, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock, Flag, Layers, LayoutGrid, ListTodo, SlidersHorizontal, Timer, UserRound, Zap, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
   Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Trash2, Upload, X, XCircle,
 } from "@/components/icons";
 import Link from "next/link";
-import { createContext, Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 import ReactMarkdown from "react-markdown";
@@ -56,6 +56,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
     <div className="flex h-full min-h-0 flex-col">
       {/* Top bar: where it lives and what you can do with it. */}
       <header className="flex items-center gap-2 border-b px-3 py-2.5 sm:px-5 sm:py-3">
+        <StepButtons board={board} ticket={t} />
         <nav className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb">
           <span className="hidden truncate sm:inline">{board.projectTitle}</span>
           {parent && (<><ChevronRight className="hidden size-3.5 shrink-0 sm:block" /><button onClick={() => void open(parent.number)} className="flex min-w-0 items-center gap-1 hover:text-foreground hover:underline"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></button></>)}
@@ -106,6 +107,34 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
           <Activity ticket={t} />
         </aside>
       </div>
+    </div>
+  );
+}
+
+// Up/down through the tickets in this ticket's column, in board order; J and K too.
+function StepButtons({ board, ticket: t }: { board: Board; ticket: Ticket }) {
+  const [, open] = useOpenTicket();
+  const column = board.tickets.filter((x) => x.fields.Status === t.fields.Status).sort(byPriorityThenNumber);
+  const i = column.findIndex((x) => x.url === t.url);
+  const prev = i > 0 ? column[i - 1] : null;
+  const next = i >= 0 && i < column.length - 1 ? column[i + 1] : null;
+  const step = (dir: -1 | 1) => { const to = dir < 0 ? prev : next; if (to) void open(to.number); };
+  const go = useEffectEvent(step);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (e.key === "j") { e.preventDefault(); go(1); }
+      if (e.key === "k") { e.preventDefault(); go(-1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  return (
+    <div className="flex items-center" role="group" aria-label="Move between tickets">
+      <Button variant="ghost" size="icon-sm" disabled={!prev} onClick={() => step(-1)} aria-label={prev ? `Previous: #${prev.number}` : "No previous ticket"} title={prev ? `Previous (K) · #${prev.number} ${cleanTitle(prev.title)}` : "First in this column"}><ArrowUp /></Button>
+      <Button variant="ghost" size="icon-sm" disabled={!next} onClick={() => step(1)} aria-label={next ? `Next: #${next.number}` : "No next ticket"} title={next ? `Next (J) · #${next.number} ${cleanTitle(next.title)}` : "Last in this column"}><ArrowDown /></Button>
+      {i >= 0 && <span className="mr-1 hidden text-xs text-muted-foreground tabular sm:inline">{i + 1}/{column.length}</span>}
     </div>
   );
 }
@@ -647,7 +676,17 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
 
 // ── Right column ────────────────────────────────────────────────────────
 
-function Field({ label, icon: Icon, wide, children }: { label: string; icon: typeof FileText; wide?: boolean; children: ReactNode }) {
+const HIDE_EMPTY = "beyondpm.hide-empty-fields";
+const hideListeners = new Set<() => void>();
+const readHide = () => { try { return localStorage.getItem(HIDE_EMPTY) === "1"; } catch { return false; } };
+function useHideEmpty(): [boolean, () => void] {
+  const on = useSyncExternalStore((l) => { hideListeners.add(l); return () => hideListeners.delete(l); }, readHide, () => false);
+  return [on, () => { try { localStorage.setItem(HIDE_EMPTY, on ? "0" : "1"); } catch { /* per-browser */ } hideListeners.forEach((l) => l()); }];
+}
+const HideEmptyCtx = createContext(false);
+
+function Field({ label, icon: Icon, wide, empty, children }: { label: string; icon: typeof FileText; wide?: boolean; empty?: boolean; children: ReactNode }) {
+  if (useContext(HideEmptyCtx) && empty) return null;
   return (
     <div className={cn("grid min-h-9 grid-cols-[7.5rem_1fr] items-center gap-2 border-b border-dashed py-0.5 last:border-0", wide && "sm:col-span-2")}>
       <span className="flex items-center gap-2 text-[13px] text-muted-foreground"><Icon className="size-4 shrink-0 opacity-70" />{label}</span>
@@ -663,12 +702,16 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const [, open] = useOpenTicket();
   const parent = parentOf(board, t);
   const descendants = (p: Ticket): number[] => childrenOf(board, p).flatMap((c) => [c.number, ...descendants(c)]);
+  const [hideEmpty, toggleHideEmpty] = useHideEmpty();
+  const f = t.fields as Record<string, unknown>;
+  const emptyCount = [!t.assignees.length, !f["Start date"] && !f["Target date"], ...(["Priority", "Ticket Type", "Size", "Component", "Sprint", "Story Points"] as const).filter((k) => hasField(board, k)).map((k) => f[k] == null || f[k] === ""), !parent, !t.labels.length].filter(Boolean).length;
   return (
     <div>
+      <HideEmptyCtx.Provider value={hideEmpty}>
       <div className="grid gap-x-8 sm:grid-cols-2">
-        <Field label="Assignees" icon={UserRound}><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></Field>
+        <Field label="Assignees" icon={UserRound} empty={!t.assignees.length}><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></Field>
         {(hasField(board, "Start date") || hasField(board, "Target date")) && (
-          <Field label="Dates" icon={CalendarDays} wide>
+          <Field label="Dates" icon={CalendarDays} wide empty={!t.fields["Start date"] && !t.fields["Target date"]}>
             <div className="flex items-center gap-1">
               {hasField(board, "Start date") && <span className="min-w-0 flex-1"><DateInput label="Start date" value={t.fields["Start date"]} onChange={(v) => void actions.setField(t, "Start date", v)} /></span>}
               {hasField(board, "Start date") && hasField(board, "Target date") && <ArrowRight className="size-3 shrink-0 text-muted-foreground" />}
@@ -677,14 +720,14 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
           </Field>
         )}
         {(["Priority", "Ticket Type", "Size", "Component"] as const).filter((f) => hasField(board, f)).map((f) => (
-          <Field key={f} label={f === "Ticket Type" ? "Type" : f} icon={FIELD_ICON[f]}>
+          <Field key={f} label={f === "Ticket Type" ? "Type" : f} icon={FIELD_ICON[f]} empty={!t.fields[f]}>
             <OptionPicker board={board} field={f} label={f} value={t.fields[f]} onChange={(v) => void actions.setField(t, f, v)} />
           </Field>
         ))}
-        {hasField(board, "Sprint") && <Field label="Sprint" icon={Timer}><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></Field>}
-        {hasField(board, "Story Points") && <Field label="Points" icon={Zap}><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
+        {hasField(board, "Sprint") && <Field label="Sprint" icon={Timer} empty={!t.fields.Sprint}><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></Field>}
+        {hasField(board, "Story Points") && <Field label="Points" icon={Zap} empty={t.fields["Story Points"] == null}><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
         <Field label="Time tracked" icon={Clock}><TimeSummary board={board} ticket={t} /></Field>
-        <Field label="Parent" icon={GitBranch}>
+        <Field label="Parent" icon={GitBranch} empty={!parent}>
           <div className="flex items-center gap-1">
             <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
               trigger={
@@ -696,7 +739,7 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
             {parent && <Button size="icon-xs" variant="ghost" aria-label="Remove parent" onClick={() => void extras.setParent(t, null, parent)}><X /></Button>}
           </div>
         </Field>
-        <Field label="Tags" icon={TagIcon} wide>
+        <Field label="Tags" icon={TagIcon} wide empty={!t.labels.length}>
           <div className="flex min-h-8 flex-wrap items-center gap-1 px-1 py-1">
             {t.labels.map((l) => <LabelChip key={l.name} {...l} onRemove={() => void actions.setLabels(t, t.labels.map((x) => x.name).filter((n) => n !== l.name))} />)}
             <LabelPicker all={board.labels} value={t.labels.map((l) => l.name)} onChange={(ls) => void actions.setLabels(t, ls)}
@@ -709,6 +752,13 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
           </div>
         </Field>
       </div>
+      </HideEmptyCtx.Provider>
+      {(emptyCount > 0 || hideEmpty) && (
+        <button onClick={toggleHideEmpty} className="mt-1.5 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+          {hideEmpty ? <ChevronsUpDown className="size-3.5" /> : <ChevronsDownUp className="size-3.5" />}
+          {hideEmpty ? `Show ${emptyCount} empty field${emptyCount === 1 ? "" : "s"}` : "Collapse empty fields"}
+        </button>
+      )}
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         {t.author && <span className="inline-flex items-center gap-1.5">Reported by <Avatar person={t.author} size={16} /><span className="text-foreground">{t.author.name || t.author.login}</span></span>}
         <span title={format(parseISO(t.createdAt), "PPpp")}>Created {formatDistanceToNow(parseISO(t.createdAt))} ago</span>
