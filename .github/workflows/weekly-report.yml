@@ -1,0 +1,46 @@
+name: Weekly report
+
+# Every Monday: sprint progress, what finished, what's overdue, open work by
+# status and workload per person, posted as an issue labelled "report".
+# Last week's report is closed so only the latest stays open. Needs PROJECT_TOKEN.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Mondays 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+    steps:
+      - name: Check for the token
+        if: env.PROJECT_TOKEN == ''
+        run: echo "::warning::PROJECT_TOKEN secret is not set; the weekly report is skipped. See README §7."
+
+      - uses: actions/checkout@v4
+        if: env.PROJECT_TOKEN != ''
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: actions/github-script@v7
+        if: env.PROJECT_TOKEN != ''
+        with:
+          github-token: ${{ env.PROJECT_TOKEN }}
+          script: |
+            const { loadItems, weeklyReport } = require('./.github/scripts/project-sync.cjs');
+            const today = new Date().toISOString().slice(0, 10);
+            const { items, iterations } = await loadItems(github.graphql);
+            const body = weeklyReport(items, { today, iterations });
+
+            const previous = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, labels: 'report', state: 'open', per_page: 100 });
+            const { data: created } = await github.rest.issues.create({ ...context.repo, title: `📈 Weekly report · ${today}`, body, labels: ['report'] });
+            for (const old of previous) {
+              await github.rest.issues.update({ ...context.repo, issue_number: old.number, state: 'closed', state_reason: 'completed' });
+            }
+            await core.summary.addRaw(body).write();
+            core.info(`Posted #${created.number}`);
