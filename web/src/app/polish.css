@@ -260,3 +260,11 @@ table thead th button { text-transform: inherit; letter-spacing: inherit; font-w
 @keyframes timer-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--destructive) 55%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
 .timer-bar { background: color-mix(in oklch, var(--destructive) 7%, var(--card)); border-color: color-mix(in oklch, var(--destructive) 30%, var(--border)); }
 @media (prefers-reduced-motion: reduce) { .timer-dot { animation: none; } }
+
+/* ── Board columns tinted by their stage (ClickUp) ── */
+.status-col { background: color-mix(in oklch, oklch(0.7 var(--col-c) var(--col-h)) 9%, var(--muted)); }
+.dark .status-col { background: color-mix(in oklch, oklch(0.5 var(--col-c) var(--col-h)) 14%, var(--muted)); }
+.status-col[data-over], .status-col.ring-2 { background: color-mix(in oklch, oklch(0.7 var(--col-c) var(--col-h)) 18%, var(--muted)); }
+.status-col-add { color: oklch(0.55 var(--col-c) var(--col-h)); }
+.status-col-add:hover { background: color-mix(in oklch, oklch(0.7 var(--col-c) var(--col-h)) 14%, transparent); }
+.dark .status-col-add { color: oklch(0.78 var(--col-c) var(--col-h)); }

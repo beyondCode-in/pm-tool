@@ -14,7 +14,7 @@ import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHor
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu } from "../layout/custom-section";
-import { StatusIcon, StatusPill } from "../ticket/status-icons";
+import { StatusIcon, StatusPill, statusMeta } from "../ticket/status-icons";
 import { Segmented } from "../ui-plus/segmented";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -174,7 +174,8 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
   }
 
   return (
-    <div ref={ref} className={cn("group/col flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
+    <div ref={ref} className={cn("status-col group/col flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl p-2 transition-colors sm:w-72", over && "ring-2 ring-primary/40")}
+      style={{ ["--col-h" as string]: statusMeta(status?.name).hue, ["--col-c" as string]: Math.max(statusMeta(status?.name).chroma, 0.04) }}
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
         {/* ClickUp-style filled status pill. */}
@@ -200,7 +201,12 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
         )}
       </div>
       <div className="flex min-h-16 flex-col gap-2">
-        {adding && status && <QuickAdd status={status.name} onDone={() => setAdding(false)} />}
+        {adding && status ? <QuickAdd status={status.name} onDone={() => setAdding(false)} /> : status && (
+          // ClickUp: a coloured "+ Add Task" at the top of every column.
+          <button onClick={() => setAdding(true)} className="status-col-add flex h-8 items-center gap-1.5 rounded-lg px-2 text-left text-[13px] font-medium transition-colors">
+            <Plus className="size-3.5" />Add Task
+          </button>
+        )}
         {sorted.map((t) => <TicketCard key={t.number} board={board} ticket={t} layoutScope={scope} />)}
         {!tickets.length && <p className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">Drop tickets here</p>}
       </div>
