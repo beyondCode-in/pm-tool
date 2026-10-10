@@ -97,6 +97,13 @@ export function createDemoSource(): DataSource {
     [102, [{ id: "c1", author: people[1], body: "PR is up, could someone review? 🙏", createdAt: new Date(Date.now() - 864e5).toISOString() }]],
     [104, [{ id: "c2", author: people[3], body: "Reproduced on Safari 18. Looking at the blob download.", createdAt: new Date(Date.now() - 36e5 * 5).toISOString() }]],
   ]);
+  // Goals: two milestones with tickets attached.
+  let milestones: { number: number; title: string; description: string; dueOn: string | null; state: "OPEN" | "CLOSED" }[] = [
+    { number: 1, title: "Self-serve reporting beta", description: "Customers can build, schedule and export their own reports.", dueOn: addDays(today(), 12), state: "OPEN" },
+    { number: 2, title: "Enterprise sign-in", description: "SAML/OIDC single sign-on for enterprise customers.", dueOn: addDays(today(), 55), state: "OPEN" },
+  ];
+  const inMilestone: Record<number, number> = { 101: 1, 102: 1, 103: 1, 104: 1, 108: 1, 109: 1, 110: 2, 111: 2 };
+  board = { ...board, tickets: board.tickets.map((t) => (inMilestone[t.number] ? { ...t, milestone: { number: inMilestone[t.number], title: milestones.find((m) => m.number === inMilestone[t.number])!.title } } : t)) };
   const blockers = new Map<number, number[]>([[104, [107]], [103, [102]]]); // ticket → tickets blocking it
   const wait = () => new Promise((r) => setTimeout(r, 120));
   const history = new Map<number, HistoryEvent[]>();
@@ -200,6 +207,28 @@ export function createDemoSource(): DataSource {
         labels: board.labels.map((l) => (l.name === name ? { ...l, ...next, color: next.color || l.color } : l)),
         tickets: board.tickets.map((t) => ({ ...t, labels: t.labels.map((l) => (l.name === name ? { ...l, name: next.name, color: next.color || l.color } : l)) })),
       };
+    },
+    async milestones() {
+      await wait();
+      return milestones.map((m) => {
+        const ts = board.tickets.filter((t) => t.milestone?.number === m.number);
+        return { ...m, url: `https://github.com/demo/board/milestone/${m.number}`, open: ts.filter((t) => t.state === "OPEN").length, closed: ts.filter((t) => t.state === "CLOSED").length };
+      });
+    },
+    async saveMilestone(m) {
+      await wait();
+      if (!m.title.trim()) throw new Error("A goal needs a name.");
+      if (m.number) {
+        milestones = milestones.map((x) => (x.number === m.number ? { ...x, title: m.title, description: m.description, dueOn: m.dueOn, state: m.state ?? x.state } : x));
+        board = { ...board, tickets: board.tickets.map((t) => (t.milestone?.number === m.number ? { ...t, milestone: { number: m.number!, title: m.title } } : t)) };
+      } else {
+        milestones = [...milestones, { number: Math.max(0, ...milestones.map((x) => x.number)) + 1, title: m.title, description: m.description, dueOn: m.dueOn, state: "OPEN" }];
+      }
+    },
+    async setMilestone(t, number) {
+      await wait();
+      const m = milestones.find((x) => x.number === number);
+      patch(t.number, (x) => ({ ...x, milestone: m ? { number: m.number, title: m.title } : null }));
     },
     async deleteLabel(name) {
       await wait();

@@ -126,3 +126,4 @@ export const Workflow = duo(P.FlowArrow);
 export const House = duo(P.House);
 export const Users = duo(P.UsersThree);
 export const Repeat = bold(P.ArrowsClockwise);
+export const Target = duo(P.Target);

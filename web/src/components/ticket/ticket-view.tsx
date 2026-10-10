@@ -1,10 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
 import { repeatOf, REPEATS, withRepeat, type Repeat } from "@/lib/recurring";
+import { useGoalActions, useMilestones } from "@/lib/goals";
+import { Target as TargetIcon } from "@/components/icons";
 import { Repeat as RepeatIcon } from "@/components/icons";
 import { isDoneStatus } from "@/lib/workspace";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -736,6 +738,7 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
         {hasField(board, "Story Points") && <Field label="Points" icon={Zap} empty={t.fields["Story Points"] == null}><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
         <Field label="Time tracked" icon={Clock}><TimeSummary board={board} ticket={t} /></Field>
         <Field label="Repeat" icon={RepeatIcon} empty={!repeatOf(t.body)}><RepeatPicker ticket={t} /></Field>
+        <Field label="Goal" icon={TargetIcon} empty={!t.milestone}><GoalPicker ticket={t} /></Field>
         <Field label="Parent" icon={GitBranch} empty={!parent}>
           <div className="flex items-center gap-1">
             <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
@@ -774,6 +777,34 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
         <span title={format(parseISO(t.updatedAt), "PPpp")}>Updated {formatDistanceToNow(parseISO(t.updatedAt))} ago</span>
       </p>
     </div>
+  );
+}
+
+// Goal: the GitHub milestone this ticket counts towards.
+function GoalPicker({ ticket: t }: { ticket: Ticket }) {
+  const { data: milestones } = useMilestones();
+  const goals = useGoalActions();
+  const open = (milestones ?? []).filter((m) => m.state === "OPEN" || m.number === t.milestone?.number);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="picker-trigger h-8 w-full justify-start rounded-lg px-2 font-normal" />}>
+        {t.milestone ? <span className="inline-flex min-w-0 items-center gap-1.5"><TargetIcon className="size-3.5 shrink-0 text-primary" /><span className="truncate">{t.milestone.title}</span></span> : <span className="text-muted-foreground">No goal</span>}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-60">
+        <DropdownMenuLabel>Goal</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={String(t.milestone?.number ?? "none")} onValueChange={(v: string) => void goals.attach(t, open.find((m) => String(m.number) === v) ?? null)}>
+          {open.map((m) => (
+            <DropdownMenuRadioItem key={m.number} value={String(m.number)}>
+              <TargetIcon className="size-4 text-primary" /><span className="min-w-0 flex-1 truncate">{m.title}</span>
+              {m.dueOn && <span className="text-xs text-muted-foreground">{m.dueOn.slice(5).replace("-", "/")}</span>}
+            </DropdownMenuRadioItem>
+          ))}
+          {!open.length && <p className="px-2.5 py-2 text-xs text-muted-foreground">No goals yet. Create one on the Goals page.</p>}
+          <DropdownMenuSeparator />
+          <DropdownMenuRadioItem value="none"><span className="text-muted-foreground">No goal</span></DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
