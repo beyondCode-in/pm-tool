@@ -8,10 +8,11 @@ import type { Board, Ticket } from "@/lib/types";
 import { useFilters, useNewTicket } from "@/lib/url-state";
 import { Plus } from "@/components/icons";
 import { ErrorState } from "../brand/states";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { BrandLoader } from "../brand/logo";
 import { FilterBar } from "../filters/filter-bar";
 import { NotificationBell } from "../notifications/bell";
+import { ViewTabs } from "./view-tabs";
 
 // Every view: a header, the shared filter bar, and loading / error states.
 export function ViewPage({ title, description, scope, children, hideDoneToggle }: {
@@ -47,6 +48,7 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
         </div>
       ) : (
         <>
+          <Suspense fallback={null}><ViewTabs /></Suspense>
           <FilterBar board={board} hideDoneToggle={hideDoneToggle} />
           {children(board, tickets)}
         </>

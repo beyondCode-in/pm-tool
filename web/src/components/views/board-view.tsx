@@ -14,7 +14,7 @@ import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHor
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu } from "../layout/custom-section";
-import { StatusIcon } from "../ticket/status-icons";
+import { StatusIcon, StatusPill } from "../ticket/status-icons";
 import { Segmented } from "../ui-plus/segmented";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -177,11 +177,8 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
     <div ref={ref} className={cn("group/col flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
-        {/* ClickUp-style status pill, Jira-style uppercase name. */}
-        <span className="inline-flex min-w-0 items-center gap-1.5 rounded-md border bg-background/80 px-2 py-0.5 shadow-xs">
-          <StatusIcon name={status?.name} size={14} />
-          <h3 className="min-w-0 truncate text-[11px] font-semibold tracking-wide uppercase" title={status?.name}>{status ? plain(status.name) : "No status"}</h3>
-        </span>
+        {/* ClickUp-style filled status pill. */}
+        <h3 className="min-w-0" title={status?.name}><StatusPill name={status?.name} /></h3>
         <span className={cn("shrink-0 rounded-md bg-background/70 px-1.5 text-xs tabular-nums text-muted-foreground", limit && tickets.length > limit && "bg-destructive/15 font-semibold text-destructive")}
           title={[limit ? `Limit ${limit}` : "", points ? `${points} story points` : ""].filter(Boolean).join(" · ") || undefined}>
           {tickets.length}{limit ? `/${limit}` : ""}

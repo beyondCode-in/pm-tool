@@ -127,3 +127,6 @@ export const priorityIndex = (p?: string | null) => {
 
 export const isUrgent = (p?: string | null) => !!p && workspace().urgent.includes(p);
 export const wipLimit = (status?: string | null) => (status ? workspace().wip[status] : undefined);
+
+/** How many priority options the board has (for ranking icons by position). */
+export const priorityCount = () => (board ? opts(board, "Priority").length : 0);
