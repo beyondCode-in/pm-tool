@@ -1,5 +1,5 @@
 import { addDays, today } from "./board";
-import type { Board, Comment, DataSource, Field, FieldValues, Person, Ticket, HistoryEvent } from "./types";
+import type { Board, Comment, DataSource, Field, FieldValues, Person, Ticket, HistoryEvent, ChatMessage } from "./types";
 import { timeBody } from "./time-entry";
 
 // A realistic, self-contained board so anyone can try every screen without
@@ -97,6 +97,29 @@ export function createDemoSource(): DataSource {
     [102, [{ id: "c1", author: people[1], body: "PR is up, could someone review? 🙏", createdAt: new Date(Date.now() - 864e5).toISOString() }]],
     [104, [{ id: "c2", author: people[3], body: "Reproduced on Safari 18. Looking at the blob download.", createdAt: new Date(Date.now() - 36e5 * 5).toISOString() }]],
   ]);
+  // Chat: three channels with a few messages and replies.
+  const ago = (h: number) => new Date(Date.now() - h * 36e5).toISOString();
+  const chat = {
+    channels: [
+      { id: "general", name: "General", emoji: "💬", description: "Day-to-day chat for the whole team" },
+      { id: "announcements", name: "Announcements", emoji: "📣", description: "Releases and news" },
+      { id: "ideas", name: "Ideas", emoji: "💡", description: "Suggestions and what-ifs" },
+    ],
+    messages: new Map<string, ChatMessage[]>([
+      ["general", [
+        { id: "m1", body: "Morning all 👋 Stand-up notes: I'm on #113 today, the EU checkout slowness.", author: people[1], createdAt: ago(26) },
+        { id: "m2", body: "Heads-up: staging is redeploying around 3pm, expect ~10 minutes of downtime.", author: people[2], createdAt: ago(5) },
+        { id: "m3", body: "@you could you take a look at the CSV export PR when you get a moment? #102", author: people[0], createdAt: ago(1) },
+      ]],
+      ["announcements", [{ id: "a1", body: "**Sprint 2 is live.** Goal: self-serve reporting beta by the 23rd. 🚀", author: people[0], createdAt: ago(72) }]],
+      ["ideas", [{ id: "i1", body: "What if the weekly report also posted a summary here on Fridays?", author: people[3], createdAt: ago(48) }]],
+    ]),
+    replies: new Map<string, ChatMessage[]>([
+      ["m1", [{ id: "r1", body: "Thanks! I can pair after lunch.", author: people[2], createdAt: ago(25) }]],
+      ["m3", [{ id: "r2", body: "On it 👍", author: you, createdAt: ago(0.5) }]],
+    ]),
+  };
+
   // Docs (and later whiteboards) live as files in the repository.
   const files = new Map<string, { text: string; sha: string; updatedAt: string }>([
     ["docs/Team handbook.md", { sha: "d1", updatedAt: new Date(Date.now() - 2 * 864e5).toISOString(), text: "# Team handbook\n\nHow we work together.\n\n## Working hours\n\nCore hours are **10:00–16:00** in your time zone.\n\n## Where things live\n\n- Work: the **Board** and **Backlog**\n- Decisions: **Docs** (this space)\n- Chat: **Chat** channels\n\n## Rituals\n\n- [x] Monday planning\n- [x] Daily stand-up (async in Chat)\n- [ ] Friday demo\n" }],
@@ -215,6 +238,23 @@ export function createDemoSource(): DataSource {
         labels: board.labels.map((l) => (l.name === name ? { ...l, ...next, color: next.color || l.color } : l)),
         tickets: board.tickets.map((t) => ({ ...t, labels: t.labels.map((l) => (l.name === name ? { ...l, name: next.name, color: next.color || l.color } : l)) })),
       };
+    },
+    async chatInfo() {
+      await wait();
+      return { enabled: true, settingsUrl: "https://github.com/demo/board/settings", channels: chat.channels };
+    },
+    async chatMessages(channelId) {
+      await wait();
+      return (chat.messages.get(channelId) ?? []).map((m) => ({ ...m, replies: chat.replies.get(m.id)?.length ?? 0 }));
+    },
+    async chatReplies(messageId) { await wait(); return chat.replies.get(messageId) ?? []; },
+    async postMessage(channelId, body) {
+      await wait();
+      chat.messages.set(channelId, [...(chat.messages.get(channelId) ?? []), { id: crypto.randomUUID(), body, author: you, createdAt: new Date().toISOString() }]);
+    },
+    async postReply(messageId, body) {
+      await wait();
+      chat.replies.set(messageId, [...(chat.replies.get(messageId) ?? []), { id: crypto.randomUUID(), body, author: you, createdAt: new Date().toISOString() }]);
     },
     async listFiles(folder, ext) {
       await wait();

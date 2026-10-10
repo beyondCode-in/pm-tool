@@ -4,6 +4,9 @@ import { timeBody } from "./time-entry";
 import { workspace } from "./workspace";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
+// Discussion categories carry emoji as ":shortcode:"; show the common ones.
+const EMOJI: Record<string, string> = { speech_balloon: "💬", loudspeaker: "📣", mega: "📣", bulb: "💡", pray: "🙏", raised_hands: "🙌", ballot_box: "🗳️", question: "❓", tada: "🎉", rocket: "🚀", bug: "🐛", wave: "👋", hammer_and_wrench: "🛠️", memo: "📝" };
+const emojiOf = (code: string) => EMOJI[code.replace(/:/g, "")] ?? "#";
 // Contents API paths keep "/" but escape everything else (spaces, #, ?).
 const encodePath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
 // UTF-8 safe base64 (btoa/atob only handle Latin-1).
@@ -236,6 +239,40 @@ export function createGitHubSource(token: string): DataSource {
         method: "PATCH",
         body: JSON.stringify({ new_name: patch.name, color: patch.color?.replace("#", ""), description: patch.description ?? undefined }),
       });
+    },
+
+    async chatInfo() {
+      const d = await gql<{ repository: { hasDiscussionsEnabled: boolean; url: string; discussionCategories: { nodes: { id: string; name: string; emoji: string; description: string | null }[] } } }>(
+        `query($o:String!,$r:String!){ repository(owner:$o,name:$r){ hasDiscussionsEnabled url discussionCategories(first:25){ nodes{ id name emoji description } } } }`, { o: config.owner, r: config.repo });
+      const r = d.repository;
+      return { enabled: r.hasDiscussionsEnabled, settingsUrl: `${r.url}/settings`,
+        channels: r.discussionCategories.nodes.map((c) => ({ id: c.id, name: c.name, emoji: emojiOf(c.emoji), description: c.description ?? "" })) };
+    },
+
+    async chatMessages(channelId) {
+      type D = { id: string; number: number; title: string; body: string; createdAt: string; url: string; author: Person | null; comments: { totalCount: number } };
+      const d = await gql<{ repository: { discussions: { nodes: D[] } } }>(
+        `query($o:String!,$r:String!,$c:ID!){ repository(owner:$o,name:$r){ discussions(first:50,categoryId:$c,orderBy:{field:CREATED_AT,direction:DESC}){ nodes{ id number title body createdAt url author{login avatarUrl} comments{totalCount} } } } }`,
+        { o: config.owner, r: config.repo, c: channelId });
+      return d.repository.discussions.nodes.map((x) => ({ id: x.id, number: x.number, title: x.title, body: x.body, author: x.author, createdAt: x.createdAt, replies: x.comments.totalCount, url: x.url })).reverse();
+    },
+
+    async chatReplies(messageId) {
+      const d = await gql<{ node: { comments: { nodes: { id: string; body: string; createdAt: string; author: Person | null }[] } } }>(
+        `query($id:ID!){ node(id:$id){ ... on Discussion{ comments(last:100){ nodes{ id body createdAt author{login avatarUrl} } } } } }`, { id: messageId });
+      return d.node.comments.nodes.map((c) => ({ id: c.id, body: c.body, author: c.author, createdAt: c.createdAt }));
+    },
+
+    async postMessage(channelId, body) {
+      const repo = await gql<{ repository: { id: string } }>(`query($o:String!,$r:String!){ repository(owner:$o,name:$r){ id } }`, { o: config.owner, r: config.repo });
+      // A discussion needs a title: the first line of the message, shortened.
+      const first = body.split("\n")[0].replace(/[#*_`>]/g, "").trim();
+      const title = first.length > 80 ? `${first.slice(0, 77)}…` : first || "Message";
+      await gql(`mutation($i:CreateDiscussionInput!){ createDiscussion(input:$i){ discussion{ id } } }`, { i: { repositoryId: repo.repository.id, categoryId: channelId, title, body } });
+    },
+
+    async postReply(messageId, body) {
+      await gql(`mutation($i:AddDiscussionCommentInput!){ addDiscussionComment(input:$i){ comment{ id } } }`, { i: { discussionId: messageId, body } });
     },
 
     async listFiles(folder, ext) {

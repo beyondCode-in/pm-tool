@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, Clock, House, Target, Users, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
+import { BookOpen, CalendarDays, Chats, Clock, House, Target, Users, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
 
 // The same seven views as the GitHub project, plus a calendar and a dashboard.
 export const NAV = [
@@ -14,6 +14,7 @@ export const NAV = [
   { href: "/epics/", label: "Epics", icon: Network, hint: "Epics and their tasks", key: "e" },
   { href: "/workload/", label: "Workload", icon: Users, hint: "Who has how much, day by day", key: "w" },
   { href: "/timesheet/", label: "Timesheet", icon: Clock, hint: "Time logged this week, by day", key: "t" },
+  { href: "/chat/", label: "Chat", icon: Chats, hint: "Channels and threads with your team", key: "a" },
   { href: "/docs/", label: "Docs", icon: BookOpen, hint: "Specs, how-tos and decisions", key: "k" },
   { href: "/dashboard/", label: "Dashboard", icon: ChartNoAxesColumn, hint: "Progress, workload, risks", key: "d" },
   { href: "/settings/", label: "Settings", icon: Settings, hint: "Tags, sidebar, appearance", key: "p" },
