@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { options, plain } from "@/lib/board";
 import { workspace } from "@/lib/workspace";
+import { deleteTemplate, fromTemplate, useTemplates, type Template } from "@/lib/templates";
+import { Copy as CopyIcon } from "@phosphor-icons/react";
 import { useActions, useBoard } from "@/lib/data";
 import {
   defaultAnswers, issueBody, labelsFor, missingAnswers, parentNumber, priorityWord, sizeWord, titleQuestion,
@@ -91,6 +93,14 @@ function Wizard({ board, draft, setDraft, onDone }: { board: Board; draft: Draft
     setDraft({ ...draft, step });
   };
 
+  // Start from a saved template: created straight away, then opened to edit.
+  async function fromTpl(tpl: Template) {
+    setBusy(true);
+    const n = await actions.create(fromTemplate(tpl, workspace().start));
+    setBusy(false);
+    if (n) { onDone(); void openTicket(n); }
+  }
+
   async function submit() {
     if (!type || !tq) return;
     if (missing.length) { setShowErrors(true); setDraft({ ...draft, step: missingHere(1).length ? 1 : 2 }); return; }
@@ -153,7 +163,7 @@ function Wizard({ board, draft, setDraft, onDone }: { board: Board; draft: Draft
       <div className="min-h-0 overflow-y-auto p-5">
         {/* Enter-only animation: the next step is usable immediately, never blocked by an exit transition. */}
         <motion.div key={draft.step} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
-            {draft.step === 0 && <TypeStep onPick={pickType} selected={draft.typeId} />}
+            {draft.step === 0 && <><Templates board={board} onUse={fromTpl} busy={busy} /><TypeStep onPick={pickType} selected={draft.typeId} /></>}
             {draft.step === 1 && type && tq && (
               <div className="space-y-5">
                 <div>
@@ -210,6 +220,28 @@ function Wizard({ board, draft, setDraft, onDone }: { board: Board; draft: Draft
 
 function focusFirstMissing() {
   setTimeout(() => (document.querySelector('[aria-invalid="true"]') as HTMLElement | null)?.focus());
+}
+
+function Templates({ board, onUse, busy }: { board: Board; onUse: (t: Template) => void; busy: boolean }) {
+  const list = useTemplates(board.projectId);
+  if (!list.length) return null;
+  return (
+    <div className="mb-6">
+      <p className="mb-2 text-sm font-semibold">Templates</p>
+      <div className="flex flex-wrap gap-2">
+        {list.map((t) => (
+          <div key={t.id} className="group/tpl relative">
+            <button disabled={busy} onClick={() => onUse(t)} title={`New ticket from "${t.name}"`}
+              className="lift flex max-w-64 items-center gap-2 rounded-xl border bg-card py-2 pr-8 pl-3 text-left text-sm transition-[border-color,box-shadow] hover:border-primary/40 disabled:opacity-50">
+              <CopyIcon weight="duotone" className="size-4 shrink-0 text-primary" /><span className="truncate font-medium">{t.name}</span>
+            </button>
+            <button aria-label={`Delete template ${t.name}`} title="Delete template" onClick={() => deleteTemplate(board.projectId, t.id)}
+              className="absolute top-1/2 right-1.5 grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground opacity-0 group-hover/tpl:opacity-100 hover:text-destructive focus-visible:opacity-100 [@media(hover:none)]:opacity-100">✕</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function TypeStep({ onPick, selected }: { onPick: (t: TicketType) => void; selected: string | null }) {

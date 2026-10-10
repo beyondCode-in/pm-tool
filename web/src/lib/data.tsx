@@ -8,9 +8,10 @@ import { markDone } from "./onboarding";
 import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
-import { plain } from "./board";
+import { plain, today } from "./board";
 import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
 import { bindBoard, isDoneStatus, priorityIndex, workspace } from "./workspace";
+import { nextOccurrence, repeatOf, REPEATS } from "./recurring";
 
 const BOARD_KEY = ["board"] as const;
 // undefined = not known yet (pre-render), null = signed out.
@@ -136,6 +137,16 @@ export function useActions() {
         if (ok && toDone && !isDoneStatus(t.fields.Status) && !opts.silent && workspace().celebrate) void celebrate();
         if (ok && toDone && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
         if (ok && !toDone && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});
+        // Recurring: finishing one creates the next, dates moved on (lib/recurring.ts).
+        const repeat = repeatOf(t.body);
+        if (ok && toDone && repeat && !isDoneStatus(t.fields.Status)) {
+          try {
+            const next = nextOccurrence(t, repeat, workspace().start, today());
+            const n = await source!.create(board(), next);
+            await qc.invalidateQueries({ queryKey: BOARD_KEY });
+            toast.success(`Next one created: #${n}`, { description: next.fields["Target date"] ? `Due ${new Date(`${next.fields["Target date"]}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · repeats ${REPEATS.find((r) => r.id === repeat)?.label.toLowerCase()}` : undefined });
+          } catch (e) { toast.error(`Couldn't create the next recurring ticket: ${e instanceof Error ? e.message : "unknown error"}`); }
+        }
         return ok;
       },
       setAssignees: (t: Ticket, logins: string[]) =>

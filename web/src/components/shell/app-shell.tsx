@@ -30,6 +30,7 @@ import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
 import { openReminder } from "@/lib/reminders";
 import { ReminderDialog, ReminderRunner } from "../reminders/reminders";
+import { SaveTemplateDialog } from "../templates/save-template";
 import { RunningTimer } from "./running-timer";
 import { toast } from "sonner";
 import { currentTenant, shareLink } from "@/lib/tenant";
@@ -88,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Shortcuts open={helpOpen} setOpen={setHelpOpen} />
       <Guide />
       <ReminderDialog />
+      <SaveTemplateDialog />
       <ReminderRunner />
     </div>
   );

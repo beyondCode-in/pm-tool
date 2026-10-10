@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
+import { repeatOf, REPEATS, withRepeat, type Repeat } from "@/lib/recurring";
+import { Repeat as RepeatIcon } from "@/components/icons";
 import { isDoneStatus } from "@/lib/workspace";
 import { Skeleton } from "@/components/ui/skeleton";
 import { byPriorityThenNumber, byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
@@ -15,6 +17,8 @@ import { useOpenTicket } from "@/lib/url-state";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
 import { Alarm as AlarmClock, Star as PStar } from "@phosphor-icons/react";
 import { openReminder } from "@/lib/reminders";
+import { openSaveTemplate } from "@/lib/templates";
+import { Copy as CopyIcon } from "@phosphor-icons/react";
 import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
@@ -82,6 +86,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => void actions.setAssignees(t, [...new Set([...t.assignees.map((a) => a.login), board.viewer.login])])}>Assign to me</DropdownMenuItem>
               <DropdownMenuItem onClick={() => openReminder({ ticket: t.number, ticketTitle: cleanTitle(t.title) })}><AlarmClock className="ico" />Remind me…<kbd className="ml-auto text-[10px] text-muted-foreground">R</kbd></DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openSaveTemplate(t)}><CopyIcon className="ico" />Save as template…</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {onClose && <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}><X /></Button>}
@@ -241,7 +246,8 @@ function Description({ ticket: t }: { ticket: Ticket }) {
   const actions = useActions();
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"write" | "preview">("write");
-  const parts = splitChecklist(t.body);
+  const split = splitChecklist(t.body);
+  const parts = { ...split, text: withRepeat(split.text, null) };
   const [body, setBody] = useState(parts.text);
   const ref = useRef<HTMLTextAreaElement>(null);
   const wrap = (before: string, after = before) => {
@@ -251,7 +257,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
     setBody(next);
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + before.length, b + before.length); });
   };
-  const save = () => { void actions.updateText(t, { body: joinChecklist(body, splitChecklist(t.body).items) }); setEditing(false); };
+  const save = () => { void actions.updateText(t, { body: joinChecklist(withRepeat(body, repeatOf(t.body)), splitChecklist(t.body).items) }); setEditing(false); };
   return (
     <Section id="description" icon={FileText} title="Description" action={!editing && <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><Pencil />Edit</Button>}>
       {editing ? (
@@ -729,6 +735,7 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
         {hasField(board, "Sprint") && <Field label="Sprint" icon={Timer} empty={!t.fields.Sprint}><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></Field>}
         {hasField(board, "Story Points") && <Field label="Points" icon={Zap} empty={t.fields["Story Points"] == null}><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
         <Field label="Time tracked" icon={Clock}><TimeSummary board={board} ticket={t} /></Field>
+        <Field label="Repeat" icon={RepeatIcon} empty={!repeatOf(t.body)}><RepeatPicker ticket={t} /></Field>
         <Field label="Parent" icon={GitBranch} empty={!parent}>
           <div className="flex items-center gap-1">
             <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
@@ -767,6 +774,27 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
         <span title={format(parseISO(t.updatedAt), "PPpp")}>Updated {formatDistanceToNow(parseISO(t.updatedAt))} ago</span>
       </p>
     </div>
+  );
+}
+
+// Recurring: pick an interval; finishing the ticket creates the next one.
+function RepeatPicker({ ticket: t }: { ticket: Ticket }) {
+  const actions = useActions();
+  const current = repeatOf(t.body);
+  const set = (r: Repeat | null) => void actions.updateText(t, { body: withRepeat(t.body, r) });
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-8 w-full justify-start px-2 font-normal" />}>
+        {current ? <span className="inline-flex items-center gap-1.5"><RepeatIcon className="size-3.5 text-primary" />{REPEATS.find((r) => r.id === current)?.label}</span> : <span className="text-muted-foreground">Doesn&apos;t repeat</span>}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-56">
+        <DropdownMenuRadioGroup value={current ?? "none"} onValueChange={(v: string) => set(v === "none" ? null : (v as Repeat))}>
+          <DropdownMenuRadioItem value="none">Doesn&apos;t repeat</DropdownMenuRadioItem>
+          {REPEATS.map((r) => <DropdownMenuRadioItem key={r.id} value={r.id}>{r.label}</DropdownMenuRadioItem>)}
+        </DropdownMenuRadioGroup>
+        <p className="px-2 pt-1 pb-1.5 text-[11px] leading-snug text-muted-foreground">When this ticket is done, the next one is created with its dates moved on.</p>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

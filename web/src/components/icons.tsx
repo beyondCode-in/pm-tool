@@ -125,3 +125,4 @@ export const SquareCheckBig = duo(P.CheckSquare);
 export const Workflow = duo(P.FlowArrow);
 export const House = duo(P.House);
 export const Users = duo(P.UsersThree);
+export const Repeat = bold(P.ArrowsClockwise);
