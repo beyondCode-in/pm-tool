@@ -78,7 +78,7 @@ function LineUp({ board }: { board: Board }) {
   return (
     <Panel title={<span className="inline-flex items-center gap-2"><P.Lightning weight="duotone" className="ico size-4 text-primary" />LineUp</span>}
       action={<span className="text-xs text-muted-foreground">Star a ticket (☆ in its header) to add it here</span>}>
-      <div className="flex gap-2 overflow-x-auto p-3 [scrollbar-width:thin]">
+      <div className="flex gap-2 overflow-x-auto p-3">
         {line.map((t, i) => (
           <div key={t.url} className="group/lu flex w-64 shrink-0 items-center gap-2 rounded-xl border bg-background px-3 py-2.5 transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-card">
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/12 text-[11px] font-bold text-primary tabular">{i + 1}</span>
