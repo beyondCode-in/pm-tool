@@ -104,15 +104,29 @@ Board: **[beyondCode-in / Project 34](https://github.com/orgs/beyondCode-in/proj
 | Sprint, Start date, Target date | Iteration / date | People, during planning |
 | Parent issue, Sub-issues progress | Built in | GitHub sub-issues |
 
-**Views:** the board has Kanban, table, roadmap and filtered views, such as triage inbox, bugs and current sprint. GitHub's API can create a view and set its filter, but **grouping and sorting must be set by hand** in the view's menu. See [§7 step 5](#7-set-it-up-in-your-own-organisation).
+**Views.** Seven views, each with one job:
+
+| View | Use it to… |
+|---|---|
+| 📋 **Board** | See everything flowing through the stages. Switch the swimlanes to Priority or Component in the view menu when you need that angle. |
+| 🏃 **Sprint** | Run the current sprint: who's doing what right now. |
+| 👤 **My work** | See only your tickets. |
+| 📥 **Inbox** | Triage new tickets: set the owner and priority, then remove `triage`. |
+| 📚 **Backlog** | Plan: everything not done, grouped by sprint, with points, size and component. Filter by `label:bug` or `label:request` for bugs or customer requests. |
+| 🗺️ **Roadmap** | See dates: epics and tasks on a timeline. |
+| 🌳 **Epics** | See the epic → task hierarchy and progress. |
+
+Recently finished work, overdue tickets, workload and sprint progress appear in the **weekly report** (an issue labelled `report`), so they don't need views of their own. GitHub's API sets each view's filter and columns, but **grouping and sorting must be set by hand**. See [§7 step 5](#7-set-it-up-in-your-own-organisation).
 
 ## 5. Automation reference
 
 | Workflow | Runs when | What it does | Needs |
 |---|---|---|---|
-| **Issue triage**<br>`no-code-auto-triage.yml` | Issue opened, edited, labelled or unlabelled | Turns form answers into labels; adds the issue to the board and sets Status, Priority, Ticket Type, Size and Component; welcomes 💡 requesters | `PROJECT_TOKEN` for the board part (labels work without it) |
+| **Issue triage**<br>`no-code-auto-triage.yml` | Issue opened, edited, labelled or unlabelled | Turns form answers into labels; links the ticket under its **parent issue** (sub-issue); on new tickets, posts **one** comment with follow-up questions for missing critical details and **possible duplicates**; welcomes 💡 requesters; adds the issue to the board and sets Status, Priority, Ticket Type, Size and Component | `PROJECT_TOKEN` for the board part (everything else works without it) |
 | **Move tickets with pull requests**<br>`no-code-pr-auto-move.yml` | PR opened, reopened, ready for review, approved or merged | Moves linked issues to Code Review → QA & Testing → Done. Link with `Fixes #12`, `Closes #12` or `Refs #12` in the PR description. Draft PRs are ignored. | `PROJECT_TOKEN` |
 | **SLA reminders**<br>`no-code-sla-reminder.yml` | Weekdays 09:00 UTC, or manually | One reminder on P0s and incidents open more than 4 h, and one on issues unassigned for more than 48 h. Never repeats the same reminder on the same issue. | — |
+| **Board health**<br>`board-health.yml` | Every 4 h on weekdays, or manually (with a dry-run option) | Closed issue → card to Done; card in Done → issue closed; unfinished work in a finished sprint → current sprint; unassigned cards in progress get one nudge; WIP limits (In Progress 5, Code Review 3, QA 4) reported in the run summary | `PROJECT_TOKEN` |
+| **Weekly report**<br>`weekly-report.yml` | Mondays 08:00 UTC, or manually | Posts an issue labelled `report` with sprint progress (tickets and points), finished work, overdue tickets, open work by status, workload per person and open critical tickets; closes last week's report | `PROJECT_TOKEN` |
 | **Project sync and guardrails**<br>`project-automation.yml` | Issues and PRs | Runs the dependency-cycle and WIP-limit checks | — |
 
 Shared logic is in [`.github/scripts/project-sync.cjs`](.github/scripts/project-sync.cjs) and tested by `tests/project-sync.test.js`. Board fields and options are looked up **by name** at run time, so you can rename "🟠 High" to "🟠 High priority" without changing code. The word "High" just has to stay in the name.
@@ -146,22 +160,15 @@ The workflow **owns** the `priority:`, `area:`, `size:` and `severity:` labels. 
    - Without it, labels still work, but nothing writes to the board.
 5. **Set grouping and sorting on each view** (the API can't). Open each view and use the view menu ▾:
 
-   | View | Layout · filter (set by API) | Set by hand: group / columns | Sort |
+   | View | Layout · filter (set by API) | Set by hand: columns / group | Sort |
    |---|---|---|---|
-   | 📋 Kanban | Board · `is:issue` | Columns: Status | Priority |
-   | 🏃 Current sprint | Board · `sprint:@current` | Columns: Status; swimlanes: Assignees | Priority |
+   | 📋 Board | Board · `is:issue` | Columns: Status | Priority |
+   | 🏃 Sprint | Board · `sprint:@current` | Columns: Status; swimlanes: Assignees | Priority |
    | 👤 My work | Board · `assignee:@me is:open` | Columns: Status | Target date |
-   | 🔥 Priority matrix | Board · `is:open` | Columns: Priority | Updated |
-   | 📚 Backlog | Table · Backlog + Todo | Group: Ticket Type | Priority, then Created |
-   | 📥 Triage inbox | Table · `label:triage` | — | Created (oldest first) |
-   | 🐛 Bugs & incidents | Table · `label:bug,incident` | Group: Priority | Created |
-   | 🎧 Customer requests | Table · `label:request,support` | Group: Status | Created |
-   | 🗓️ Sprint planning | Table · not Done | Group: Sprint; sum Story Points | Priority |
-   | 🧩 By component | Table · `is:open` | Group: Component | Status |
-   | 🌳 Hierarchy | Table | Group: Parent issue | — |
-   | ✅ Recently done | Table · Done in last 14 days | Group: Ticket Type | Updated |
-   | 🗺️ Roadmap | Roadmap · epics and tasks | Dates: Start date → Target date; group: Ticket Type | — |
-   | 📆 Timeline | Roadmap · all issues | Dates: Start date → Target date; zoom: Month | — |
+   | 📥 Inbox | Table · `label:triage is:open` | — | Created (oldest first) |
+   | 📚 Backlog | Table · not Done | Group: Sprint; show sum of Story Points | Priority |
+   | 🗺️ Roadmap | Roadmap · `is:issue` | Dates: Start date → Target date; group: Ticket Type; zoom: Month | — |
+   | 🌳 Epics | Table · `is:issue` | Group: Parent issue | — |
 
 6. **Check it:** create a test ticket with each form and confirm the labels, board fields and welcome comment appear. Then delete the test tickets.
 
@@ -200,8 +207,11 @@ Add an option to a pick-list:
 | Epics → stories → sub-tasks with progress | ✅ Sub-issues |
 | Automation (labels, status moves, reminders) | ✅ GitHub Actions in this repo |
 | Fields that show or hide based on earlier answers | ❌ Not in GitHub forms; planned in the web app |
-| Blocking a card from skipping a status | ❌ Not in GitHub; planned in the web app |
-| Time tracking, workload view, built-in burndown | ❌ Partly via Insights charts; planned in the web app |
+| Blocking a card from skipping a status | ⚠️ Not blocked, but board health corrects closed/Done mismatches within 4 hours; true blocking is planned in the web app |
+| Sprint progress, workload, overdue tracking | ✅ Weekly report, plus GitHub Insights charts for burn-up |
+| Sprint rollover | ✅ Board health moves unfinished work to the current sprint |
+| Duplicate detection, follow-up questions | ✅ Triage comments once on new tickets |
+| Time tracking, built-in burndown chart | ❌ Planned in the web app |
 | Drag-and-drop form builder, users without GitHub accounts | ❌ Planned in the web app ([`docs/BUILD-PROMPT.md`](docs/BUILD-PROMPT.md)) |
 | Per-field permissions | ❌ Use team roles (read, triage, write) |
 
