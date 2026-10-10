@@ -13,13 +13,12 @@ import { useBoard, useSource } from "@/lib/data";
 import { TICKET_TYPES } from "@/lib/ticket-types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun, Link2, ArrowRightLeft } from "@/components/icons";
+import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, Sun, Link2, ArrowRightLeft } from "@/components/icons";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BrandLoader, Logo, LogoMark } from "../brand/logo";
+import { BrandLoader, LogoMark } from "../brand/logo";
 import { Tip } from "./tip";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Guide } from "../guide/guide";
@@ -32,6 +31,7 @@ import { openReminder } from "@/lib/reminders";
 import { ReminderDialog, ReminderRunner } from "../reminders/reminders";
 import { SaveTemplateDialog } from "../templates/save-template";
 import { RunningTimer } from "./running-timer";
+import { SyncLine, TodayStrip, WorkspaceCard } from "./sidebar-parts";
 import { toast } from "sonner";
 import { currentTenant, shareLink } from "@/lib/tenant";
 import { SidebarSections } from "./sidebar-sections";
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => void }) {
   const pathname = usePathname();
-  const { data: board, dataUpdatedAt, isFetching, refetch } = useBoard();
+  const { data: board } = useBoard();
   const source = useSource();
   const [, newTicket] = useNewTicket();
   const { theme, setTheme } = useTheme();
@@ -111,25 +111,28 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
 
   return (
     <aside data-collapsed={collapsed || undefined}
-      className={cn("group/side hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex", collapsed ? "w-16" : "w-60")}>
-      <div className={cn("flex items-center gap-1 pt-4 pb-3", collapsed ? "flex-col justify-center px-2" : "px-4")}>
-        {collapsed ? <LogoMark size={30} /> : <span className="min-w-0 flex-1"><Logo subtitle={board?.projectTitle ?? "Loading…"} /></span>}
+      className={cn("sidebar-flavour group/side hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex", collapsed ? "w-16" : "w-64")}>
+      <div className={cn("flex items-center gap-1 pt-3 pb-2", collapsed ? "flex-col justify-center px-2" : "px-2.5")}>
+        {collapsed ? <LogoMark size={30} /> : <span className="min-w-0 flex-1"><WorkspaceCard /></span>}
         <NotificationBell />
       </div>
-      <div className={cn("space-y-1.5", collapsed ? "px-2" : "px-3")}>
-        <Tip label="New ticket" kbd="C" show={collapsed}>
-          <Button data-tour="new" size={collapsed ? "icon" : "default"} className={cn("glow-pulse", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={() => void newTicket("pick")} aria-label="New ticket">
-            <Plus />{!collapsed && <>New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></>}
-          </Button>
-        </Tip>
+      <div className={cn("space-y-2", collapsed ? "px-2" : "px-3")}>
+        <div className={cn("flex gap-1.5", collapsed && "flex-col")}>
+          <Tip label="New ticket" kbd="C" show={collapsed}>
+            <Button data-tour="new" size={collapsed ? "icon" : "default"} className={cn("glow-pulse brand-button", collapsed ? "mx-auto flex size-10" : "h-9 flex-1 justify-start")} onClick={() => void newTicket("pick")} aria-label="New ticket">
+              <Plus />{!collapsed && <>New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></>}
+            </Button>
+          </Tip>
+          <Tip label="Search" kbd="Ctrl K" show>
+            <Button data-tour="search" variant="outline" size="icon" className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10" : "size-9 shrink-0 bg-card")} onClick={onSearch} aria-label="Search (Ctrl K)">
+              <Search />
+            </Button>
+          </Tip>
+        </div>
         <RunningTimer compact={collapsed} />
-        <Tip label="Search" kbd="Ctrl K" show={collapsed}>
-          <Button data-tour="search" variant="outline" size={collapsed ? "icon" : "default"} className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={onSearch} aria-label="Search">
-            <Search />{!collapsed && <>Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></>}
-          </Button>
-        </Tip>
+        {!collapsed && <TodayStrip />}
       </div>
-      <nav data-tour="nav" className={cn("scroll-quiet flex-1 overflow-x-hidden overflow-y-auto", collapsed ? "no-scrollbar mt-2 space-y-0 px-2" : "mt-4 space-y-0.5 px-3")} aria-label="Views">
+      <nav data-tour="nav" className={cn("scroll-quiet flex-1 overflow-x-hidden overflow-y-auto", collapsed ? "no-scrollbar mt-2 space-y-0 px-2" : "mt-3 space-y-0.5 px-2.5")} aria-label="Views">
         {!collapsed ? <SidebarSections items={navItems} pathname={pathname} counts={{ "/inbox/": inbox, "/my-work/": mine }} /> : railItems(navItems).map((n, i) => n === "divider" ? <div key={`divider-${i}`} className="mx-auto my-1.5 h-px w-6 bg-sidebar-border" aria-hidden /> : (() => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
@@ -149,24 +152,19 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
           );
         })())}
       </nav>
-      <div className={cn("space-y-2 border-t", collapsed ? "p-2" : "p-3")}>
-        {!collapsed && (
-          <button onClick={() => void refetch()} className="flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" title="Refresh from GitHub">
-            <RefreshCw className={cn("size-3", isFetching && "animate-spin")} aria-hidden />
-            {source?.mode === "demo" ? "Demo data · changes aren't saved" : dataUpdatedAt ? `Synced ${formatDistanceToNow(dataUpdatedAt)} ago` : "Syncing…"}
-          </button>
+      <div className={cn("space-y-2", collapsed ? "border-t p-2" : "p-2.5")}>
+        {!collapsed && <SyncLine className="px-1.5" />}
+        {collapsed && (
+          <Tip label="Expand sidebar" kbd="[" show>
+            <Button variant="ghost" size="sm" onClick={toggleSidebar} aria-label="Expand sidebar" className="mx-auto flex size-10 p-0 text-muted-foreground"><PanelLeftOpen /></Button>
+          </Tip>
         )}
-        <Tip label={collapsed ? "Expand sidebar" : "Collapse sidebar"} kbd="[" show>
-          <Button variant="ghost" size="sm" onClick={toggleSidebar} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10 p-0" : "w-full justify-start")}>
-            {collapsed ? <PanelLeftOpen /> : <><PanelLeftClose />Collapse</>}
-          </Button>
-        </Tip>
-        <div className={cn("flex items-center gap-1", collapsed && "flex-col")}>
+        <div className={cn("flex items-center gap-1", collapsed ? "flex-col" : "profile-card rounded-xl p-1.5")}>
           {board && (
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Account and theme" className={cn("h-9 gap-2 px-1.5", collapsed ? "size-10 justify-center" : "flex-1 justify-start")} />}>
-                <Avatar person={board.viewer} size={24} />{!collapsed && <span className="truncate text-sm">{board.viewer.name || board.viewer.login}</span>}
+              <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Account and theme" className={cn("gap-2.5 px-1.5", collapsed ? "size-10 justify-center" : "h-10 min-w-0 flex-1 justify-start")} />}>
+                <span className="relative shrink-0"><Avatar person={board.viewer} size={collapsed ? 24 : 28} /><span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full bg-emerald-500 ring-2 ring-sidebar" aria-hidden /></span>
+                {!collapsed && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-medium">{board.viewer.name || board.viewer.login}</span><span className="block truncate text-[11px] font-normal text-muted-foreground">@{board.viewer.login}</span></span>}
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="min-w-56">
                 <DropdownMenuLabel>Theme</DropdownMenuLabel>
@@ -201,9 +199,10 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button variant="ghost" size="icon-sm" aria-label="Toggle dark mode" onClick={() => setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark")}>
+          <Button variant="ghost" size="icon-sm" aria-label="Toggle dark mode" title="Light / dark" onClick={() => setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark")}>
             <Sun className="hidden dark:block" /><Moon className="dark:hidden" />
           </Button>
+          {!collapsed && <Tip label="Collapse sidebar" kbd="[" show><Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label="Collapse sidebar"><PanelLeftClose /></Button></Tip>}
         </div>
       </div>
     </aside>

@@ -20,6 +20,7 @@ import { NAV } from "./nav";
 
 type Item = (typeof NAV)[number];
 const HOME = ["/home/", "/my-work/", "/inbox/"];
+const HOME_HUE: Record<string, number> = { "/home/": 285, "/my-work/": 230, "/inbox/": 45, "/settings/": 250 };
 const FOOT = ["/settings/"];
 
 const OPEN_KEY = "beyondpm.sidebar-open";
@@ -40,9 +41,9 @@ function useOpen(id: string, initial = true): [boolean, () => void] {
 function Heading({ id, label, action, children }: { id: string; label: string; action?: ReactNode; children: ReactNode }) {
   const [open, toggle] = useOpen(id);
   return (
-    <section className="mt-3 first:mt-0">
+    <section className="mt-4 first:mt-0">
       <div className="group/h flex items-center px-2.5 pb-1">
-        <button onClick={toggle} aria-expanded={open} className="flex flex-1 items-center gap-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase hover:text-foreground">
+        <button onClick={toggle} aria-expanded={open} className="flex flex-1 items-center gap-1 text-[10.5px] font-semibold tracking-[0.08em] text-muted-foreground/90 uppercase hover:text-foreground">
           {label}
           <ChevronRight className={cn("size-3 opacity-0 transition-[transform,opacity] group-hover/h:opacity-100", open && "rotate-90")} />
         </button>
@@ -62,12 +63,10 @@ function Heading({ id, label, action, children }: { id: string; label: string; a
 function NavLink({ n, active, count, indent, hue }: { n: Item; active: boolean; count?: number; indent?: boolean; hue?: number }) {
   return (
     <Link href={n.href} aria-current={active ? "page" : undefined} title={n.hint}
-      className={cn("relative flex items-center gap-2.5 rounded-lg py-1.5 pr-2 text-sm transition-colors hover:bg-sidebar-accent",
-        indent ? "pl-7" : "pl-2.5", active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground")}>
-      {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-primary" aria-hidden />}
-      {hue !== undefined
-        ? <span className="view-tab-icon grid size-[18px] shrink-0 place-items-center rounded-[5px]" style={{ ["--vh" as string]: hue }}><n.icon size={12} /></span>
-        : <n.icon className="size-4 shrink-0 opacity-80" aria-hidden />}
+      className={cn("nav-item relative flex h-8 items-center gap-2.5 rounded-lg pr-2 text-[13.5px] transition-[background-color,box-shadow,color]",
+        indent ? "pl-7" : "pl-2", active ? "nav-item-active font-medium" : "text-sidebar-foreground/85 hover:text-sidebar-foreground")}>
+      {active && <span className="absolute top-2 bottom-2 left-0 w-[3px] rounded-full bg-primary" aria-hidden />}
+      <span className="view-tab-icon grid size-[20px] shrink-0 place-items-center rounded-[6px]" style={{ ["--vh" as string]: hue ?? HOME_HUE[n.href] ?? 260 }}><n.icon size={13} /></span>
       <span className="truncate">{n.label}</span>
       {!!count && <span className="ml-auto rounded-full bg-primary/12 px-1.5 text-xs font-medium tabular-nums text-primary">{count}</span>}
     </Link>
