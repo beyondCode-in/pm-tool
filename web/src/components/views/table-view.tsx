@@ -8,6 +8,10 @@ import { useGroupBy, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { ArrowDown, ArrowUp, ChevronRight, SearchX } from "lucide-react";
 import { EmptyState } from "../brand/states";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TicketPreview } from "../ticket/ticket-preview";
+import { BulkBar } from "./bulk-bar";
+import { CardMenu } from "./card-menu";
 import { useMemo, useState } from "react";
 import { cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ticket/bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "../ticket/pickers";
@@ -31,6 +35,9 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
   const [group, setGroup] = useGroupBy(defaultGroup);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "priority", dir: 1 });
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Selection for bulk edit, keyed by board item; shift-click selects a range.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [anchor, setAnchor] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     const v = (t: Ticket): string | number => ({
@@ -48,6 +55,25 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
     return [...m.entries()].filter(([, ts]) => ts.length || group === "sprint");
   }, [sorted, group, board]);
 
+  const flat = groups.flatMap(([name, rows]) => (collapsed.has(name) ? [] : rows));
+  const toggle = (t: Ticket, range: boolean) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (range && anchor) {
+      const a = flat.findIndex((x) => x.itemId === anchor), b = flat.findIndex((x) => x.itemId === t.itemId);
+      if (a >= 0 && b >= 0) { for (const x of flat.slice(Math.min(a, b), Math.max(a, b) + 1)) next.add(x.itemId); return next; }
+    }
+    if (next.has(t.itemId)) next.delete(t.itemId); else next.add(t.itemId);
+    return next;
+  });
+  const toggleAll = (rows: Ticket[]) => setSelected((prev) => {
+    const next = new Set(prev);
+    const all = rows.every((r) => next.has(r.itemId));
+    for (const r of rows) { if (all) next.delete(r.itemId); else next.add(r.itemId); }
+    return next;
+  });
+  const pick = (t: Ticket, range: boolean) => { toggle(t, range); setAnchor(t.itemId); };
+  const selectedTickets = tickets.filter((t) => selected.has(t.itemId));
+
   const head = (key: SortKey, label: string, className = "") => (
     <th scope="col" className={cn("px-2 py-2 text-left text-xs font-medium text-muted-foreground", className)}
       aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none"}>
@@ -63,11 +89,16 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
         <span className="mr-1 text-muted-foreground">Group by</span>
         {GROUPS.map(([k, l]) => <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>)}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card">
-        <table className="w-full min-w-[960px] border-collapse text-sm">
+      <MobileList board={board} groups={groups} selected={selected} onPick={pick} />
+      <div className="hidden min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-card md:block">
+        <table className="w-full min-w-[980px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
             <tr className="border-b">
-              {head("number", "#", "w-16 pl-4")}{head("title", "Title")}{head("status", "Status", "w-40")}{head("priority", "Priority", "w-36")}
+              <th scope="col" className="w-10 pl-3">
+                <Checkbox aria-label="Select all shown" checked={flat.length > 0 && flat.every((t) => selected.has(t.itemId))}
+                  indeterminate={selected.size > 0 && !flat.every((t) => selected.has(t.itemId))} onCheckedChange={() => toggleAll(flat)} />
+              </th>
+              {head("number", "#", "w-16")}{head("title", "Title")}{head("status", "Status", "w-40")}{head("priority", "Priority", "w-36")}
               <th scope="col" className="w-44 px-2 text-left text-xs font-medium text-muted-foreground">Assignees</th>
               {hasField(board, "Sprint") && <th scope="col" className="w-40 px-2 text-left text-xs font-medium text-muted-foreground">Sprint</th>}
               {hasField(board, "Story Points") && head("points", "Points", "w-20")}
@@ -78,7 +109,8 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
             <tbody key={name}>
               {group !== "none" && (
                 <tr className="border-b bg-muted/40">
-                  <th colSpan={8} scope="rowgroup" className="px-3 py-1.5 text-left">
+                  <th colSpan={9} scope="rowgroup" className="px-3 py-1.5 text-left">
+                    {rows.length > 0 && <span className="mr-2 inline-flex align-middle"><Checkbox aria-label={`Select all in ${name}`} checked={rows.every((r) => selected.has(r.itemId))} onCheckedChange={() => toggleAll(rows)} /></span>}
                     <button className="inline-flex items-center gap-1.5 text-xs font-semibold" aria-expanded={!collapsed.has(name)}
                       onClick={() => setCollapsed((s) => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; })}>
                       <ChevronRight className={cn("size-3.5 transition-transform", !collapsed.has(name) && "rotate-90")} />{name}
@@ -87,28 +119,38 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
                   </th>
                 </tr>
               )}
-              {!collapsed.has(name) && rows.map((t) => <Row key={`${name}-${t.number}`} board={board} t={t} />)}
-              {!collapsed.has(name) && !rows.length && <tr><td colSpan={8} className="px-4 py-3 text-xs text-muted-foreground">Nothing here yet.</td></tr>}
+              {!collapsed.has(name) && rows.map((t) => <Row key={`${name}-${t.itemId}`} board={board} t={t} checked={selected.has(t.itemId)} onCheck={(range) => pick(t, range)} />)}
+              {!collapsed.has(name) && !rows.length && <tr><td colSpan={9} className="px-4 py-3 text-xs text-muted-foreground">Nothing here yet.</td></tr>}
             </tbody>
           ))}
         </table>
         {!tickets.length && <EmptyState icon={SearchX} title="No tickets match" text="Try removing a filter, or search for something else." />}
       </div>
+      <BulkBar board={board} selected={selectedTickets} onClear={() => setSelected(new Set())} />
     </div>
   );
 }
 
-function Row({ board, t }: { board: Board; t: Ticket }) {
+function Row({ board, t, checked, onCheck }: { board: Board; t: Ticket; checked: boolean; onCheck: (range: boolean) => void }) {
   const actions = useActions();
   const [, open] = useOpenTicket();
   return (
-    <tr className={cn("group border-b last:border-0 hover:bg-muted/40", isDone(t) && "text-muted-foreground")}>
-      <td className="py-1 pl-4 font-mono text-xs text-muted-foreground">#{t.number}</td>
+    <tr className={cn("group border-b last:border-0 hover:bg-muted/40", checked && "bg-accent/50 hover:bg-accent/60", isDone(t) && "text-muted-foreground")}>
+      <td className="pl-3" onClick={(e) => { if (e.shiftKey) { e.preventDefault(); onCheck(true); } }}>
+        <Checkbox aria-label={`Select #${t.number}`} checked={checked} onCheckedChange={() => onCheck(false)} />
+      </td>
+      <td className="py-1 font-mono text-xs text-muted-foreground">#{t.number}</td>
       <td className="max-w-0 px-2 py-1">
-        <button onClick={() => void open(t.number)} className="flex w-full min-w-0 items-center gap-2 text-left hover:underline">
-          <TypeIcon ticket={t} /><span className={cn("truncate font-medium", isDone(t) && "line-through")}>{cleanTitle(t.title)}</span>
-          <span className="hidden shrink-0 xl:inline"><TicketMeta ticket={{ ...t, fields: { ...t.fields, "Target date": undefined } }} /></span>
-        </button>
+        <CardMenu board={board} ticket={t}>
+          <div className="flex min-w-0 items-center gap-2">
+            <TicketPreview board={board} ticket={t}>
+              <button onClick={() => void open(t.number)} className="flex min-w-0 items-center gap-2 text-left hover:underline">
+                <TypeIcon ticket={t} /><span className={cn("truncate font-medium", isDone(t) && "line-through")}>{cleanTitle(t.title)}</span>
+              </button>
+            </TicketPreview>
+            <span className="hidden shrink-0 xl:inline"><TicketMeta ticket={{ ...t, fields: { ...t.fields, "Target date": undefined } }} /></span>
+          </div>
+        </CardMenu>
       </td>
       <td className="px-1"><OptionPicker board={board} field="Status" label="Status" value={t.fields.Status} onChange={(v) => v && void actions.move(t, v)} /></td>
       <td className="px-1"><OptionPicker board={board} field="Priority" label="Priority" value={t.fields.Priority} onChange={(v) => void actions.setField(t, "Priority", v)} /></td>
@@ -142,6 +184,42 @@ export function ListView({ board, groups, empty }: { board: Board; groups: { nam
                   <span className="hidden sm:inline"><OptionPill board={board} field="Priority" value={t.fields.Priority} compact /></span>
                   <OptionPill board={board} field="Status" value={t.fields.Status} compact />
                 </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function MobileList({ board, groups, selected, onPick }: {
+  board: Board; groups: [string, Ticket[]][]; selected: Set<string>; onPick: (t: Ticket, range: boolean) => void;
+}) {
+  const actions = useActions();
+  const [, open] = useOpenTicket();
+  return (
+    <div className="space-y-4 pb-24 md:hidden">
+      {groups.map(([name, rows]) => (
+        <section key={name} aria-label={name}>
+          {name !== "All" && <h3 className="mb-1.5 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{name} <span className="font-normal">· {rows.length}</span></h3>}
+          <ul className="space-y-2">
+            {rows.map((t) => (
+              <li key={t.itemId} className={cn("rounded-xl border bg-card p-3 shadow-card", selected.has(t.itemId) && "border-primary bg-accent/50")}>
+                <div className="flex items-start gap-2.5">
+                  <Checkbox className="mt-0.5" aria-label={`Select #${t.number}`} checked={selected.has(t.itemId)} onCheckedChange={() => onPick(t, false)} />
+                  <button onClick={() => void open(t.number)} className="flex min-w-0 flex-1 items-start gap-2 text-left">
+                    <TypeIcon ticket={t} />
+                    <span className="min-w-0">
+                      <span className={cn("block text-[15px] leading-snug font-medium", isDone(t) && "text-muted-foreground line-through")}>{cleanTitle(t.title)}</span>
+                      <span className="mt-1 flex items-center gap-2"><span className="font-mono text-[11px] text-muted-foreground">#{t.number}</span><TicketMeta ticket={t} /></span>
+                    </span>
+                  </button>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1 border-t pt-2">
+                  <OptionPicker board={board} field="Status" label="Status" value={t.fields.Status} onChange={(v) => v && void actions.move(t, v)} />
+                  <OptionPicker board={board} field="Priority" label="Priority" value={t.fields.Priority} onChange={(v) => void actions.setField(t, "Priority", v)} />
+                </div>
               </li>
             ))}
           </ul>

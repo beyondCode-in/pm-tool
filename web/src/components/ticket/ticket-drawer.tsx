@@ -19,7 +19,7 @@ export function TicketDrawer() {
   return (
     <Dialog open={number !== null} onOpenChange={(o: boolean) => { if (!o) close(); }}>
       <DialogContent showCloseButton={false}
-        className="flex h-[min(92dvh,56rem)] w-[min(100vw-1.5rem,78rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none">
+        className="flex h-[min(92dvh,56rem)] w-[min(100vw-1.5rem,78rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:w-screen max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0">
         <DialogTitle className="sr-only">{ticket ? `#${ticket.number} ${ticket.title}` : "Ticket"}</DialogTitle>
         <DialogDescription className="sr-only">Ticket details, relationships, attachments and conversation</DialogDescription>
         {board && ticket ? <TicketView key={ticket.number} board={board} ticket={ticket} mode="modal" onClose={close} />

@@ -113,20 +113,20 @@ export function useActions() {
       return ok;
     };
 
-    const setState = (t: Ticket, state: "OPEN" | "CLOSED", reason?: "COMPLETED" | "NOT_PLANNED") =>
+    const setState = (t: Ticket, state: "OPEN" | "CLOSED", reason?: "COMPLETED" | "NOT_PLANNED", opts: { silent?: boolean } = {}) =>
       run(
         state === "CLOSED" ? (reason === "NOT_PLANNED" ? `#${t.number} marked won't do` : `#${t.number} closed`) : `#${t.number} reopened`,
         () => patchTicket(t.itemId, (x) => ({ ...x, state, stateReason: reason ?? null, closedAt: state === "CLOSED" ? new Date().toISOString() : null })),
         () => source!.setState(t, state, reason),
-        () => void source!.setState(t, t.state).then(() => qc.invalidateQueries({ queryKey: BOARD_KEY })),
+        opts.silent ? undefined : () => void source!.setState(t, t.state).then(() => qc.invalidateQueries({ queryKey: BOARD_KEY })),
       );
 
     return {
       setField,
       setState,
       // Moving a card to Done also closes the ticket, like Jira's resolution.
-      async move(t: Ticket, status: string) {
-        const ok = await setField(t, "Status", status);
+      async move(t: Ticket, status: string, opts: { silent?: boolean } = {}) {
+        const ok = await setField(t, "Status", status, opts);
         if (ok) markDone("move");
         if (ok && /done/i.test(status) && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
         if (ok && !/done/i.test(status) && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});

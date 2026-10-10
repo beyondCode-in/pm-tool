@@ -39,6 +39,35 @@ function lanesFor(board: Board, tickets: Ticket[], by: string): Lane[] {
   return [{ key: "all", title: null, tickets }];
 }
 
+// Type a title straight into a column, like Trello: Enter creates it there,
+// Esc cancels, and the full form is one click away for more detail.
+function QuickAdd({ board, status, onDone }: { board: Board; status: string; onDone: () => void }) {
+  const actions = useActions();
+  const [, newTicket] = useNewTicket();
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!title.trim()) return onDone();
+    setBusy(true);
+    const type = options(board, "Ticket Type").find((o) => /task/i.test(o.name))?.name;
+    const n = await actions.create({ title: `[Task] ${title.trim()}`, body: "", labels: ["task"], assignees: [], fields: { Status: status, "Ticket Type": type } });
+    setBusy(false);
+    if (n) { setTitle(""); toast.success(`#${n} added to ${plain(status)}`); }
+  };
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="rounded-xl border border-primary/50 bg-card p-2 shadow-pop">
+      <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} rows={2} placeholder="What needs doing?" aria-label="New ticket title"
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); } if (e.key === "Escape") onDone(); }}
+        className="w-full resize-none bg-transparent text-sm outline-none" />
+      <div className="flex items-center gap-1">
+        <Button type="submit" size="xs" disabled={busy}>{busy ? "Adding…" : "Add"}</Button>
+        <Button type="button" size="xs" variant="ghost" onClick={onDone}>Cancel</Button>
+        <Button type="button" size="xs" variant="ghost" className="ml-auto text-muted-foreground" onClick={() => { onDone(); void newTicket("pick"); }}>Full form</Button>
+      </div>
+    </form>
+  );
+}
+
 export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
   const actions = useActions();
   const [group, setGroup] = useGroupBy("none");
@@ -72,8 +101,8 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Swimlanes</span>
+      <div className="flex items-center gap-2 overflow-x-auto text-sm [scrollbar-width:none]">
+        <span className="shrink-0 text-muted-foreground">Swimlanes</span>
         {[["none", "None"], ["priority", "Priority"], ["assignee", "People"], ["type", "Type"]].map(([k, l]) => (
           <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>
         ))}
@@ -100,7 +129,7 @@ function LaneRow({ board, lane, statuses, showTitle }: { board: Board; lane: Lan
         </button>
       )}
       {!collapsed && (
-        <div className="flex gap-3">
+        <div className="flex snap-x snap-mandatory gap-3 sm:snap-none">
           {noStatus.length > 0 && <Column board={board} status={null} tickets={noStatus} scope={lane.key} />}
           {statuses.map((s) => <Column key={s.id} board={board} status={s} scope={lane.key} tickets={lane.tickets.filter((t) => t.fields.Status === s.name)} />)}
         </div>
@@ -112,6 +141,7 @@ function LaneRow({ board, lane, statuses, showTitle }: { board: Board; lane: Lan
 function Column({ board, status, tickets, scope }: { board: Board; status: Option | null; tickets: Ticket[]; scope: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [, newTicket] = useNewTicket();
   const limit = status ? wipFor(status.name) : undefined;
   const sorted = useMemo(() => [...tickets].sort(byPriorityThenNumber), [tickets]);
@@ -124,7 +154,7 @@ function Column({ board, status, tickets, scope }: { board: Board; status: Optio
   }, [status]);
 
   return (
-    <div ref={ref} className={cn("flex w-72 shrink-0 flex-col rounded-2xl bg-muted/50 p-2 transition-colors", over && "bg-accent ring-2 ring-primary/40")}
+    <div ref={ref} className={cn("flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
         <span className={cn("size-2 rounded-full", dotClass(status?.color))} aria-hidden />
@@ -134,9 +164,11 @@ function Column({ board, status, tickets, scope }: { board: Board; status: Optio
           {tickets.length}{limit ? `/${limit}` : ""}
         </span>
         {points > 0 && <span className="text-xs text-muted-foreground" title="Story points">· {points} pts</span>}
-        <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label="New ticket" onClick={() => void newTicket("pick")}><Plus /></Button>
+        <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label={`Add a ticket to ${status?.name ?? "this column"}`}
+          onClick={() => (status ? setAdding(true) : void newTicket("pick"))}><Plus /></Button>
       </div>
       <div className="flex min-h-16 flex-col gap-2">
+        {adding && status && <QuickAdd board={board} status={status.name} onDone={() => setAdding(false)} />}
         {sorted.map((t) => <TicketCard key={t.number} board={board} ticket={t} layoutScope={scope} />)}
         {!tickets.length && <p className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">Drop tickets here</p>}
       </div>

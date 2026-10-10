@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { MoreHorizontal } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { CardMenu } from "./card-menu";
 import { AvatarStack, cleanTitle, LabelChip, PriorityMark, TicketMeta, TypeIcon } from "../ticket/bits";
 
 const SHOWN_LABELS = /^(area|severity): /;
@@ -49,6 +50,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
 
   return (
     <motion.div layout layoutId={`card-${layoutScope}-${t.number}`} transition={{ type: "spring", stiffness: 500, damping: 38 }}>
+      <CardMenu board={board} ticket={t}>
       <div ref={ref} role="button" tabIndex={0} aria-label={`#${t.number} ${cleanTitle(t.title)}`}
         onClick={() => void open(t.number)} onKeyDown={(e) => { if (e.key === "Enter") void open(t.number); }}
         className={cn("group relative cursor-grab rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,opacity,border-color] hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
@@ -57,7 +59,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
           <TypeIcon ticket={t} />
           <p className={cn("min-w-0 flex-1 text-sm leading-snug font-medium", isDone(t) && "line-through decoration-muted-foreground/50")}>{cleanTitle(t.title)}</p>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100" aria-label={`Move #${t.number}`} onClick={(e: React.MouseEvent) => e.stopPropagation()} />}>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 [@media(hover:none)]:opacity-100" aria-label={`Move #${t.number}`} onClick={(e: React.MouseEvent) => e.stopPropagation()} />}>
               <MoreHorizontal />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()} className="min-w-48">
@@ -79,6 +81,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
           <span className="ml-auto"><AvatarStack people={t.assignees} size={20} /></span>
         </div>
       </div>
+      </CardMenu>
     </motion.div>
   );
 }

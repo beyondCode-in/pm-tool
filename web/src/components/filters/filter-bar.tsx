@@ -41,12 +41,12 @@ export function FilterBar({ board, children, hideDoneToggle }: { board: Board; c
     value: o.name, label: <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(o.name).toLowerCase()} size={14} />}{plain(o.name)}</Tag>,
   }));
   return (
-    <div data-tour="filters" className="flex flex-wrap items-center gap-2" role="search">
+    <div data-tour="filters" className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0" role="search">
       <label className="relative">
         <span className="sr-only">Search tickets</span>
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <input value={filters.q} onChange={(e) => update({ q: e.target.value })} placeholder="Search…  (/)" data-search
-          className="h-8 w-44 rounded-lg border bg-background pr-2 pl-8 text-sm outline-none focus:w-60 focus:border-ring transition-[width] sm:w-52" />
+          className="h-9 w-40 rounded-lg border bg-background pr-2 pl-8 text-base outline-none transition-[width] focus:w-56 focus:border-ring sm:h-8 sm:w-52 sm:text-sm sm:focus:w-60" />
       </label>
       <Multi label="Type" values={opt("Ticket Type")} selected={filters.type} onChange={(type) => update({ type })} />
       <Multi label="Priority" values={opt("Priority")} selected={filters.priority} onChange={(priority) => update({ priority })} />

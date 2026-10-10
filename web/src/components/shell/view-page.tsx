@@ -26,11 +26,11 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
   const tickets = board ? applyFilters(scope ? board.tickets.filter((t) => scope(t, board)) : board.tickets, filters) : [];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4 sm:gap-4 md:p-6">
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{title}</h1>
+          <p className="hidden text-sm text-muted-foreground sm:block">{description}</p>
         </div>
         <Button className="ml-auto md:hidden" size="sm" onClick={() => void newTicket("pick")}><Plus />New</Button>
       </header>

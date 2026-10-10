@@ -6,18 +6,20 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
 import { signOut } from "@/lib/auth";
 import { markDone } from "@/lib/onboarding";
+import { toggleSidebar, useSidebarCollapsed } from "@/lib/ui-prefs";
 import { config } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
 import { TICKET_TYPES } from "@/lib/ticket-types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { HelpCircle, LogOut, Moon, Plus, RefreshCw, Search, Sun } from "lucide-react";
+import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BrandLoader, Logo } from "../brand/logo";
+import { BrandLoader, Logo, LogoMark } from "../brand/logo";
+import { Tip } from "./tip";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Guide } from "../guide/guide";
 import { TypeGlyph } from "../ticket/type-badge";
@@ -46,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       else if (e.key === "c") { e.preventDefault(); void newTicket("pick"); }
       else if (e.key === "/") { e.preventDefault(); (document.querySelector("[data-search]") as HTMLInputElement | null)?.focus(); }
       else if (e.key === "?") setHelpOpen(true);
+      else if (e.key === "[") toggleSidebar();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -75,40 +78,66 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
   const [, newTicket] = useNewTicket();
   const { theme, setTheme } = useTheme();
   const accent = useAccent();
+  const collapsed = useSidebarCollapsed();
   const inbox = board?.tickets.filter((t) => t.state === "OPEN" && t.labels.some((l) => l.name === "triage")).length ?? 0;
   const mine = board?.tickets.filter((t) => t.state === "OPEN" && t.assignees.some((a) => a.login === board.viewer.login)).length ?? 0;
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
-      <div className="px-4 pt-4 pb-3"><Logo subtitle={board?.projectTitle ?? "Loading…"} /></div>
-      <div className="space-y-1.5 px-3">
-        <Button data-tour="new" className="glow-soft w-full justify-start" onClick={() => void newTicket("pick")}><Plus />New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></Button>
-        <Button data-tour="search" variant="outline" className="w-full justify-start text-muted-foreground" onClick={onSearch}><Search />Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></Button>
+    <aside data-collapsed={collapsed || undefined}
+      className={cn("group/side hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex", collapsed ? "w-16" : "w-60")}>
+      <div className={cn("flex items-center pt-4 pb-3", collapsed ? "justify-center px-2" : "px-4")}>
+        {collapsed ? <LogoMark size={30} /> : <Logo subtitle={board?.projectTitle ?? "Loading…"} />}
       </div>
-      <nav data-tour="nav" className="mt-4 flex-1 space-y-0.5 overflow-y-auto px-3" aria-label="Views">
+      <div className={cn("space-y-1.5", collapsed ? "px-2" : "px-3")}>
+        <Tip label="New ticket" kbd="C" show={collapsed}>
+          <Button data-tour="new" size={collapsed ? "icon" : "default"} className={cn("glow-soft", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={() => void newTicket("pick")} aria-label="New ticket">
+            <Plus />{!collapsed && <>New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></>}
+          </Button>
+        </Tip>
+        <Tip label="Search" kbd="Ctrl K" show={collapsed}>
+          <Button data-tour="search" variant="outline" size={collapsed ? "icon" : "default"} className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={onSearch} aria-label="Search">
+            <Search />{!collapsed && <>Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></>}
+          </Button>
+        </Tip>
+      </div>
+      <nav data-tour="nav" className={cn("mt-4 flex-1 space-y-0.5 overflow-y-auto", collapsed ? "px-2" : "px-3")} aria-label="Views">
         {NAV.map((n) => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
           return (
-            <Link key={n.href} href={n.href} aria-current={active ? "page" : undefined} title={n.hint}
-              className={cn("flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-sidebar-accent",
-                active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground")}>
-              <n.icon className="size-4 opacity-80" aria-hidden />{n.label}
-              {count > 0 && <span className="ml-auto rounded-full bg-primary/12 px-1.5 text-xs font-medium tabular-nums text-primary">{count}</span>}
-            </Link>
+            <Tip key={n.href} label={n.label} kbd={`G ${n.key.toUpperCase()}`} show={collapsed}>
+              <Link href={n.href} aria-current={active ? "page" : undefined} aria-label={collapsed ? n.label : undefined} title={collapsed ? undefined : n.hint}
+                className={cn("relative flex items-center gap-2.5 rounded-lg py-1.5 text-sm transition-colors hover:bg-sidebar-accent",
+                  collapsed ? "mx-auto size-10 justify-center px-0" : "px-2.5",
+                  active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground")}>
+                {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-primary" aria-hidden />}
+                <n.icon className="size-4 shrink-0 opacity-80" aria-hidden />{!collapsed && n.label}
+                {count > 0 && (collapsed
+                  ? <span className="absolute top-1 right-1 size-2 rounded-full bg-primary ring-2 ring-sidebar" aria-label={`${count} items`} />
+                  : <span className="ml-auto rounded-full bg-primary/12 px-1.5 text-xs font-medium tabular-nums text-primary">{count}</span>)}
+              </Link>
+            </Tip>
           );
         })}
       </nav>
-      <div className="space-y-2 border-t p-3">
-        <button onClick={() => void refetch()} className="flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" title="Refresh from GitHub">
-          <RefreshCw className={cn("size-3", isFetching && "animate-spin")} aria-hidden />
-          {source?.mode === "demo" ? "Demo data · changes aren't saved" : dataUpdatedAt ? `Synced ${formatDistanceToNow(dataUpdatedAt)} ago` : "Syncing…"}
-        </button>
-        <div className="flex items-center gap-1">
+      <div className={cn("space-y-2 border-t", collapsed ? "p-2" : "p-3")}>
+        {!collapsed && (
+          <button onClick={() => void refetch()} className="flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" title="Refresh from GitHub">
+            <RefreshCw className={cn("size-3", isFetching && "animate-spin")} aria-hidden />
+            {source?.mode === "demo" ? "Demo data · changes aren't saved" : dataUpdatedAt ? `Synced ${formatDistanceToNow(dataUpdatedAt)} ago` : "Syncing…"}
+          </button>
+        )}
+        <Tip label={collapsed ? "Expand sidebar" : "Collapse sidebar"} kbd="[" show>
+          <Button variant="ghost" size="sm" onClick={toggleSidebar} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10 p-0" : "w-full justify-start")}>
+            {collapsed ? <PanelLeftOpen /> : <><PanelLeftClose />Collapse</>}
+          </Button>
+        </Tip>
+        <div className={cn("flex items-center gap-1", collapsed && "flex-col")}>
           {board && (
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" className="h-9 flex-1 justify-start gap-2 px-1.5" />}>
-                <Avatar person={board.viewer} size={24} /><span className="truncate text-sm">{board.viewer.name || board.viewer.login}</span>
+              <DropdownMenuTrigger render={<Button variant="ghost" aria-label="Account and theme" className={cn("h-9 gap-2 px-1.5", collapsed ? "size-10 justify-center" : "flex-1 justify-start")} />}>
+                <Avatar person={board.viewer} size={24} />{!collapsed && <span className="truncate text-sm">{board.viewer.name || board.viewer.login}</span>}
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="min-w-56">
                 <DropdownMenuLabel>Theme</DropdownMenuLabel>
@@ -204,7 +233,7 @@ function Palette({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => vo
 }
 
 function Shortcuts({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => void }) {
-  const rows: [string, string][] = [["C", "New ticket"], ["/", "Search this view"], ["Ctrl K", "Jump to anything"], ["?", "This list"], ["Esc", "Close"],
+  const rows: [string, string][] = [["C", "New ticket"], ["/", "Search this view"], ["Ctrl K", "Jump to anything"], ["?", "This list"], ["[", "Collapse or expand the sidebar"], ["Esc", "Close"],
     ...NAV.map((n) => [`G ${n.key.toUpperCase()}`, `Go to ${n.label}`] as [string, string])];
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Keyboard shortcuts" description="Shortcuts work anywhere except while typing">

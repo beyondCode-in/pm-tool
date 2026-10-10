@@ -35,10 +35,10 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Top bar: where it lives and what you can do with it. */}
-      <header className="flex items-center gap-2 border-b px-5 py-3">
+      <header className="flex items-center gap-2 border-b px-3 py-2.5 sm:px-5 sm:py-3">
         <nav className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground" aria-label="Breadcrumb">
-          <span className="truncate">{board.projectTitle}</span>
-          {parent && (<><ChevronRight className="size-3.5 shrink-0" /><button onClick={() => void open(parent.number)} className="flex min-w-0 items-center gap-1 hover:text-foreground hover:underline"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></button></>)}
+          <span className="hidden truncate sm:inline">{board.projectTitle}</span>
+          {parent && (<><ChevronRight className="hidden size-3.5 shrink-0 sm:block" /><button onClick={() => void open(parent.number)} className="flex min-w-0 items-center gap-1 hover:text-foreground hover:underline"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></button></>)}
           <ChevronRight className="size-3.5 shrink-0" />
           <span className="flex items-center gap-1 font-medium text-foreground"><TypeIcon ticket={t} /><span className="font-mono">#{t.number}</span></span>
         </nav>
@@ -63,8 +63,8 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_21rem] lg:overflow-hidden">
-        <main className="min-w-0 space-y-7 px-6 py-6 lg:overflow-y-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_21rem] lg:overflow-hidden">
+        <main className="min-w-0 space-y-7 px-4 py-5 sm:px-6 sm:py-6 lg:overflow-y-auto">
           <TitleAndStatus board={board} ticket={t} />
           <QuickActions board={board} ticket={t} />
           <Description ticket={t} />
@@ -73,7 +73,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
           <Attachments ticket={t} />
           <Activity ticket={t} />
         </main>
-        <aside className="border-t bg-muted/25 px-5 py-5 lg:overflow-y-auto lg:border-t-0 lg:border-l" aria-label="Details">
+        <aside className="min-w-0 border-t bg-muted/25 px-4 py-4 sm:px-5 sm:py-5 lg:overflow-y-auto lg:border-t-0 lg:border-l" aria-label="Details">
           <Details board={board} ticket={t} />
         </aside>
       </div>
