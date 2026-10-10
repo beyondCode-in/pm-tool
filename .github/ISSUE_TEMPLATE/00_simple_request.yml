@@ -53,7 +53,7 @@ body:
       description: "Pick every area this touches. Not sure? Pick the last option."
       multiple: true
       options:
-        - "🌐 Website / web app"
+        - "🌐 Web app"
         - "📱 Mobile app"
         - "🔐 Login & accounts"
         - "💳 Billing & payments"

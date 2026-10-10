@@ -1,68 +1,57 @@
-name: ⚡ Zero-Effort PR Lifecycle & Automatic Status Sync
+name: Move tickets with pull requests
+
+# Pull request opened      → linked issues move to Code Review
+# Pull request approved    → QA & Testing
+# Pull request merged      → Done (GitHub closes "Fixes #N" issues itself)
+# Link issues in the PR description with "Fixes #12", "Closes #12" or "Refs #12".
 
 on:
   pull_request:
-    types: [opened, review_submitted, closed]
+    types: [opened, reopened, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
 
 jobs:
-  auto-status-sync:
-    name: Auto Move Ticket Status on PR Events
+  move:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
 
-      - name: Auto Sync Ticket Status
+      - name: Update linked issues on the board
+        if: env.PROJECT_TOKEN != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.PROJECT_TOKEN }}
           script: |
+            const { loadProject, addItem, setFields, linkedIssues } = require('./.github/scripts/project-sync.cjs');
             const pr = context.payload.pull_request;
-            const action = context.payload.action;
+            const { eventName, payload } = context;
 
-            // Extract referenced issue numbers from PR body (e.g., #1, Fixes #2, PM-142)
-            const issueMatches = pr.body ? pr.body.match(/#(\d+)/g) : null;
-            if (!issueMatches) {
-              console.log('No referenced issues found in PR body.');
-              return;
+            let status = null;
+            if (eventName === 'pull_request_review') {
+              if (payload.review.state === 'approved') status = 'QA';
+            } else if (payload.action === 'closed') {
+              if (pr.merged) status = 'Done';
+            } else {
+              status = 'Code';
             }
+            if (!status) return core.info('Nothing to move for this event.');
 
-            const issueNumbers = [...new Set(issueMatches.map(m => parseInt(m.replace('#', ''))))];
-            console.log('Referenced issue numbers:', issueNumbers);
+            const issues = linkedIssues(pr.body);
+            if (!issues.length) return core.info('No linked issues in the PR description.');
 
-            for (const issueNum of issueNumbers) {
-              if (action === 'opened') {
-                // PR Opened -> Move to Code Review
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNum,
-                  body: `⚡ **Zero-Effort Automation**: Pull Request #${pr.number} was opened by @${pr.user.login}. Ticket automatically moved to **Code Review**!`
-                });
-              } else if (action === 'review_submitted' && context.payload.review.state === 'approved') {
-                // PR Approved -> Move to QA & Testing
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNum,
-                  body: `✅ **Zero-Effort Automation**: Pull Request #${pr.number} was APPROVED by @${context.payload.review.user.login}. Ticket automatically moved to **QA & Testing**!`
-                });
-              } else if (action === 'closed' && pr.merged) {
-                // PR Merged -> Move to Done / Released & Close Issue
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNum,
-                  body: `🎉 **Zero-Effort Automation**: Pull Request #${pr.number} was successfully MERGED into main! Ticket automatically marked **Done / Released** and closed.`
-                });
-                await github.rest.issues.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNum,
-                  state: 'closed'
-                });
-              }
+            const project = await loadProject(github.graphql);
+            for (const number of issues) {
+              const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: number });
+              if (issue.pull_request) continue;
+              const itemId = await addItem(github.graphql, project.id, issue.node_id);
+              await setFields(github.graphql, project, itemId, { Status: status }, (m) => core.info(`#${number}: ${m}`));
             }

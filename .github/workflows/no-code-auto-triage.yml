@@ -2,72 +2,63 @@ name: Issue triage
 
 on:
   issues:
-    types: [opened, edited]
+    types: [opened, edited, labeled, unlabeled]
 
 permissions:
   issues: write
+  contents: read
+
+concurrency:
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-  label-from-form:
-    name: Label from form answers
+  triage:
     runs-on: ubuntu-latest
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
       - name: Turn form answers into labels
+        # Label events only need the board sync below.
+        if: github.event.action == 'opened' || github.event.action == 'edited'
         uses: actions/github-script@v7
         with:
           script: |
+            const { parseForm, labelsFromAnswers, OWNED } = require('./.github/scripts/project-sync.cjs');
             const issue = context.payload.issue;
-            const body = issue.body || '';
+            const wanted = labelsFromAnswers(parseForm(issue.body));
+            if (!wanted.size) return core.info('No form answers found; leaving labels alone.');
 
-            // Issue forms render each answer as "### <field label>\n\n<answer>".
-            const answers = {};
-            for (const part of body.split(/^### /m).slice(1)) {
-              const [heading, ...rest] = part.split('\n');
-              answers[heading.trim()] = rest.join('\n').trim();
-            }
-            const pick = (label) => {
-              const v = answers[label];
-              return v && v !== '_No response_' ? v : '';
-            };
-            const slug = (s) => s.replace(/[^\p{L}\p{N}&/ -]/gu, '').trim().split(/\s*[/&]\s*|\s+—/)[0]
-              .trim().toLowerCase().replace(/\s+/g, '-');
-
-            const labels = new Set();
-
-            const priority = pick('Priority').match(/P[0-3]/);
-            if (priority) labels.add(`priority: ${priority[0].toLowerCase()}`);
-
-            for (const area of pick('Areas affected').split(',').map(s => s.trim()).filter(Boolean)) {
-              if (!/not sure/i.test(area)) labels.add(`area: ${slug(area)}`);
-            }
-
-            const size = pick('Size estimate').match(/^(XS|S|M|L|XL)\b/);
-            if (size) labels.add(`size: ${size[1].toLowerCase()}`);
-
-            const severity = pick('Severity').match(/^(SEV[1-3]|Blocker|Major|Minor|Cosmetic)/i);
-            if (severity) labels.add(`severity: ${severity[1].toLowerCase()}`);
-
-            const type = pick('What kind of request is this?');
-            const typeLabels = { 'new idea': 'enhancement', 'looks or reads': 'design', 'broken': 'bug', 'customer': 'support', 'question': 'question' };
-            for (const [needle, label] of Object.entries(typeLabels)) {
-              if (type.toLowerCase().includes(needle)) labels.add(label);
-            }
-
-            // Replace labels this workflow owns; leave everything else alone.
-            const owned = /^(priority|area|size|severity): /;
             const current = issue.labels.map(l => l.name);
-            const stale = current.filter(n => owned.test(n) && !labels.has(n));
+            const stale = current.filter(n => OWNED.test(n) && !wanted.has(n));
             for (const name of stale) {
               await github.rest.issues.removeLabel({ ...context.repo, issue_number: issue.number, name });
             }
-            const add = [...labels].filter(n => !current.includes(n));
-            if (add.length) {
-              await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
-            }
+            const add = [...wanted].filter(n => !current.includes(n));
+            if (add.length) await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
             core.info(`Added: ${add.join(', ') || 'none'} · Removed: ${stale.join(', ') || 'none'}`);
 
+      - name: Sync to project board
+        # The default token can't write to organisation projects; a PROJECT_TOKEN secret can.
+        if: env.PROJECT_TOKEN != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ env.PROJECT_TOKEN }}
+          script: |
+            const { loadProject, addItem, setFields, boardValues } = require('./.github/scripts/project-sync.cjs');
+            // Re-read the issue so labels added by the previous step are included.
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
+            const project = await loadProject(github.graphql);
+            const itemId = await addItem(github.graphql, project.id, issue.node_id);
+            const values = boardValues(issue.labels.map(l => l.name));
+            if (context.payload.action === 'opened') values['Status'] = 'Backlog';
+            await setFields(github.graphql, project, itemId, values, core.info);
+
   welcome:
-    name: Welcome comment
     if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'request')
     runs-on: ubuntu-latest
     steps:
@@ -83,18 +74,3 @@ jobs:
                 "There's nothing else you need to do. The team will review it and you'll get updates here as it moves along.",
               ].join('\n'),
             });
-
-  add-to-project:
-    name: Add to project board
-    if: github.event.action == 'opened'
-    runs-on: ubuntu-latest
-    env:
-      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-    steps:
-      # Issue forms add the issue to the project when the author has access.
-      # This catches everyone else. Needs a PROJECT_TOKEN secret with project scope.
-      - if: env.PROJECT_TOKEN != ''
-        uses: actions/add-to-project@v1.0.2
-        with:
-          project-url: https://github.com/orgs/beyondCode-in/projects/34
-          github-token: ${{ env.PROJECT_TOKEN }}
