@@ -1,0 +1,133 @@
+"use client";
+
+import { dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { Button } from "@/components/ui/button";
+import { byPriorityThenNumber, dotClass, options, plain } from "@/lib/board";
+import { useActions } from "@/lib/data";
+import type { Board, Option, Ticket } from "@/lib/types";
+import { useGroupBy, useNewTicket } from "@/lib/url-state";
+import { cn } from "@/lib/utils";
+import { LayoutGroup } from "motion/react";
+import { ChevronRight, Plus } from "lucide-react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Avatar } from "../ticket/bits";
+import { TicketCard } from "./ticket-card";
+
+// Work-in-progress limits, matching .github/workflows/board-health.yml.
+const WIP: Record<string, number> = { "In Progress": 5, "Code Review": 3, QA: 4 };
+const wipFor = (status: string) => Object.entries(WIP).find(([k]) => status.includes(k))?.[1];
+
+type Lane = { key: string; title: React.ReactNode; tickets: Ticket[] };
+
+function lanesFor(board: Board, tickets: Ticket[], by: string): Lane[] {
+  if (by === "priority") {
+    const opts = options(board, "Priority");
+    return [...opts.map((o) => ({ key: o.name, title: <><span className={cn("size-2 rounded-full", dotClass(o.color))} />{o.name}</>, tickets: tickets.filter((t) => t.fields.Priority === o.name) })),
+      { key: "none", title: "No priority", tickets: tickets.filter((t) => !t.fields.Priority) }];
+  }
+  if (by === "assignee") {
+    return [...board.people.map((p) => ({ key: p.login, title: <><Avatar person={p} size={18} />{p.name || p.login}</>, tickets: tickets.filter((t) => t.assignees.some((a) => a.login === p.login)) })),
+      { key: "none", title: "Unassigned", tickets: tickets.filter((t) => !t.assignees.length) }];
+  }
+  if (by === "type") {
+    const opts = options(board, "Ticket Type");
+    return [...opts.map((o) => ({ key: o.name, title: o.name, tickets: tickets.filter((t) => t.fields["Ticket Type"] === o.name) })),
+      { key: "none", title: "No type", tickets: tickets.filter((t) => !t.fields["Ticket Type"]) }];
+  }
+  return [{ key: "all", title: null, tickets }];
+}
+
+export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
+  const actions = useActions();
+  const [group, setGroup] = useGroupBy("none");
+  const statuses = options(board, "Status");
+  const lanes = useMemo(() => lanesFor(board, tickets, group).filter((l) => l.key === "all" || l.tickets.length), [board, tickets, group]);
+  // One monitor for the whole board: a card dropped on a column changes its Status.
+  const onDrop = useEffectEvent((number: unknown, status: string) => {
+    const t = tickets.find((x) => x.number === number);
+    if (!t || t.fields.Status === status) return;
+    void actions.move(t, status);
+    const n = tickets.filter((x) => x.fields.Status === status).length + 1;
+    const limit = wipFor(status);
+    if (limit && n > limit) toast.warning(`${plain(status)} now has ${n} tickets (limit ${limit}). Finish something before starting more.`);
+  });
+  useEffect(() => monitorForElements({
+    onDrop({ source, location }) {
+      const target = location.current.dropTargets[0];
+      if (target) onDrop(source.data.ticket, target.data.status as string);
+    },
+  }), []);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Swimlanes</span>
+        {[["none", "None"], ["priority", "Priority"], ["assignee", "People"], ["type", "Type"]].map(([k, l]) => (
+          <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>
+        ))}
+      </div>
+      <LayoutGroup>
+        <div className="min-h-0 flex-1 overflow-auto pb-4">
+          {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} showTitle={lane.key !== "all"} />)}
+        </div>
+      </LayoutGroup>
+    </div>
+  );
+}
+
+function LaneRow({ board, lane, statuses, showTitle }: { board: Board; lane: Lane; statuses: Option[]; showTitle: boolean }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const noStatus = lane.tickets.filter((t) => !t.fields.Status || !statuses.some((s) => s.name === t.fields.Status));
+  return (
+    <section className="mb-4" aria-label={typeof lane.title === "string" ? lane.title : undefined}>
+      {showTitle && (
+        <button onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed} className="sticky left-0 mb-2 flex items-center gap-2 text-sm font-semibold">
+          <ChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />{lane.title}
+          <span className="text-xs font-normal text-muted-foreground">{lane.tickets.length}</span>
+        </button>
+      )}
+      {!collapsed && (
+        <div className="flex gap-3">
+          {noStatus.length > 0 && <Column board={board} status={null} tickets={noStatus} scope={lane.key} />}
+          {statuses.map((s) => <Column key={s.id} board={board} status={s} scope={lane.key} tickets={lane.tickets.filter((t) => t.fields.Status === s.name)} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Column({ board, status, tickets, scope }: { board: Board; status: Option | null; tickets: Ticket[]; scope: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState(false);
+  const [, newTicket] = useNewTicket();
+  const limit = status ? wipFor(status.name) : undefined;
+  const sorted = useMemo(() => [...tickets].sort(byPriorityThenNumber), [tickets]);
+  const points = tickets.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !status) return;
+    return dropTargetForElements({ element: el, getData: () => ({ status: status.name }), onDragEnter: () => setOver(true), onDragLeave: () => setOver(false), onDrop: () => setOver(false) });
+  }, [status]);
+
+  return (
+    <div ref={ref} className={cn("flex w-72 shrink-0 flex-col rounded-2xl bg-muted/50 p-2 transition-colors", over && "bg-accent ring-2 ring-primary/40")}
+      aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
+      <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
+        <span className={cn("size-2 rounded-full", dotClass(status?.color))} aria-hidden />
+        <h3 className="text-sm font-semibold">{status?.name ?? "No status"}</h3>
+        <span className={cn("rounded-md px-1.5 text-xs tabular-nums text-muted-foreground", limit && tickets.length > limit && "bg-destructive/15 font-semibold text-destructive")}
+          title={limit ? `Limit ${limit}` : undefined}>
+          {tickets.length}{limit ? `/${limit}` : ""}
+        </span>
+        {points > 0 && <span className="text-xs text-muted-foreground" title="Story points">· {points} pts</span>}
+        <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label="New ticket" onClick={() => void newTicket("pick")}><Plus /></Button>
+      </div>
+      <div className="flex min-h-16 flex-col gap-2">
+        {sorted.map((t) => <TicketCard key={t.number} board={board} ticket={t} layoutScope={scope} />)}
+        {!tickets.length && <p className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">Drop tickets here</p>}
+      </div>
+    </div>
+  );
+}

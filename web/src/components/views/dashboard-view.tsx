@@ -1,0 +1,152 @@
+"use client";
+
+import { addDays, currentSprint, isDone, isOverdue, options, plain, sprintEnd, today } from "@/lib/board";
+import type { Board, Ticket } from "@/lib/types";
+import { useOpenTicket } from "@/lib/url-state";
+import { format, parseISO } from "date-fns";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Avatar, cleanTitle, TypeIcon } from "../ticket/bits";
+
+const pts = (ts: Ticket[]) => ts.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
+
+function Tile({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: string; tone?: "danger" | "success" }) {
+  return (
+    <div className="rounded-2xl border bg-card p-4">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-3xl font-semibold tracking-tight tabular-nums ${tone === "danger" ? "text-destructive" : tone === "success" ? "text-success" : ""}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function Panel({ title, sub, children, className = "" }: { title: string; sub: string; children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`rounded-2xl border bg-card p-4 ${className}`} aria-label={title}>
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <p className="mb-3 text-xs text-muted-foreground">{sub}</p>
+      {children}
+    </section>
+  );
+}
+
+const axis = { fontSize: 11, fill: "var(--muted-foreground)" };
+const tooltipStyle = { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12, color: "var(--popover-foreground)" };
+
+export function DashboardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
+  const [, open] = useOpenTicket();
+  const sprint = currentSprint(board);
+  const open_ = tickets.filter((t) => !isDone(t));
+  const weekAgo = addDays(today(), -7);
+  const doneWeek = tickets.filter((t) => t.closedAt && t.closedAt.slice(0, 10) > weekAgo && t.stateReason !== "NOT_PLANNED");
+  const overdue = open_.filter(isOverdue);
+  const critical = open_.filter((t) => /critical/i.test(t.fields.Priority ?? ""));
+
+  const inSprint = sprint ? tickets.filter((t) => t.fields.Sprint === sprint.id) : [];
+  const sprintDone = inSprint.filter(isDone);
+
+  // Remaining story points per day of the current sprint (points if set, else 1 per ticket).
+  const burndown = !sprint ? [] : (() => {
+    const weight = (t: Ticket) => t.fields["Story Points"] ?? 1;
+    const total = inSprint.reduce((s, t) => s + weight(t), 0);
+    return Array.from({ length: sprint.duration }, (_, i) => {
+      const day = addDays(sprint.startDate, i);
+      const burned = inSprint.filter((t) => isDone(t) && (t.closedAt?.slice(0, 10) ?? today()) <= day).reduce((s, t) => s + weight(t), 0);
+      return {
+        day: format(parseISO(day), "d MMM"),
+        ideal: Math.round((total - (total * i) / (sprint.duration - 1)) * 10) / 10,
+        remaining: day <= today() ? total - burned : null,
+      };
+    });
+  })();
+
+  const byStatus = options(board, "Status").map((o) => ({ name: plain(o.name), tickets: open_.filter((t) => t.fields.Status === o.name).length }));
+  const load = board.people.map((p) => {
+    const mine = open_.filter((t) => t.assignees.some((a) => a.login === p.login));
+    return { p, n: mine.length, pts: pts(mine) };
+  }).filter((x) => x.n).sort((a, b) => b.pts - a.pts || b.n - a.n);
+  const maxPts = Math.max(1, ...load.map((l) => Math.max(l.pts, l.n)));
+  const unassigned = open_.filter((t) => !t.assignees.length).length;
+
+  return (
+    <div className="space-y-4 overflow-auto pb-8">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Open tickets" value={open_.length} sub={`${unassigned} unassigned`} />
+        <Tile label="Finished this week" value={doneWeek.length} tone="success" sub="closed in the last 7 days" />
+        <Tile label="Overdue" value={overdue.length} tone={overdue.length ? "danger" : undefined} sub="past their due date" />
+        <Tile label={sprint ? sprint.title : "No current sprint"} value={sprint ? `${inSprint.length ? Math.round((sprintDone.length / inSprint.length) * 100) : 0}%` : "–"}
+          sub={sprint ? `${sprintDone.length} of ${inSprint.length} done · ${pts(sprintDone)}/${pts(inSprint)} pts · ends ${format(parseISO(sprintEnd(sprint)), "d MMM")}` : "Add a Sprint field to plan sprints"} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Sprint burndown" sub="How much work is left in this sprint. The dashed line is the even pace.">
+          {sprint && inSprint.length ? (
+            <div className="h-56" role="img" aria-label={`Burndown for ${sprint.title}: ${burndown.filter((d) => d.remaining !== null).at(-1)?.remaining ?? 0} points left`}>
+              <ResponsiveContainer>
+                <LineChart data={burndown} margin={{ top: 6, right: 12, left: -18, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="day" tick={axis} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
+                  <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: "var(--muted-foreground)", strokeDasharray: 3 }} />
+                  <Line dataKey="ideal" name="Even pace" stroke="var(--muted-foreground)" strokeDasharray="4 4" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                  <Line dataKey="remaining" name="Remaining" stroke="var(--chart-1)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls={false} />
+                  <ReferenceLine x={format(parseISO(today()), "d MMM")} stroke="var(--border)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : <p className="py-10 text-center text-sm text-muted-foreground">No tickets in the current sprint yet. Plan some in the Backlog.</p>}
+          <p className="mt-2 flex gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-[var(--chart-1)]" />Remaining</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-muted-foreground" />Even pace</span>
+          </p>
+        </Panel>
+
+        <Panel title="Open work by stage" sub="Where tickets are sitting right now.">
+          <div className="h-56" role="img" aria-label={byStatus.map((s) => `${s.name}: ${s.tickets}`).join(", ")}>
+            <ResponsiveContainer>
+              <BarChart data={byStatus} margin={{ top: 6, right: 12, left: -18, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="name" tick={axis} tickLine={false} axisLine={false} interval={0} />
+                <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} />
+                <Bar dataKey="tickets" name="Tickets" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+
+        <Panel title="Workload" sub="Open tickets and story points per person.">
+          {load.length ? (
+            <ul className="space-y-2.5">
+              {load.map(({ p, n, pts: points }) => (
+                <li key={p.login} className="flex items-center gap-3 text-sm">
+                  <Avatar person={p} size={24} />
+                  <span className="w-28 truncate">{p.name || p.login}</span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted" title={`${points} points`}>
+                    <span className="block h-full rounded-full bg-[var(--chart-1)]" style={{ width: `${(Math.max(points, n) / maxPts) * 100}%` }} />
+                  </span>
+                  <span className="w-24 text-right text-xs tabular-nums text-muted-foreground">{n} tickets · {points} pts</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="py-6 text-center text-sm text-muted-foreground">Nobody has open work assigned.</p>}
+        </Panel>
+
+        <Panel title="Needs attention" sub="Critical and overdue tickets.">
+          {[...new Set([...critical, ...overdue])].length ? (
+            <ul className="divide-y">
+              {[...new Set([...critical, ...overdue])].slice(0, 8).map((t) => (
+                <li key={t.number}>
+                  <button onClick={() => void open(t.number)} className="flex w-full items-center gap-2 py-2 text-left text-sm hover:underline">
+                    <TypeIcon ticket={t} /><span className="flex-1 truncate">{cleanTitle(t.title)}</span>
+                    {isOverdue(t) && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Overdue</span>}
+                    {/critical/i.test(t.fields.Priority ?? "") && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Critical</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="py-6 text-center text-sm text-muted-foreground">Nothing critical or overdue. 🎉</p>}
+        </Panel>
+      </div>
+    </div>
+  );
+}

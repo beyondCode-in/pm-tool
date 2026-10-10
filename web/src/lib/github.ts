@@ -1,0 +1,222 @@
+import { config } from "./config";
+import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket } from "./types";
+
+export class GitHubError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+  }
+}
+
+// Plain-language messages for the failures people actually hit.
+function explain(status: number, fallback: string) {
+  if (status === 401) return "Your GitHub sign-in has expired. Please sign in again.";
+  if (status === 403) return "GitHub refused this. You may not have access to this board, or you've hit the hourly limit; try again in a few minutes.";
+  if (status === 404) return "GitHub couldn't find that. It may have been deleted, or you don't have access.";
+  return fallback;
+}
+
+export function createGitHubSource(token: string): DataSource {
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/vnd.github+json" };
+
+  async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+    const res = await fetch("https://api.github.com/graphql", { method: "POST", headers, body: JSON.stringify({ query, variables }) });
+    if (!res.ok) throw new GitHubError(explain(res.status, `GitHub returned ${res.status}.`), res.status);
+    const json = await res.json();
+    if (json.errors?.length) throw new GitHubError(json.errors[0].message);
+    return json.data as T;
+  }
+
+  async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const res = await fetch(`https://api.github.com${path}`, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      throw new GitHubError(explain(res.status, detail.message ?? `GitHub returned ${res.status}.`), res.status);
+    }
+    return (res.status === 204 ? undefined : await res.json()) as T;
+  }
+
+  const repoPath = `/repos/${config.owner}/${config.repo}`;
+
+  async function setField(board: Board, t: Ticket, name: FieldName, value: FieldValue) {
+    const field = board.fields.find((f) => f.name === name);
+    if (!field) throw new GitHubError(`The board has no "${name}" field.`);
+    const vars = { p: board.projectId, i: t.itemId, f: field.id };
+    if (value === null || value === undefined || value === "") {
+      await gql(`mutation($p:ID!,$i:ID!,$f:ID!){clearProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f}){clientMutationId}}`, vars);
+      return;
+    }
+    let input: Record<string, unknown>;
+    if (field.kind === "single") {
+      const option = field.options.find((o) => o.name === value);
+      if (!option) throw new GitHubError(`"${value}" isn't an option for ${name}.`);
+      input = { singleSelectOptionId: option.id };
+    } else if (field.kind === "iteration") input = { iterationId: value };
+    else if (field.kind === "date") input = { date: value };
+    else if (field.kind === "number") input = { number: Number(value) };
+    else input = { text: String(value) };
+    await gql(`mutation($p:ID!,$i:ID!,$f:ID!,$v:ProjectV2FieldValue!){updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:$v}){clientMutationId}}`, { ...vars, v: input });
+  }
+
+  return {
+    mode: "github",
+
+    async load() {
+      const head = await gql<HeadResult>(HEAD_QUERY, { owner: config.owner, repo: config.repo, number: config.projectNumber });
+      const project = head.organization?.projectV2;
+      if (!project) throw new GitHubError(`Board #${config.projectNumber} wasn't found in ${config.owner}, or you don't have access to it.`);
+      const tickets: Ticket[] = [];
+      let after: string | null = null;
+      do {
+        const page: ItemsResult = await gql<ItemsResult>(ITEMS_QUERY, { id: project.id, after });
+        const items = page.node.items;
+        for (const n of items.nodes) if (n.content?.__typename === "Issue") tickets.push(toTicket(n));
+        after = items.pageInfo.hasNextPage ? items.pageInfo.endCursor : null;
+      } while (after);
+
+      return {
+        projectId: project.id,
+        projectTitle: project.title,
+        repoId: head.repository.id,
+        fields: project.fields.nodes.map(toField).filter((f): f is Field => f !== null),
+        labels: head.repository.labels.nodes,
+        people: head.repository.assignableUsers.nodes,
+        viewer: head.viewer,
+        tickets,
+      };
+    },
+
+    setField,
+
+    async setAssignees(_board, t, logins) {
+      const current = t.assignees.map((a) => a.login);
+      const add = logins.filter((l) => !current.includes(l));
+      const remove = current.filter((l) => !logins.includes(l));
+      if (add.length) await rest(`${repoPath}/issues/${t.number}/assignees`, { method: "POST", body: JSON.stringify({ assignees: add }) });
+      if (remove.length) await rest(`${repoPath}/issues/${t.number}/assignees`, { method: "DELETE", body: JSON.stringify({ assignees: remove }) });
+    },
+
+    async setLabels(_board, t, labels) {
+      await rest(`${repoPath}/issues/${t.number}/labels`, { method: "PUT", body: JSON.stringify({ labels }) });
+    },
+
+    async setState(t, state, reason) {
+      await rest(`${repoPath}/issues/${t.number}`, {
+        method: "PATCH",
+        body: JSON.stringify({ state: state === "OPEN" ? "open" : "closed", state_reason: state === "OPEN" ? "reopened" : reason === "NOT_PLANNED" ? "not_planned" : "completed" }),
+      });
+    },
+
+    async updateText(t, patch) {
+      await rest(`${repoPath}/issues/${t.number}`, { method: "PATCH", body: JSON.stringify(patch) });
+    },
+
+    async comments(t) {
+      const list = await rest<RestComment[]>(`${repoPath}/issues/${t.number}/comments?per_page=100`);
+      return list.map(toComment);
+    },
+
+    async addComment(t, body) {
+      return toComment(await rest<RestComment>(`${repoPath}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
+    },
+
+    async create(board, input: NewTicket) {
+      const issue = await rest<{ number: number; node_id: string; id: number }>(`${repoPath}/issues`, {
+        method: "POST",
+        body: JSON.stringify({ title: input.title, body: input.body, labels: input.labels, assignees: input.assignees }),
+      });
+      const added = await gql<{ addProjectV2ItemById: { item: { id: string } } }>(
+        `mutation($p:ID!,$c:ID!){addProjectV2ItemById(input:{projectId:$p,contentId:$c}){item{id}}}`,
+        { p: board.projectId, c: issue.node_id },
+      );
+      const ticket = { itemId: added.addProjectV2ItemById.item.id, number: issue.number } as Ticket;
+      for (const [name, value] of Object.entries(input.fields) as [FieldName, FieldValue][]) {
+        if (value !== undefined && value !== null && value !== "") await setField(board, ticket, name, value);
+      }
+      if (input.parent) {
+        await rest(`${repoPath}/issues/${input.parent}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: issue.id }) }).catch(() => {
+          /* the parent may be in another repository; the link is still in the body */
+        });
+      }
+      return issue.number;
+    },
+  };
+}
+
+// ── Queries and mapping ──────────────────────────────────────────────────
+
+const HEAD_QUERY = `query($owner:String!,$repo:String!,$number:Int!){
+  viewer{login avatarUrl name}
+  repository(owner:$owner,name:$repo){ id
+    labels(first:100){nodes{name color}}
+    assignableUsers(first:100){nodes{login avatarUrl name}} }
+  organization(login:$owner){ projectV2(number:$number){ id title
+    fields(first:50){nodes{ __typename
+      ... on ProjectV2FieldCommon{id name dataType}
+      ... on ProjectV2SingleSelectField{options{id name color description}}
+      ... on ProjectV2IterationField{configuration{
+        iterations{id title startDate duration} completedIterations{id title startDate duration}}} }} } } }`;
+
+const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV2{
+  items(first:100,after:$after){ pageInfo{hasNextPage endCursor} nodes{ id
+    content{ __typename ... on Issue{ id number title body url state stateReason createdAt updatedAt closedAt
+      author{login avatarUrl} assignees(first:10){nodes{login avatarUrl name}} labels(first:30){nodes{name color}}
+      comments{totalCount} parent{number} subIssuesSummary{total completed} } }
+    fieldValues(first:30){ nodes{ __typename
+      ... on ProjectV2ItemFieldSingleSelectValue{name field{... on ProjectV2FieldCommon{name}}}
+      ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}
+      ... on ProjectV2ItemFieldNumberValue{number field{... on ProjectV2FieldCommon{name}}}
+      ... on ProjectV2ItemFieldIterationValue{iterationId field{... on ProjectV2FieldCommon{name}}} } } } } } } }`;
+
+type HeadResult = {
+  viewer: Person;
+  repository: { id: string; labels: { nodes: Label[] }; assignableUsers: { nodes: Person[] } };
+  organization: { projectV2: { id: string; title: string; fields: { nodes: RawField[] } } | null } | null;
+};
+type RawField = {
+  __typename: string; id: string; name: string; dataType: string;
+  options?: { id: string; name: string; color: string; description: string }[];
+  configuration?: { iterations: Iter[]; completedIterations: Iter[] };
+};
+type Iter = { id: string; title: string; startDate: string; duration: number };
+type RawItem = {
+  id: string;
+  content: null | {
+    __typename: string; id: string; number: number; title: string; body: string; url: string; state: "OPEN" | "CLOSED";
+    stateReason: string | null; createdAt: string; updatedAt: string; closedAt: string | null; author: Person | null;
+    assignees: { nodes: Person[] }; labels: { nodes: Label[] }; comments: { totalCount: number };
+    parent: { number: number } | null; subIssuesSummary: { total: number; completed: number } | null;
+  };
+  fieldValues: { nodes: { __typename: string; name?: string; date?: string; number?: number; iterationId?: string; field?: { name: string } }[] };
+};
+type ItemsResult = { node: { items: { pageInfo: { hasNextPage: boolean; endCursor: string }; nodes: RawItem[] } } };
+type RestComment = { node_id: string; body: string; created_at: string; user: { login: string; avatar_url: string } | null };
+
+function toField(f: RawField): Field | null {
+  if (f.dataType === "SINGLE_SELECT" && f.options) return { id: f.id, name: f.name, kind: "single", options: f.options };
+  if (f.dataType === "ITERATION" && f.configuration)
+    return { id: f.id, name: f.name, kind: "iteration", iterations: [...f.configuration.completedIterations, ...f.configuration.iterations].sort((a, b) => a.startDate.localeCompare(b.startDate)) };
+  if (f.dataType === "DATE") return { id: f.id, name: f.name, kind: "date" };
+  if (f.dataType === "NUMBER") return { id: f.id, name: f.name, kind: "number" };
+  if (f.dataType === "TEXT") return { id: f.id, name: f.name, kind: "text" };
+  return null;
+}
+
+function toTicket(n: RawItem): Ticket {
+  const c = n.content!;
+  const fields: Record<string, unknown> = {};
+  for (const v of n.fieldValues.nodes) {
+    const name = v.field?.name;
+    if (!name) continue;
+    fields[name] = v.name ?? v.date ?? v.number ?? v.iterationId;
+  }
+  return {
+    itemId: n.id, issueId: c.id, number: c.number, title: c.title, body: c.body, url: c.url, state: c.state,
+    stateReason: c.stateReason, createdAt: c.createdAt, updatedAt: c.updatedAt, closedAt: c.closedAt, author: c.author,
+    assignees: c.assignees.nodes, labels: c.labels.nodes, commentCount: c.comments.totalCount, parent: c.parent?.number ?? null,
+    subIssues: c.subIssuesSummary ?? { total: 0, completed: 0 }, fields: fields as FieldValues,
+  };
+}
+
+function toComment(c: RestComment): Comment {
+  return { id: c.node_id, body: c.body, createdAt: c.created_at, author: c.user ? { login: c.user.login, avatarUrl: c.user.avatar_url } : null };
+}
