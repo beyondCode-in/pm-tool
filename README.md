@@ -1,72 +1,39 @@
-# BeyondPM — GitHub Projects Template Repository (`beyondCode-in`)
+# BeyondPM — Jira/ClickUp-style project management on GitHub
 
-> **Enterprise Project Management Engine & GitHub Projects V2 Template**
-> Combining the finest architectural concepts from Jira, GitHub Projects V2, Linear, ClickUp, Trello, and Notion databases into a clean, customizable GitHub Template Repository.
+Anyone can raise a ticket, and nobody needs to know Git to do it.
 
----
+## ✨ Create a ticket (for everyone)
 
-## ⚡ Overview
+Open **[Ticket Studio](https://beyondcode-in.github.io/pm-tool/portal.html)**, or go to **Issues → New issue** and pick it from the list.
 
-`beyondCode-in/pm-tool` is an enterprise-grade GitHub Template Repository designed to bootstrap custom project management engines directly within GitHub Organizations.
+1. **Pick a card**: new idea, look & feel, something broken, customer help or question. Click it, or drag it onto the ticket preview.
+2. **Write a short title.** Tap a suggestion to get started.
+3. **Choose the urgency and the area.** You can drop in screenshots too.
+4. Press **Create ticket**. GitHub opens with everything filled in. Press **Create** there and the ticket lands on the [project board](https://github.com/orgs/beyondCode-in/projects/34).
 
-It provides configurable issue hierarchies, semantic color tokens, workflow transition guardrails, WIP limit checks, automation safety recursion guards, circular dependency detection, and project views.
+Your draft is saved in your browser as you type.
 
+## 🗂️ What's in the repository
+
+| Path | What it is |
+|---|---|
+| `app/` | Ticket Studio (`portal.html`) and the board dashboard (`index.html`) |
+| `.github/ISSUE_TEMPLATE/` | Issue forms: simple request, feature, bug, incident, security, epic, subtask, spike, support |
+| `.github/workflows/` | Auto-triage, PR-to-board moves, SLA reminders, CI checks, Pages deploy |
+| `.github/PROJECT_TEMPLATES/`, `templates/` | Board and hierarchy presets (Kanban, Scrum, ClickUp spaces) |
+| `lib/` | Jira/ClickUp field adapter |
+| `scripts/` | Project field and view setup, dependency and WIP linters, local server |
+| `docs/` | Architecture, planning and the phased roadmap |
+| `tests/` | Run with `npm test` |
+
+## 🛠️ For maintainers
+
+```bash
+npm run serve   # http://localhost:3333 (dashboard) and /portal.html (Ticket Studio)
+npm test
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        GITHUB PROJECTS V2 ENGINE                       │
-└────────────────────────────────────────────────────────────────────────┘
-  DATA  ──►  CONFIGURATION  ──►  POLICY  ──►  WORKFLOW  ──►  AUTOMATION  ──►  VIEW
-```
 
----
-
-## 🏗️ Repository Architecture
-
-```
-pm-tool/
-├── .github/
-│   ├── ISSUE_TEMPLATE/        # Structured YAML Issue Templates (Features, Bugs, Incidents, Security, Epics)
-│   │   ├── 01_feature_request.yml
-│   │   ├── 02_bug_report.yml
-│   │   ├── 03_incident_report.yml
-│   │   ├── 04_security_vulnerability.yml
-│   │   ├── 05_epic_template.yml
-│   │   └── config.yml
-│   ├── workflows/             # GitHub Actions Automation Workflows
-│   │   └── project-automation.yml
-│   ├── PROJECT_TEMPLATES/     # GitHub Projects V2 Configuration Schemas
-│   │   ├── engineering_kanban.json
-│   │   ├── scrum_sprint_planning.json
-│   │   ├── architecture_roadmap.json
-│   │   └── bug_triage_matrix.json
-│   └── PULL_REQUEST_TEMPLATE.md
-│
-├── docs/                      # Complete Master Architectural Blueprint
-│   ├── planning/              # All 15 Required Planning Documents
-│   │   ├── CURRENT_STATE.md
-│   │   ├── GAP_ANALYSIS.md
-│   │   ├── TARGET_ARCHITECTURE.md
-│   │   ├── DATABASE_PLAN.md
-│   │   ├── DIRECTORY_PLAN.md
-│   │   ├── UI_UX_PLAN.md
-│   │   ├── BOARD_ENGINE.md
-│   │   ├── WORKFLOW_ENGINE.md
-│   │   ├── AUTOMATION_ENGINE.md
-│   │   ├── PERMISSION_MODEL.md
-│   │   ├── GITHUB_INTEGRATION.md
-│   │   ├── MIGRATION_PLAN.md
-│   │   ├── SECURITY_REVIEW.md
-│   │   ├── TESTING_STRATEGY.md
-│   │   └── IMPLEMENTATION_ROADMAP.md
-│   └── 00-overview/ to 10-deployment/
-│
-├── scripts/                   # Dependency & WIP Limit CI Linter Scripts
-│   ├── validate-circular-dependencies.js
-│   └── audit-wip-limits.js
-│
-├── package.json
-└── README.md
-```
+To host Ticket Studio publicly, turn on **Settings → Pages → Source: GitHub Actions**. `.github/workflows/pages.yml` then publishes `app/` on every push to `main`. To point the studio at another repository, edit `CONFIG` at the top of the script in `app/portal.html`.
 
 ---
 
