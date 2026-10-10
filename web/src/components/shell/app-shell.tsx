@@ -17,7 +17,7 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Logo } from "../brand/logo";
+import { BrandLoader, Logo } from "../brand/logo";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Guide } from "../guide/guide";
 import { Avatar, cleanTitle } from "../ticket/bits";
@@ -50,6 +50,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [router, newTicket]);
 
+  // Pre-rendered HTML and the first paint: show the brand loader, not a blank page.
+  if (source === undefined) return <div className="flex h-dvh"><BrandLoader label="Opening BeyondPM…" /></div>;
   if (!source) return null;
   return (
     <div className="flex h-dvh overflow-hidden">
