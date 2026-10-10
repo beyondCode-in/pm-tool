@@ -2,6 +2,7 @@
 
 import { useBoard } from "@/lib/data";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
+import { deleteView, useSavedViews } from "@/lib/saved-views";
 import type { Layout } from "@/lib/layout";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,7 @@ function NavLink({ n, active, count, indent, hue }: { n: Item; active: boolean; 
 export function SidebarSections({ items, pathname, counts }: { items: Item[]; pathname: string | null; counts: Record<string, number>; nav?: Layout }) {
   const { data: board } = useBoard();
   const favorites = useFavorites();
+  const savedViews = useSavedViews(board?.projectId);
   const [, open] = useOpenTicket();
   const [spaceOpen, toggleSpace] = useOpen("space");
   const [showAllFav, setShowAllFav] = useState(false);
@@ -96,6 +98,19 @@ export function SidebarSections({ items, pathname, counts }: { items: Item[]; pa
       )}
 
       <Heading id="favorites" label="Favorites">
+        {savedViews.map((v) => {
+          const href = `${v.path}${v.query ? `?${v.query}` : ""}`;
+          return (
+            <div key={v.id} className="group/fav flex items-center rounded-lg pr-1 hover:bg-sidebar-accent">
+              <Link href={href} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2.5 text-sm" title={v.name}>
+                <P.BookmarkSimple size={16} weight="duotone" className="ico shrink-0 text-primary" /><span className="truncate">{v.name}</span>
+              </Link>
+              <button onClick={() => board && deleteView(board.projectId, v.id)} aria-label={`Delete view ${v.name}`} className="grid size-6 place-items-center rounded text-muted-foreground opacity-0 group-hover/fav:opacity-100 hover:text-foreground focus-visible:opacity-100">
+                <X className="size-3" />
+              </button>
+            </div>
+          );
+        })}
         {starred.length ? (showAllFav ? starred : starred.slice(0, 6)).map((t) => (
           <div key={t.url} className="group/fav flex items-center rounded-lg pr-1 hover:bg-sidebar-accent">
             <button onClick={() => void open(t.number)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2.5 text-left text-sm" title={cleanTitle(t.title)}>
@@ -106,7 +121,7 @@ export function SidebarSections({ items, pathname, counts }: { items: Item[]; pa
             </button>
           </div>
         )) : (
-          <p className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground"><P.Star size={13} weight="duotone" />Star a ticket to pin it here</p>
+          !savedViews.length && <p className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-muted-foreground"><P.Star size={13} weight="duotone" />Star a ticket or save a view to pin it here</p>
         )}
         {starred.length > 6 && <button onClick={() => setShowAllFav(!showAllFav)} className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">{showAllFav ? "Show less" : `Show ${starred.length - 6} more`}</button>}
       </Heading>
