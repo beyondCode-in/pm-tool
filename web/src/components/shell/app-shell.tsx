@@ -23,6 +23,7 @@ import { BrandLoader, Logo, LogoMark } from "../brand/logo";
 import { Tip } from "./tip";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Guide } from "../guide/guide";
+import { NotificationBell } from "../notifications/bell";
 import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
@@ -89,8 +90,9 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
   return (
     <aside data-collapsed={collapsed || undefined}
       className={cn("group/side hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out md:flex", collapsed ? "w-16" : "w-60")}>
-      <div className={cn("flex items-center pt-4 pb-3", collapsed ? "justify-center px-2" : "px-4")}>
-        {collapsed ? <LogoMark size={30} /> : <Logo subtitle={board?.projectTitle ?? "Loading…"} />}
+      <div className={cn("flex items-center gap-1 pt-4 pb-3", collapsed ? "flex-col justify-center px-2" : "px-4")}>
+        {collapsed ? <LogoMark size={30} /> : <span className="min-w-0 flex-1"><Logo subtitle={board?.projectTitle ?? "Loading…"} /></span>}
+        <NotificationBell />
       </div>
       <div className={cn("space-y-1.5", collapsed ? "px-2" : "px-3")}>
         <Tip label="New ticket" kbd="C" show={collapsed}>

@@ -150,3 +150,21 @@ table tbody tr { transition: background-color .12s ease; }
 /* ── Primary glow pulse for the main call to action ── */
 @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 0%, transparent), 0 6px 18px -6px color-mix(in oklch, var(--primary) 55%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 10%, transparent), 0 8px 26px -6px color-mix(in oklch, var(--primary) 65%, transparent); } }
 .glow-pulse { animation: glow-pulse 3.2s ease-in-out infinite; }
+
+/* ── Icons: a soft glow in their own colour when their control is hovered ── */
+.ico { transition: filter .2s ease, transform .2s cubic-bezier(.2,.9,.3,1.4); }
+@media (hover: hover) {
+  :is(button, a, [role="button"], [role="menuitem"], [role="menuitemradio"], [role="radio"], label):hover .ico,
+  .ico:hover {
+    filter: drop-shadow(0 0 5px color-mix(in oklch, currentColor 60%, transparent));
+    transform: scale(1.1);
+  }
+}
+.dark { --icon-l: 0.74; }
+/* Critical priority flickers gently, like a flame. */
+@keyframes flame { 0%, 100% { filter: drop-shadow(0 0 2px oklch(0.7 0.2 40 / .6)); } 50% { filter: drop-shadow(0 0 6px oklch(0.75 0.2 50 / .9)); } }
+.ico-hot { animation: flame 1.8s ease-in-out infinite; }
+
+/* ── Unread badge: a ring that pulses outward ── */
+.notify-ping { position: absolute; inset: 0; border-radius: 999px; background: var(--destructive); animation: notify-ping 1.8s cubic-bezier(0, 0, .2, 1) infinite; z-index: -1; }
+@keyframes notify-ping { 0% { transform: scale(1); opacity: .6; } 80%, 100% { transform: scale(2.2); opacity: 0; } }

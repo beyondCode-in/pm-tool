@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { options, plain } from "@/lib/board";
+import { options } from "@/lib/board";
 import type { Board } from "@/lib/types";
 import { useFilters } from "@/lib/url-state";
 import { ChevronDown, Search, X } from "@/components/icons";
 import type { ReactNode } from "react";
-import { Avatar, Tag } from "../ticket/bits";
-import { TypeGlyph } from "../ticket/type-badge";
+import { Avatar, OptionLabel } from "../ticket/bits";
 
 function Multi({ label, values, selected, onChange }: {
   label: string; values: { value: string; label: ReactNode }[]; selected: string[]; onChange: (v: string[]) => void;
@@ -38,7 +37,7 @@ function Multi({ label, values, selected, onChange }: {
 export function FilterBar({ board, children, hideDoneToggle }: { board: Board; children?: ReactNode; hideDoneToggle?: boolean }) {
   const { filters, update, clear, active } = useFilters();
   const opt = (field: string) => options(board, field).map((o) => ({
-    value: o.name, label: <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(o.name).toLowerCase()} size={14} />}{plain(o.name)}</Tag>,
+    value: o.name, label: <OptionLabel field={field} name={o.name} color={o.color} />,
   }));
   return (
     <div data-tour="filters" className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0" role="search">

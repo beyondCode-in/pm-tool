@@ -13,8 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { addDays, format, parseISO } from "date-fns";
 import { CalendarDays, ChevronDown } from "@/components/icons";
 import { useState, type ReactNode } from "react";
-import { Avatar, shortDate, Tag } from "./bits";
-import { TypeGlyph } from "./type-badge";
+import { Avatar, OptionLabel, shortDate } from "./bits";
 
 const NONE = "__none";
 
@@ -37,7 +36,7 @@ export function OptionPicker({ board, field, value, onChange, label }: {
     <DropdownMenu>
       <DropdownMenuTrigger render={triggerButton} aria-label={`${label}: ${value ?? "not set"}`}>
         <Trigger empty={!value}>
-          {value ? <Tag color={opts.find((o) => o.name === value)?.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(value).toLowerCase()} size={14} />}{plain(value)}</Tag> : "Not set"}
+          {value ? <OptionLabel field={field} name={value} color={opts.find((o) => o.name === value)?.color} /> : "Not set"}
         </Trigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
@@ -45,7 +44,7 @@ export function OptionPicker({ board, field, value, onChange, label }: {
         <DropdownMenuRadioGroup value={value ?? NONE} onValueChange={(v: string) => onChange(v === NONE ? null : v)}>
           {opts.map((o) => (
             <DropdownMenuRadioItem key={o.id} value={o.name}>
-              <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(o.name).toLowerCase()} size={14} />}{plain(o.name)}</Tag>
+              <OptionLabel field={field} name={o.name} color={o.color} />
               {o.description && <span className="ml-auto max-w-40 truncate pl-3 text-xs text-muted-foreground">{o.description}</span>}
             </DropdownMenuRadioItem>
           ))}

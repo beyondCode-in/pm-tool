@@ -5,7 +5,7 @@ import { pointerOutsideOfPreview } from "@atlaskit/pragmatic-drag-and-drop/eleme
 import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { isDone, options } from "@/lib/board";
+import { isDone, options, plain } from "@/lib/board";
 import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
@@ -14,6 +14,7 @@ import { MoreHorizontal } from "@/components/icons";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CardMenu } from "./card-menu";
+import { StatusIcon } from "../ticket/status-icons";
 import { AvatarStack, cleanTitle, LabelChip, PriorityMark, TicketMeta, TypeIcon } from "../ticket/bits";
 
 const SHOWN_LABELS = /^(area|severity): /;
@@ -65,7 +66,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
             <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()} className="min-w-48">
               <DropdownMenuLabel>Move to</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={t.fields.Status ?? ""} onValueChange={(v: string) => void actions.move(t, v)}>
-                {options(board, "Status").map((o) => <DropdownMenuRadioItem key={o.id} value={o.name}>{o.name}</DropdownMenuRadioItem>)}
+                {options(board, "Status").map((o) => <DropdownMenuRadioItem key={o.id} value={o.name}><StatusIcon name={o.name} size={15} />{plain(o.name)}</DropdownMenuRadioItem>)}
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>

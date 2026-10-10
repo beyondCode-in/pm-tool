@@ -12,6 +12,7 @@ import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHor
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu } from "../layout/custom-section";
+import { StatusIcon } from "../ticket/status-icons";
 import { Segmented } from "../ui-plus/segmented";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -166,9 +167,9 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
       <div ref={ref} className={cn("flex w-11 shrink-0 snap-start flex-col items-center gap-2 rounded-2xl bg-muted/50 py-3 transition-colors", over && "bg-accent ring-2 ring-primary/40")}
         aria-label={`${status.name}, ${tickets.length} tickets, collapsed`}>
         <button onClick={() => cols.toggleCollapsed(status.name)} aria-label={`Expand ${status.name}`} className="flex flex-col items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
-          <span className={cn("size-2 rounded-full", dotClass(status.color))} aria-hidden />
+          <StatusIcon name={status.name} size={17} />
           <span className="text-xs tabular text-muted-foreground">{tickets.length}</span>
-          <span className="text-sm font-semibold [writing-mode:vertical-rl]">{status.name}</span>
+          <span className="text-sm font-semibold [writing-mode:vertical-rl]">{plain(status.name)}</span>
         </button>
       </div>
     );
@@ -178,8 +179,8 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
     <div ref={ref} className={cn("group/col flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
-        <span className={cn("size-2 rounded-full", dotClass(status?.color))} aria-hidden />
-        <h3 className="min-w-0 truncate text-sm font-semibold" title={status?.name}>{status?.name ?? "No status"}</h3>
+        <StatusIcon name={status?.name} size={17} />
+        <h3 className="min-w-0 truncate text-sm font-semibold" title={status?.name}>{status ? plain(status.name) : "No status"}</h3>
         <span className={cn("shrink-0 rounded-md bg-background/70 px-1.5 text-xs tabular-nums text-muted-foreground", limit && tickets.length > limit && "bg-destructive/15 font-semibold text-destructive")}
           title={[limit ? `Limit ${limit}` : "", points ? `${points} story points` : ""].filter(Boolean).join(" · ") || undefined}>
           {tickets.length}{limit ? `/${limit}` : ""}

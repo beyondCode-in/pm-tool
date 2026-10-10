@@ -3,8 +3,9 @@
 import { cn } from "@/lib/utils";
 import { isOverdue, plain, tint } from "@/lib/board";
 import { TypeGlyph, typeKey } from "./type-badge";
+import { PriorityIcon, StatusIcon } from "./status-icons";
 import type { Board, Person, Ticket } from "@/lib/types";
-import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "@/components/icons";
+import { Calendar, MessageSquare, GitBranch } from "@/components/icons";
 import { format, parseISO } from "date-fns";
 
 export function Avatar({ person, size = 24, className }: { person: Person; size?: number; className?: string }) {
@@ -39,11 +40,25 @@ export function Tag({ color, children, dot }: { color?: string; children: React.
   return <span className="tag" style={tint(color)}>{dot && <span className="tag-dot" aria-hidden />}{children}</span>;
 }
 
+// The icon that goes with an option: status shape, priority mark or type tile.
+export function OptionGlyph({ field, name, size = 13 }: { field: string; name?: string | null; size?: number }) {
+  if (field === "Status") return <StatusIcon name={name} size={size} />;
+  if (field === "Priority") return <PriorityIcon value={name} size={size} />;
+  if (field === "Ticket Type") return <TypeGlyph kind={plain(name).toLowerCase()} size={size + 1} />;
+  return null;
+}
+const hasGlyph = (field: string) => field === "Status" || field === "Priority" || field === "Ticket Type";
+
+// A board option as a tinted tag with its icon (or a colour dot for other fields).
+export function OptionLabel({ field, name, color }: { field: string; name: string; color?: string }) {
+  return <Tag color={color} dot={!hasGlyph(field)}><OptionGlyph field={field} name={name} />{plain(name)}</Tag>;
+}
+
 export function OptionPill({ board, field, value }: { board: Board; field: string; value?: string; compact?: boolean }) {
   if (!value) return null;
   const f = board.fields.find((x) => x.name === field && x.kind === "single");
   const color = f && f.kind === "single" ? f.options.find((o) => o.name === value)?.color : undefined;
-  return <Tag color={color} dot={field !== "Ticket Type"}>{plain(value)}</Tag>;
+  return <OptionLabel field={field} name={value} color={color} />;
 }
 
 export function TypeIcon({ ticket, size = 18 }: { ticket: Ticket; size?: number }) {
@@ -51,16 +66,7 @@ export function TypeIcon({ ticket, size = 18 }: { ticket: Ticket; size?: number 
 }
 
 export function PriorityMark({ value }: { value?: string }) {
-  const p = plain(value).toLowerCase();
-  const bars = { critical: 4, high: 3, medium: 2, low: 1 }[p] ?? 0;
-  if (!bars) return null;
-  return (
-    <span title={`Priority: ${plain(value)}`} className="inline-flex items-end gap-px" aria-label={`Priority ${plain(value)}`}>
-      {p === "critical" ? <AlertTriangle className="size-3.5 text-destructive" /> : [1, 2, 3].map((i) => (
-        <span key={i} className={cn("w-[3px] rounded-sm", i <= bars ? "bg-foreground/70" : "bg-foreground/15")} style={{ height: 4 + i * 3 }} />
-      ))}
-    </span>
-  );
+  return <PriorityIcon value={value} size={15} />;
 }
 
 export function LabelChip({ name, color }: { name: string; color?: string }) {

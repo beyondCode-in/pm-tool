@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { byUrl, childrenOf, hasField, isDone, options, parentOf } from "@/lib/board";
+import { byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
 import { config } from "@/lib/config";
 import { useActions, useAddComment, useComments, useSource } from "@/lib/data";
 import { fmtElapsed, fmtMinutes, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
@@ -26,6 +26,7 @@ import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
 import { LabelPicker, TicketSearch } from "./search-pickers";
 import { Segmented } from "../ui-plus/segmented";
+import { StatusIcon } from "./status-icons";
 
 // The full ticket: everything about one piece of work, editable in place.
 // Left: what it is and its conversation. Right: the facts, as pickers.
@@ -126,9 +127,9 @@ function TitleAndStatus({ board, ticket: t }: { board: Board; ticket: Ticket }) 
           const on = t.fields.Status === s.name;
           return (
             <button key={s.id} role="radio" aria-checked={on} onClick={() => void actions.move(t, s.name)}
-              className={cn("rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
-                on ? "border-primary bg-primary text-primary-foreground shadow-card" : "bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground")}>
-              {s.name}
+              className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
+                on ? "border-primary/50 bg-accent text-foreground shadow-card ring-2 ring-primary/20" : "bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground")}>
+              <StatusIcon name={s.name} size={14} />{plain(s.name)}
             </button>
           );
         })}

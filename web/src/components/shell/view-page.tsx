@@ -11,6 +11,7 @@ import { ErrorState } from "../brand/states";
 import type { ReactNode } from "react";
 import { BrandLoader } from "../brand/logo";
 import { FilterBar } from "../filters/filter-bar";
+import { NotificationBell } from "../notifications/bell";
 
 // Every view: a header, the shared filter bar, and loading / error states.
 export function ViewPage({ title, description, scope, children, hideDoneToggle }: {
@@ -32,7 +33,10 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
           <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{title}</h1>
           <p className="hidden text-sm text-muted-foreground sm:block">{description}</p>
         </div>
-        <Button className="ml-auto md:hidden" size="sm" onClick={() => void newTicket("pick")}><Plus />New</Button>
+        <div className="ml-auto flex items-center gap-1 md:hidden">
+          <NotificationBell compact />
+          <Button size="sm" onClick={() => void newTicket("pick")}><Plus />New</Button>
+        </div>
       </header>
       {error ? (
         <ErrorState title="We couldn't load the board" message={(error as Error).message} onRetry={() => void refetch()} />

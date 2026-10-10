@@ -11,7 +11,7 @@ import { CheckCircle2, ChevronDown, UserRoundPlus, X } from "@/components/icons"
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Tag } from "../ticket/bits";
+import { PriorityIcon, StatusIcon } from "../ticket/status-icons";
 
 // Change many tickets at once, like Jira's bulk edit. Appears while any rows
 // are selected; each change runs per ticket and reports once at the end.
@@ -49,8 +49,8 @@ export function BulkBar({ board, selected, onClear }: { board: Board; selected: 
           role="toolbar" aria-label={`Bulk actions for ${n} selected tickets`}
           className="fixed bottom-20 left-1/2 z-40 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl bg-foreground p-1.5 pl-3 text-background shadow-pop md:bottom-6">
           <span className="shrink-0 pr-2 text-sm font-semibold tabular">{n} selected</span>
-          {menu("Status", options(board, "Status").map((o) => ({ key: o.id, node: o.name, run: (t) => actions.move(t, o.name, { silent: true }) })))}
-          {menu("Priority", options(board, "Priority").map((o) => ({ key: o.id, node: <Tag color={o.color} dot>{plain(o.name)}</Tag>, run: (t) => actions.setField(t, "Priority", o.name, { silent: true }) })))}
+          {menu("Status", options(board, "Status").map((o) => ({ key: o.id, node: <span className="flex items-center gap-2"><StatusIcon name={o.name} size={15} />{plain(o.name)}</span>, run: (t) => actions.move(t, o.name, { silent: true }) })))}
+          {menu("Priority", options(board, "Priority").map((o) => ({ key: o.id, node: <span className="flex items-center gap-2"><PriorityIcon value={o.name} size={15} />{plain(o.name)}</span>, run: (t) => actions.setField(t, "Priority", o.name, { silent: true }) })))}
           {iterationField(board) && menu("Sprint", [
             ...(iterationField(board)?.iterations ?? []).map((i) => ({ key: i.id, node: i.title, run: (t: Ticket) => actions.setField(t, "Sprint", i.id, { silent: true }) })),
             { key: "none", node: <span className="text-muted-foreground">No sprint</span>, run: (t: Ticket) => actions.setField(t, "Sprint", null, { silent: true }) },

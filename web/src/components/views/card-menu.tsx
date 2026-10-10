@@ -12,7 +12,7 @@ import { useOpenTicket } from "@/lib/url-state";
 import { ArrowRightLeft, CheckCircle2, Flag, Link2, PanelRightOpen, RotateCcw, UserRoundPlus, XCircle } from "@/components/icons";
 import type { ReactElement } from "react";
 import { toast } from "sonner";
-import { Tag } from "../ticket/bits";
+import { PriorityIcon, StatusIcon } from "../ticket/status-icons";
 
 // Right-click (or long-press on touch) any ticket for the common actions,
 // like Jira and ClickUp. Everything here is also reachable from the ticket itself.
@@ -30,7 +30,7 @@ export function CardMenu({ board, ticket: t, children }: { board: Board; ticket:
           <ContextMenuSubTrigger><ArrowRightLeft />Move to</ContextMenuSubTrigger>
           <ContextMenuSubContent className="min-w-48">
             <ContextMenuRadioGroup value={t.fields.Status ?? ""} onValueChange={(v: string) => void actions.move(t, v)}>
-              {options(board, "Status").map((o) => <ContextMenuRadioItem key={o.id} value={o.name}>{o.name}</ContextMenuRadioItem>)}
+              {options(board, "Status").map((o) => <ContextMenuRadioItem key={o.id} value={o.name}><StatusIcon name={o.name} size={15} />{plain(o.name)}</ContextMenuRadioItem>)}
             </ContextMenuRadioGroup>
           </ContextMenuSubContent>
         </ContextMenuSub>
@@ -38,7 +38,7 @@ export function CardMenu({ board, ticket: t, children }: { board: Board; ticket:
           <ContextMenuSubTrigger><Flag />Priority</ContextMenuSubTrigger>
           <ContextMenuSubContent className="min-w-44">
             <ContextMenuRadioGroup value={t.fields.Priority ?? ""} onValueChange={(v: string) => void actions.setField(t, "Priority", v)}>
-              {options(board, "Priority").map((o) => <ContextMenuRadioItem key={o.id} value={o.name}><Tag color={o.color} dot>{plain(o.name)}</Tag></ContextMenuRadioItem>)}
+              {options(board, "Priority").map((o) => <ContextMenuRadioItem key={o.id} value={o.name}><PriorityIcon value={o.name} size={15} />{plain(o.name)}</ContextMenuRadioItem>)}
             </ContextMenuRadioGroup>
           </ContextMenuSubContent>
         </ContextMenuSub>

@@ -12,7 +12,8 @@ type IconProps = SVGProps<SVGSVGElement> & { size?: number | string; strokeWidth
 export type LucideIcon = ComponentType<IconProps>;
 
 function make(Icon: P.Icon, weight: P.IconWeight = "regular"): LucideIcon {
-  const Wrapped = ({ strokeWidth: _ignored, size, ...rest }: IconProps) => <Icon weight={weight} size={size ?? "1em"} {...(rest as object)} />;
+  const Wrapped = ({ strokeWidth: _ignored, size, className, ...rest }: IconProps) =>
+    <Icon weight={weight} size={size ?? "1em"} className={className ? `ico ${className}` : "ico"} {...(rest as object)} />;
   Wrapped.displayName = `Icon(${Icon.displayName ?? "phosphor"})`;
   return Wrapped;
 }
