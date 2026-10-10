@@ -8,21 +8,56 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, Responsiv
 import { Avatar, cleanTitle, TypeIcon } from "../ticket/bits";
 import { useLayout, type Layout } from "@/lib/layout";
 import { createContext, Fragment, useContext } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useActions } from "@/lib/data";
+import { MoreHorizontal, UserRoundPlus } from "@/components/icons";
+import { CardMenu } from "./card-menu";
+import { DateInput } from "../ticket/pickers";
+import { PriorityIcon } from "../ticket/status-icons";
 import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 
 const pts = (ts: Ticket[]) => ts.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
 
-function Tile({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: string; tone?: "danger" | "success" }) {
+function Tile({ label, value, sub, tone, href }: { label: string; value: React.ReactNode; sub?: string; tone?: "danger" | "success"; href?: string }) {
+  const router = useRouter();
+  const Tag = href ? "button" : "div";
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <Tag {...(href ? { type: "button" as const, onClick: () => router.push(href) } : {})}
+      className={`block w-full rounded-2xl border bg-card p-4 text-left ${href ? "cursor-pointer transition-[box-shadow,border-color,transform] hover:-translate-y-px hover:border-primary/40 hover:shadow-pop" : ""}`}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className={`mt-1 text-3xl font-semibold tracking-tight tabular-nums ${tone === "danger" ? "text-destructive" : tone === "success" ? "text-success" : ""}`}>{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
-    </div>
+    </Tag>
   );
 }
 
-export const WIDGETS: Record<string, string> = { summary: "Summary", burndown: "Sprint burndown", stages: "Open work by stage", workload: "Workload", attention: "Needs attention" };
+export const WIDGETS: Record<string, string> = {
+  summary: "Summary", burndown: "Sprint burndown", stages: "Open work by stage", workload: "Workload", attention: "Needs attention",
+  priority: "Open work by priority", dueSoon: "Due in the next 7 days", unassigned: "Unassigned work",
+};
+const LIST = "/backlog/";
+const q = (p: Record<string, string>) => `${LIST}?${new URLSearchParams({ done: "false", ...p })}`;
+
+// One ticket row inside a widget: opens on click, right-click or ⋯ for the full menu.
+function Row({ board, ticket: t, children }: { board: Board; ticket: Ticket; children?: React.ReactNode }) {
+  const [, open] = useOpenTicket();
+  return (
+    <CardMenu board={board} ticket={t}>
+      <li className="group/row flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-sm transition-colors hover:bg-muted/60">
+        <button onClick={() => void open(t.number)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <TypeIcon ticket={t} /><span className="font-mono text-[11px] text-muted-foreground">#{t.number}</span>
+          <span className="truncate">{cleanTitle(t.title)}</span>
+        </button>
+        {children}
+        <Button size="icon-xs" variant="ghost" aria-label={`Actions for #${t.number}`} className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+          onClick={(e) => { e.preventDefault(); e.currentTarget.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: e.clientX, clientY: e.clientY })); }}>
+          <MoreHorizontal />
+        </Button>
+      </li>
+    </CardMenu>
+  );
+}
 const DashLayout = createContext<Layout | null>(null);
 
 // Each widget can be collapsed, hidden, or dragged to a new place.
@@ -41,7 +76,8 @@ const axis = { fontSize: 11, fill: "var(--muted-foreground)" };
 const tooltipStyle = { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12, color: "var(--popover-foreground)" };
 
 export function DashboardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
-  const [, open] = useOpenTicket();
+  const router = useRouter();
+  const actions = useActions();
   const layout = useLayout("dashboard", Object.keys(WIDGETS));
   useSectionDrops("dashboard", layout);
   const sprint = currentSprint(board);
@@ -81,11 +117,11 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
     summary: (
       <Panel id="summary" wide title="Summary" sub="The numbers that matter this week.">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Open tickets" value={open_.length} sub={`${unassigned} unassigned`} />
-        <Tile label="Finished this week" value={doneWeek.length} tone="success" sub="closed in the last 7 days" />
-        <Tile label="Overdue" value={overdue.length} tone={overdue.length ? "danger" : undefined} sub="past their due date" />
+        <Tile label="Open tickets" value={open_.length} sub={`${unassigned} unassigned`} href={q({})} />
+        <Tile label="Finished this week" value={doneWeek.length} tone="success" sub="closed in the last 7 days" href="/board/" />
+        <Tile label="Overdue" value={overdue.length} tone={overdue.length ? "danger" : undefined} sub="past their due date" href="/calendar/" />
         <Tile label={sprint ? sprint.title : "No current sprint"} value={sprint ? `${inSprint.length ? Math.round((sprintDone.length / inSprint.length) * 100) : 0}%` : "–"}
-          sub={sprint ? `${sprintDone.length} of ${inSprint.length} done · ${pts(sprintDone)}/${pts(inSprint)} pts · ends ${format(parseISO(sprintEnd(sprint)), "d MMM")}` : "Add a Sprint field to plan sprints"} />
+          href="/sprint/" sub={sprint ? `${sprintDone.length} of ${inSprint.length} done · ${pts(sprintDone)}/${pts(inSprint)} pts · ends ${format(parseISO(sprintEnd(sprint)), "d MMM")}` : "Add a Sprint field to plan sprints"} />
       </div>
       </Panel>
     ),
@@ -121,7 +157,7 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
                 <XAxis dataKey="name" tick={axis} tickLine={false} axisLine={false} interval={0} />
                 <YAxis tick={axis} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} />
-                <Bar dataKey="tickets" name="Tickets" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                <Bar dataKey="tickets" name="Tickets" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={36} cursor="pointer" onClick={() => router.push("/board/")} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -132,13 +168,16 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
           {load.length ? (
             <ul className="space-y-2.5">
               {load.map(({ p, n, pts: points }) => (
-                <li key={p.login} className="flex items-center gap-3 text-sm">
+                <li key={p.login}>
+                <button onClick={() => router.push(q({ assignee: p.login }))} title={`Open ${p.name || p.login}'s work`}
+                  className="flex w-full items-center gap-3 rounded-lg px-1.5 py-1 text-left text-sm transition-colors hover:bg-muted/60">
                   <Avatar person={p} size={24} />
                   <span className="w-28 truncate">{p.name || p.login}</span>
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted" title={`${points} points`}>
                     <span className="block h-full rounded-full bg-[var(--chart-1)]" style={{ width: `${(Math.max(points, n) / maxPts) * 100}%` }} />
                   </span>
                   <span className="w-24 text-right text-xs tabular-nums text-muted-foreground">{n} tickets · {points} pts</span>
+                </button>
                 </li>
               ))}
             </ul>
@@ -148,26 +187,74 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
     attention: (
         <Panel id="attention" title="Needs attention" sub="Critical and overdue tickets.">
           {[...new Set([...critical, ...overdue])].length ? (
-            <ul className="divide-y">
+            <ul className="-mx-1.5">
               {[...new Set([...critical, ...overdue])].slice(0, 8).map((t) => (
-                <li key={t.number}>
-                  <button onClick={() => void open(t.number)} className="flex w-full items-center gap-2 py-2 text-left text-sm hover:underline">
-                    <TypeIcon ticket={t} /><span className="flex-1 truncate">{cleanTitle(t.title)}</span>
-                    {isOverdue(t) && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Overdue</span>}
-                    {/critical/i.test(t.fields.Priority ?? "") && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Critical</span>}
-                  </button>
-                </li>
+                <Row key={t.number} board={board} ticket={t}>
+                  {isOverdue(t) && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Overdue</span>}
+                  {/critical/i.test(t.fields.Priority ?? "") && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Critical</span>}
+                </Row>
               ))}
             </ul>
           ) : <p className="py-6 text-center text-sm text-muted-foreground">Nothing critical or overdue. 🎉</p>}
         </Panel>
     ),
+    priority: (
+        <Panel id="priority" title="Open work by priority" sub="Click a priority to see those tickets.">
+          <ul className="space-y-1">
+            {[...options(board, "Priority").map((o) => ({ key: o.name, label: plain(o.name), n: open_.filter((t) => t.fields.Priority === o.name).length })),
+              { key: "", label: "No priority", n: open_.filter((t) => !t.fields.Priority).length }].map((r) => (
+              <li key={r.key || "none"}>
+                <button disabled={!r.key} onClick={() => router.push(q({ priority: r.key }))}
+                  className="flex w-full items-center gap-3 rounded-lg px-1.5 py-1.5 text-left text-sm transition-colors enabled:hover:bg-muted/60">
+                  <span className="grid w-5 place-items-center">{r.key ? <PriorityIcon value={r.key} size={16} /> : <span className="size-2 rounded-full bg-muted-foreground/40" />}</span>
+                  <span className="w-24 truncate">{r.label}</span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><span className="block h-full rounded-full bg-[var(--chart-2)]" style={{ width: `${open_.length ? (r.n / open_.length) * 100 : 0}%` }} /></span>
+                  <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">{r.n}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+    ),
+    dueSoon: (() => {
+      const soon = open_.filter((t) => { const d = t.fields["Target date"]; return !!d && d >= today() && d <= addDays(today(), 7); })
+        .sort((a, b) => (a.fields["Target date"] ?? "").localeCompare(b.fields["Target date"] ?? ""));
+      return (
+        <Panel id="dueSoon" title="Due in the next 7 days" sub="Change a date right here, or right-click a row for more.">
+          {soon.length ? (
+            <ul className="-mx-1.5">
+              {soon.slice(0, 10).map((t) => (
+                <Row key={t.number} board={board} ticket={t}>
+                  <span className="w-44 shrink-0"><DateInput label={`Due date of #${t.number}`} value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></span>
+                </Row>
+              ))}
+            </ul>
+          ) : <p className="py-6 text-center text-sm text-muted-foreground">Nothing due this week.</p>}
+        </Panel>
+      );
+    })(),
+    unassigned: (() => {
+      const free = open_.filter((t) => !t.assignees.length);
+      return (
+        <Panel id="unassigned" title="Unassigned work" sub="Pick something up with one click.">
+          {free.length ? (
+            <ul className="-mx-1.5">
+              {free.slice(0, 8).map((t) => (
+                <Row key={t.number} board={board} ticket={t}>
+                  <Button size="xs" variant="outline" onClick={() => void actions.setAssignees(t, [board.viewer.login])}><UserRoundPlus />Take it</Button>
+                </Row>
+              ))}
+            </ul>
+          ) : <p className="py-6 text-center text-sm text-muted-foreground">Everything open has an owner.</p>}
+        </Panel>
+      );
+    })(),
   };
 
   return (
     <DashLayout.Provider value={layout}>
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <div className="flex justify-end"><CustomiseMenu layout={layout} labels={WIDGETS} label="Customise" /></div>
+        <div className="flex justify-end"><CustomiseMenu layout={layout} labels={WIDGETS} label="Add or remove widgets" heading="Widgets" /></div>
         <div className="grid min-h-0 content-start gap-4 overflow-auto pb-8 lg:grid-cols-2">
           {layout.visible.map((id) => <Fragment key={id}>{widgets[id]}</Fragment>)}
           {!layout.visible.length && <p className="text-sm text-muted-foreground">All widgets are hidden. Use Customise to show them again.</p>}
