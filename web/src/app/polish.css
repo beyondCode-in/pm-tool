@@ -76,7 +76,8 @@
 /* ── Typography ── */
 html { font-size: 16px; text-rendering: optimizeLegibility; }
 body { font-feature-settings: "cv11", "ss01", "ss03", "calt"; letter-spacing: -0.006em; }
-h1 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.15; }
+/* In the base layer so size classes on a heading (text-xl…) still win. */
+@layer base { h1 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.15; } }
 .text-xs, .text-sm { letter-spacing: 0; }
 kbd { font-family: var(--font-code), ui-monospace, monospace; font-feature-settings: "calt" 0; }
 
@@ -311,3 +312,17 @@ table thead th button { text-transform: inherit; letter-spacing: inherit; font-w
 .picker-trigger .picker-chevron { transition: transform .18s ease, opacity .15s ease; opacity: .45; }
 .picker-trigger:hover .picker-chevron { opacity: .8; }
 .picker-trigger[data-popup-open] .picker-chevron, .picker-trigger[aria-expanded="true"] .picker-chevron { transform: rotate(180deg); opacity: 1; }
+
+/* ── Docs: comfortable reading width and type ── */
+.doc-prose { font-size: 15.5px; line-height: 1.7; }
+.doc-prose h1 { font-family: var(--font-display, inherit); font-size: 2rem; line-height: 1.15; margin: .2em 0 .6em; }
+.doc-prose h2 { font-size: 1.3rem; margin: 1.6em 0 .5em; }
+.doc-prose h3 { font-size: 1.08rem; margin: 1.3em 0 .4em; }
+.doc-prose table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.doc-prose th, .doc-prose td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.doc-prose thead th { background: var(--muted); text-transform: none; letter-spacing: 0; font-size: 13px; }
+.ticket-ref { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; border-radius: 6px; font-family: var(--font-code), monospace; font-size: .85em;
+  background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); font-weight: 600; }
+.ticket-ref:hover { background: color-mix(in oklch, var(--primary) 20%, transparent); }
+.mention { padding: 0 4px; border-radius: 5px; font-weight: 600; color: var(--primary); background: color-mix(in oklch, var(--primary) 12%, transparent); }
+.doc-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }

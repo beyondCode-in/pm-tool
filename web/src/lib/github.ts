@@ -4,6 +4,11 @@ import { timeBody } from "./time-entry";
 import { workspace } from "./workspace";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
+// Contents API paths keep "/" but escape everything else (spaces, #, ?).
+const encodePath = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+// UTF-8 safe base64 (btoa/atob only handle Latin-1).
+const textToBase64 = (s: string) => { const b = new TextEncoder().encode(s); let bin = ""; for (const x of b) bin += String.fromCharCode(x); return btoa(bin); };
+const fromBase64 = (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), (c) => c.charCodeAt(0)));
 
 export class GitHubError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -231,6 +236,39 @@ export function createGitHubSource(token: string): DataSource {
         method: "PATCH",
         body: JSON.stringify({ new_name: patch.name, color: patch.color?.replace("#", ""), description: patch.description ?? undefined }),
       });
+    },
+
+    async listFiles(folder, ext) {
+      const branch = (await rest<{ default_branch: string }>(repoPath)).default_branch;
+      try {
+        const tree = await rest<{ tree: { path: string; type: string; sha: string }[] }>(`${repoPath}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+        return tree.tree.filter((n) => n.type === "blob" && n.path.startsWith(`${folder}/`) && n.path.endsWith(ext)).map((n) => ({ path: n.path, sha: n.sha }));
+      } catch (e) {
+        if (e instanceof GitHubError && e.status === 409) return []; // empty repository
+        throw e;
+      }
+    },
+
+    async readFile(path) {
+      const f = await rest<{ content: string; sha: string }>(`${repoPath}/contents/${encodePath(path)}`);
+      return { text: fromBase64(f.content), sha: f.sha };
+    },
+
+    async writeFile(path, text, sha, message) {
+      try {
+        const r = await rest<{ content: { sha: string } }>(`${repoPath}/contents/${encodePath(path)}`, {
+          method: "PUT", body: JSON.stringify({ message, content: textToBase64(text), ...(sha ? { sha } : {}) }),
+        });
+        return r.content.sha;
+      } catch (e) {
+        if (e instanceof GitHubError && (e.status === 409 || e.status === 422))
+          throw new GitHubError(sha ? "Someone else saved this file since you opened it. Copy your changes, reload it, and save again." : "A file with that name already exists.", e.status);
+        throw e;
+      }
+    },
+
+    async deleteFile(path, sha, message) {
+      await rest(`${repoPath}/contents/${encodePath(path)}`, { method: "DELETE", body: JSON.stringify({ message, sha }) });
     },
 
     async milestones() {

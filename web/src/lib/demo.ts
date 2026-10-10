@@ -97,6 +97,14 @@ export function createDemoSource(): DataSource {
     [102, [{ id: "c1", author: people[1], body: "PR is up, could someone review? 🙏", createdAt: new Date(Date.now() - 864e5).toISOString() }]],
     [104, [{ id: "c2", author: people[3], body: "Reproduced on Safari 18. Looking at the blob download.", createdAt: new Date(Date.now() - 36e5 * 5).toISOString() }]],
   ]);
+  // Docs (and later whiteboards) live as files in the repository.
+  const files = new Map<string, { text: string; sha: string; updatedAt: string }>([
+    ["docs/Team handbook.md", { sha: "d1", updatedAt: new Date(Date.now() - 2 * 864e5).toISOString(), text: "# Team handbook\n\nHow we work together.\n\n## Working hours\n\nCore hours are **10:00–16:00** in your time zone.\n\n## Where things live\n\n- Work: the **Board** and **Backlog**\n- Decisions: **Docs** (this space)\n- Chat: **Chat** channels\n\n## Rituals\n\n- [x] Monday planning\n- [x] Daily stand-up (async in Chat)\n- [ ] Friday demo\n" }],
+    ["docs/Onboarding/Getting started.md", { sha: "d2", updatedAt: new Date(Date.now() - 5 * 864e5).toISOString(), text: "# Getting started\n\nWelcome! In your first week:\n\n1. Pick up a ticket marked **good first issue**\n2. Read the [Team handbook](<../Team handbook.md>)\n3. Pair with someone on #113\n" }],
+    ["docs/Onboarding/Tools and access.md", { sha: "d3", updatedAt: new Date(Date.now() - 9 * 864e5).toISOString(), text: "# Tools and access\n\n| Tool | Who to ask |\n| --- | --- |\n| GitHub | Maya |\n| Staging | Sam |\n" }],
+    ["docs/Release process.md", { sha: "d4", updatedAt: new Date(Date.now() - 864e5).toISOString(), text: "# Release process\n\nReleases go out on **Tuesdays**.\n\n- [ ] Freeze the sprint board\n- [ ] QA signs off (see #108)\n- [ ] Tag and publish\n" }],
+  ]);
+
   // Goals: two milestones with tickets attached.
   let milestones: { number: number; title: string; description: string; dueOn: string | null; state: "OPEN" | "CLOSED" }[] = [
     { number: 1, title: "Self-serve reporting beta", description: "Customers can build, schedule and export their own reports.", dueOn: addDays(today(), 12), state: "OPEN" },
@@ -208,6 +216,25 @@ export function createDemoSource(): DataSource {
         tickets: board.tickets.map((t) => ({ ...t, labels: t.labels.map((l) => (l.name === name ? { ...l, name: next.name, color: next.color || l.color } : l)) })),
       };
     },
+    async listFiles(folder, ext) {
+      await wait();
+      return [...files.entries()].filter(([p]) => p.startsWith(`${folder}/`) && p.endsWith(ext)).map(([path, f]) => ({ path, sha: f.sha, updatedAt: f.updatedAt }));
+    },
+    async readFile(path) {
+      await wait();
+      const f = files.get(path);
+      if (!f) throw new Error(`${path} wasn't found.`);
+      return { text: f.text, sha: f.sha };
+    },
+    async writeFile(path, text, sha) {
+      await wait();
+      const cur = files.get(path);
+      if (cur && cur.sha !== sha) throw new Error(sha ? "Someone else saved this file since you opened it." : "A file with that name already exists.");
+      const next = crypto.randomUUID();
+      files.set(path, { text, sha: next, updatedAt: new Date().toISOString() });
+      return next;
+    },
+    async deleteFile(path) { await wait(); files.delete(path); },
     async milestones() {
       await wait();
       return milestones.map((m) => {
