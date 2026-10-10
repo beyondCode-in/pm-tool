@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { dotClass, emojiOf, isOverdue, plain } from "@/lib/board";
+import { emojiOf, isOverdue, plain, tint } from "@/lib/board";
 import type { Board, Person, Ticket } from "@/lib/types";
 import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -32,17 +32,17 @@ export function AvatarStack({ people, max = 3, size = 22 }: { people: Person[]; 
   );
 }
 
-// Option with its board colour. Colour is never the only signal: the name is always shown.
-export function OptionPill({ board, field, value, compact }: { board: Board; field: string; value?: string; compact?: boolean }) {
+// A board option as a tinted tag. The text is always shown, so colour is never the only signal.
+// Type keeps its emoji (it's the type's icon); other fields show the plain name.
+export function Tag({ color, children, dot }: { color?: string; children: React.ReactNode; dot?: boolean }) {
+  return <span className="tag" style={tint(color)}>{dot && <span className="tag-dot" aria-hidden />}{children}</span>;
+}
+
+export function OptionPill({ board, field, value }: { board: Board; field: string; value?: string; compact?: boolean }) {
   if (!value) return null;
-  const color = board.fields.find((f) => f.name === field && f.kind === "single");
-  const c = color && color.kind === "single" ? color.options.find((o) => o.name === value)?.color : undefined;
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border bg-background/60 px-1.5 py-0.5 text-xs font-medium whitespace-nowrap">
-      <span className={cn("size-1.5 rounded-full", dotClass(c))} aria-hidden />
-      {compact ? plain(value) : value}
-    </span>
-  );
+  const f = board.fields.find((x) => x.name === field && x.kind === "single");
+  const color = f && f.kind === "single" ? f.options.find((o) => o.name === value)?.color : undefined;
+  return <Tag color={color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? value : plain(value)}</Tag>;
 }
 
 export function TypeIcon({ ticket }: { ticket: Ticket }) {

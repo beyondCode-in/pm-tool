@@ -1,3 +1,4 @@
+import type React from "react";
 import type { Board, Field, FieldName, Iteration, Option, Ticket } from "./types";
 
 export const singleField = (b: Board, name: string) => b.fields.find((f): f is Extract<Field, { kind: "single" }> => f.name === name && f.kind === "single");
@@ -21,6 +22,16 @@ const COLOR: Record<string, string> = {
   ORANGE: "bg-orange-500", RED: "bg-red-500", PINK: "bg-pink-500", PURPLE: "bg-violet-500",
 };
 export const dotClass = (color?: string) => COLOR[color ?? "GRAY"] ?? COLOR.GRAY;
+
+// Tag tint for a GitHub option colour: [hue, chroma] in OKLCH.
+const TINT: Record<string, [number, number]> = {
+  GRAY: [280, 0.02], BLUE: [255, 0.16], GREEN: [155, 0.15], YELLOW: [85, 0.15],
+  ORANGE: [55, 0.17], RED: [25, 0.2], PINK: [350, 0.18], PURPLE: [300, 0.18],
+};
+export const tint = (color?: string) => {
+  const [h, c] = TINT[color ?? "GRAY"] ?? TINT.GRAY;
+  return { "--h": h, "--c": c } as React.CSSProperties;
+};
 export const optionColor = (b: Board, field: string, name?: string) => options(b, field).find((o) => o.name === name)?.color;
 
 export const today = () => new Date().toISOString().slice(0, 10);

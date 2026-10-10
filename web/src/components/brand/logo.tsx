@@ -1,20 +1,29 @@
 import { cn } from "@/lib/utils";
+import { useId } from "react";
 
-// The BeyondPM mark: three cards stepping forward — work moving across a board.
-// Colours come from the accent tokens, so the logo follows the chosen theme.
+// The BeyondPM mark: a "B" built from a stem and two stacked cards — tickets
+// on a board — with a small spark for "beyond". Colours come from the accent
+// tokens, so the mark follows the chosen theme.
 export function LogoMark({ size = 28, className, animated }: { size?: number; className?: string; animated?: boolean }) {
+  const id = useId();
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden className={cn("shrink-0", animated && "logo-animated", className)}>
       <defs>
-        <linearGradient id="bpm-g" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" style={{ stopColor: "var(--brand-from)" }} />
           <stop offset="1" style={{ stopColor: "var(--brand-to)" }} />
         </linearGradient>
+        <linearGradient id={`${id}-shine`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="white" stopOpacity="0.28" />
+          <stop offset="0.5" stopColor="white" stopOpacity="0" />
+        </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill="url(#bpm-g)" />
-      <rect className="logo-card logo-card-1" x="6.5" y="9" width="6" height="14" rx="2" fill="white" opacity="0.45" />
-      <rect className="logo-card logo-card-2" x="13" y="7" width="6" height="18" rx="2" fill="white" opacity="0.7" />
-      <rect className="logo-card logo-card-3" x="19.5" y="11" width="6" height="10" rx="2" fill="white" />
+      <rect width="32" height="32" rx="9" fill={`url(#${id}-bg)`} />
+      <rect width="32" height="32" rx="9" fill={`url(#${id}-shine)`} />
+      <rect className="logo-card logo-card-1" x="8" y="7" width="3.6" height="18" rx="1.8" fill="white" />
+      <rect className="logo-card logo-card-2" x="12.8" y="7" width="9.4" height="7.6" rx="2.6" fill="white" fillOpacity="0.92" />
+      <rect className="logo-card logo-card-3" x="12.8" y="16.4" width="11.2" height="8.6" rx="2.8" fill="white" fillOpacity="0.72" />
+      <circle cx="24.6" cy="8.4" r="1.9" style={{ fill: "var(--brand-spark)" }} />
     </svg>
   );
 }
@@ -24,7 +33,7 @@ export function Logo({ size = 28, subtitle }: { size?: number; subtitle?: string
     <span className="flex items-center gap-2.5">
       <LogoMark size={size} />
       <span className="min-w-0 leading-tight">
-        <span className="block text-[15px] font-semibold tracking-tight">Beyond<span className="text-primary">PM</span></span>
+        <span className="font-display block text-[16px] font-semibold">beyond<span className="text-primary">pm</span></span>
         {subtitle && <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>}
       </span>
     </span>

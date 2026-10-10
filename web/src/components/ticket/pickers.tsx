@@ -5,12 +5,15 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { dotClass, iterationField, options, sprintEnd } from "@/lib/board";
+import { iterationField, options, plain, sprintEnd } from "@/lib/board";
 import type { Board, Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
-import { Avatar, shortDate } from "./bits";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { addDays, format, parseISO } from "date-fns";
+import { CalendarDays, ChevronDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Avatar, shortDate, Tag } from "./bits";
 
 const NONE = "__none";
 
@@ -33,11 +36,7 @@ export function OptionPicker({ board, field, value, onChange, label }: {
     <DropdownMenu>
       <DropdownMenuTrigger render={triggerButton} aria-label={`${label}: ${value ?? "not set"}`}>
         <Trigger empty={!value}>
-          {value ? (
-            <span className="inline-flex items-center gap-2">
-              <span className={cn("size-2 rounded-full", dotClass(opts.find((o) => o.name === value)?.color))} aria-hidden />{value}
-            </span>
-          ) : "Not set"}
+          {value ? <Tag color={opts.find((o) => o.name === value)?.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? value : plain(value)}</Tag> : "Not set"}
         </Trigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
@@ -45,8 +44,8 @@ export function OptionPicker({ board, field, value, onChange, label }: {
         <DropdownMenuRadioGroup value={value ?? NONE} onValueChange={(v: string) => onChange(v === NONE ? null : v)}>
           {opts.map((o) => (
             <DropdownMenuRadioItem key={o.id} value={o.name}>
-              <span className={cn("size-2 rounded-full", dotClass(o.color))} aria-hidden />
-              <span className="flex-1">{o.name}</span>
+              <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? o.name : plain(o.name)}</Tag>
+              {o.description && <span className="ml-auto max-w-40 truncate pl-3 text-xs text-muted-foreground">{o.description}</span>}
             </DropdownMenuRadioItem>
           ))}
           <DropdownMenuSeparator />
@@ -112,10 +111,34 @@ export function SprintPicker({ board, value, onChange }: { board: Board; value?:
   );
 }
 
+// Calendar popover with quick picks; replaces the browser's date input, which
+// looks different in every browser and is fiddly on phones.
 export function DateInput({ value, onChange, label }: { value?: string; onChange: (v: string | null) => void; label: string }) {
+  const [open, setOpen] = useState(false);
+  const pick = (d: string | null) => { onChange(d); setOpen(false); };
+  const today = format(new Date(), "yyyy-MM-dd");
+  const quick: [string, string][] = [["Today", today], ["Tomorrow", format(addDays(new Date(), 1), "yyyy-MM-dd")],
+    ["Next week", format(addDays(new Date(), 7), "yyyy-MM-dd")], ["In 2 weeks", format(addDays(new Date(), 14), "yyyy-MM-dd")]];
+  const overdue = value && value < today;
   return (
-    <input type="date" aria-label={label} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}
-      className="h-8 w-full rounded-md bg-transparent px-2 text-sm hover:bg-muted focus-visible:bg-muted [color-scheme:light] dark:[color-scheme:dark]" />
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={triggerButton} aria-label={`${label}: ${value ?? "not set"}`}>
+        <Trigger empty={!value}>
+          <span className={cn("inline-flex items-center gap-2", overdue && "font-medium text-destructive")}>
+            <CalendarDays className="size-3.5 opacity-70" aria-hidden />
+            {value ? format(parseISO(value), "EEE d MMM yyyy") : "Pick a date"}
+          </span>
+        </Trigger>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <div className="flex flex-wrap gap-1 border-b p-2">
+          {quick.map(([l, d]) => <Button key={l} size="xs" variant={value === d ? "secondary" : "ghost"} onClick={() => pick(d)}>{l}</Button>)}
+        </div>
+        <Calendar mode="single" weekStartsOn={1} selected={value ? parseISO(value) : undefined}
+          defaultMonth={value ? parseISO(value) : undefined} onSelect={(d) => pick(d ? format(d, "yyyy-MM-dd") : null)} />
+        {value && <div className="border-t p-2"><Button size="xs" variant="ghost" className="w-full text-muted-foreground" onClick={() => pick(null)}>Clear date</Button></div>}
+      </PopoverContent>
+    </Popover>
   );
 }
 

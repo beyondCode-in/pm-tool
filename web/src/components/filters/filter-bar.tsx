@@ -4,13 +4,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { dotClass, options } from "@/lib/board";
+import { options, plain } from "@/lib/board";
 import type { Board } from "@/lib/types";
 import { useFilters } from "@/lib/url-state";
-import { cn } from "@/lib/utils";
 import { ChevronDown, Search, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { Avatar } from "../ticket/bits";
+import { Avatar, Tag } from "../ticket/bits";
 
 function Multi({ label, values, selected, onChange }: {
   label: string; values: { value: string; label: ReactNode }[]; selected: string[]; onChange: (v: string[]) => void;
@@ -38,7 +37,7 @@ function Multi({ label, values, selected, onChange }: {
 export function FilterBar({ board, children, hideDoneToggle }: { board: Board; children?: ReactNode; hideDoneToggle?: boolean }) {
   const { filters, update, clear, active } = useFilters();
   const opt = (field: string) => options(board, field).map((o) => ({
-    value: o.name, label: <span className="inline-flex items-center gap-2"><span className={cn("size-2 rounded-full", dotClass(o.color))} />{o.name}</span>,
+    value: o.name, label: <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? o.name : plain(o.name)}</Tag>,
   }));
   return (
     <div data-tour="filters" className="flex flex-wrap items-center gap-2" role="search">
