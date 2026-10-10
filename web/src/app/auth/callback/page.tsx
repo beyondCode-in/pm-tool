@@ -23,7 +23,7 @@ export default function Callback() {
         <div className="max-w-sm space-y-3">
           <p className="text-lg font-semibold">Sign-in didn&apos;t work</p>
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button render={<a href={`${config.basePath}/login/`} />}>Back to sign in</Button>
+          <Button nativeButton={false} render={<a href={`${config.basePath}/login/`} />}>Back to sign in</Button>
         </div>
       ) : (
         <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" />Signing you in…</p>

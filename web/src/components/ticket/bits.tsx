@@ -7,7 +7,7 @@ import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "lucide-react"
 import { format, parseISO } from "date-fns";
 
 export function Avatar({ person, size = 24, className }: { person: Person; size?: number; className?: string }) {
-  const initials = (person.name || person.login).split(/[\s-_]+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = ((person.name || person.login).match(/\p{L}+/gu) ?? ["?"]).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const hue = [...person.login].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
   return person.avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element

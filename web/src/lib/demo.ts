@@ -96,6 +96,7 @@ export function createDemoSource(): DataSource {
     [102, [{ id: "c1", author: people[1], body: "PR is up, could someone review? 🙏", createdAt: new Date(Date.now() - 864e5).toISOString() }]],
     [104, [{ id: "c2", author: people[3], body: "Reproduced on Safari 18. Looking at the blob download.", createdAt: new Date(Date.now() - 36e5 * 5).toISOString() }]],
   ]);
+  const blockers = new Map<number, number[]>([[104, [107]], [103, [102]]]); // ticket → tickets blocking it
   const wait = () => new Promise((r) => setTimeout(r, 120));
   const patch = (n: number, p: (t: Ticket) => Ticket) => {
     board = { ...board, tickets: withRollups(board.tickets.map((t) => (t.number === n ? { ...p(t), updatedAt: new Date().toISOString() } : t))) };
@@ -119,6 +120,38 @@ export function createDemoSource(): DataSource {
       comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
       return c;
+    },
+    async dependencies(t) {
+      await wait();
+      return { blockedBy: blockers.get(t.number) ?? [], blocking: [...blockers].filter(([, b]) => b.includes(t.number)).map(([n]) => n) };
+    },
+    async addBlocker(t, blocker) {
+      await wait();
+      if (blocker === t.number) throw new Error("A ticket can't block itself.");
+      if ((blockers.get(blocker) ?? []).includes(t.number)) throw new Error(`#${blocker} is already blocked by #${t.number}; that would be a loop.`);
+      blockers.set(t.number, [...new Set([...(blockers.get(t.number) ?? []), blocker])]);
+    },
+    async removeBlocker(t, blocker) { await wait(); blockers.set(t.number, (blockers.get(t.number) ?? []).filter((n) => n !== blocker)); },
+    async setParent(t, parent) {
+      await wait();
+      if (parent === t.number) throw new Error("A ticket can't be its own parent.");
+      patch(t.number, (x) => ({ ...x, parent }));
+    },
+    async attach(t, file) {
+      await wait();
+      const url = URL.createObjectURL(file);
+      const isImage = file.type.startsWith("image/");
+      const c = { id: crypto.randomUUID(), author: you, body: `📎 Attached **${file.name}**\n\n${isImage ? `![${file.name}](${url})` : `[${file.name}](${url})`}`, createdAt: new Date().toISOString() };
+      comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
+      patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
+      return { name: file.name, url, isImage };
+    },
+    async logTime(_b, t, minutes, note) {
+      await wait();
+      const h = Math.floor(minutes / 60), m = minutes % 60;
+      const c = { id: crypto.randomUUID(), author: you, body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}`, createdAt: new Date().toISOString() };
+      comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
+      patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
     },
     async create(_b, input) {
       await wait();

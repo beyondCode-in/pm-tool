@@ -16,7 +16,7 @@ export default function Page() {
         const due = (t: (typeof open)[number]) => t.fields["Target date"];
         const now = today(), week = addDays(now, 7);
         return (
-          <ListView board={board} empty={<EmptyState icon={Sun} title="Nothing assigned to you" text="Enjoy the calm, or pick something up from the Board or Backlog." action={<Button render={<Link href="/board/" />}>Open the board</Button>} />}
+          <ListView board={board} empty={<EmptyState icon={Sun} title="Nothing assigned to you" text="Enjoy the calm, or pick something up from the Board or Backlog." action={<Button nativeButton={false} render={<Link href="/board/" />}>Open the board</Button>} />}
             groups={[
               { name: "Overdue", tickets: open.filter((t) => due(t) && due(t)! < now) },
               { name: "Due today", tickets: open.filter((t) => due(t) === now) },

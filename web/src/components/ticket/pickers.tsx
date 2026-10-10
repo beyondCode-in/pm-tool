@@ -113,13 +113,13 @@ export function SprintPicker({ board, value, onChange }: { board: Board; value?:
 
 // Calendar popover with quick picks; replaces the browser's date input, which
 // looks different in every browser and is fiddly on phones.
-export function DateInput({ value, onChange, label }: { value?: string; onChange: (v: string | null) => void; label: string }) {
+export function DateInput({ value, onChange, label, warnPast }: { value?: string; onChange: (v: string | null) => void; label: string; warnPast?: boolean }) {
   const [open, setOpen] = useState(false);
   const pick = (d: string | null) => { onChange(d); setOpen(false); };
   const today = format(new Date(), "yyyy-MM-dd");
   const quick: [string, string][] = [["Today", today], ["Tomorrow", format(addDays(new Date(), 1), "yyyy-MM-dd")],
     ["Next week", format(addDays(new Date(), 7), "yyyy-MM-dd")], ["In 2 weeks", format(addDays(new Date(), 14), "yyyy-MM-dd")]];
-  const overdue = value && value < today;
+  const overdue = warnPast && value && value < today;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={triggerButton} aria-label={`${label}: ${value ?? "not set"}`}>

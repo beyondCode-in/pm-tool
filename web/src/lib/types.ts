@@ -82,4 +82,14 @@ export interface DataSource {
   comments(t: Ticket): Promise<Comment[]>;
   addComment(t: Ticket, body: string): Promise<Comment>;
   create(board: Board, input: NewTicket): Promise<number>;
+  // Relationships: Jira's "blocks / is blocked by", plus the parent link.
+  dependencies(t: Ticket): Promise<{ blockedBy: number[]; blocking: number[] }>;
+  addBlocker(t: Ticket, blocker: number): Promise<void>;
+  removeBlocker(t: Ticket, blocker: number): Promise<void>;
+  setParent(t: Ticket, parent: number | null): Promise<void>;
+  // Files are stored in the repository under .attachments/<ticket>/ and linked in a comment.
+  attach(t: Ticket, file: File): Promise<Attachment>;
+  logTime(board: Board, t: Ticket, minutes: number, note: string): Promise<void>;
 }
+
+export type Attachment = { name: string; url: string; isImage: boolean };

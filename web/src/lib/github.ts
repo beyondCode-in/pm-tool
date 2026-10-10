@@ -1,6 +1,8 @@
 import { config } from "./config";
 import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket } from "./types";
 
+const ATTACH_BRANCH = "beyondpm-attachments";
+
 export class GitHubError extends Error {
   constructor(message: string, readonly status?: number) {
     super(message);
@@ -36,6 +38,8 @@ export function createGitHubSource(token: string): DataSource {
   }
 
   const repoPath = `/repos/${config.owner}/${config.repo}`;
+  // The REST "id" (not the number) is what the sub-issue and dependency APIs expect.
+  const restId = async (n: number) => (await rest<{ id: number }>(`${repoPath}/issues/${n}`)).id;
 
   async function setField(board: Board, t: Ticket, name: FieldName, value: FieldValue) {
     const field = board.fields.find((f) => f.name === name);
@@ -117,6 +121,67 @@ export function createGitHubSource(token: string): DataSource {
 
     async addComment(t, body) {
       return toComment(await rest<RestComment>(`${repoPath}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
+    },
+
+    async dependencies(t) {
+      const [by, ing] = await Promise.all([
+        rest<{ number: number }[]>(`${repoPath}/issues/${t.number}/dependencies/blocked_by?per_page=100`),
+        rest<{ number: number }[]>(`${repoPath}/issues/${t.number}/dependencies/blocking?per_page=100`),
+      ]);
+      return { blockedBy: by.map((i) => i.number), blocking: ing.map((i) => i.number) };
+    },
+
+    async addBlocker(t, blocker) {
+      await rest(`${repoPath}/issues/${t.number}/dependencies/blocked_by`, { method: "POST", body: JSON.stringify({ issue_id: await restId(blocker) }) });
+    },
+
+    async removeBlocker(t, blocker) {
+      await rest(`${repoPath}/issues/${t.number}/dependencies/blocked_by/${await restId(blocker)}`, { method: "DELETE" });
+    },
+
+    async setParent(t, parent) {
+      const id = await restId(t.number);
+      if (t.parent) await rest(`${repoPath}/issues/${t.parent}/sub_issue`, { method: "DELETE", body: JSON.stringify({ sub_issue_id: id }) });
+      if (parent) await rest(`${repoPath}/issues/${parent}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: id }) });
+    },
+
+    async attach(t, file) {
+      if (file.size > 20 * 1024 * 1024) throw new GitHubError("That file is over 20 MB. Please attach something smaller, or link to it instead.");
+      const safe = file.name.replace(/[^\w.-]+/g, "-").slice(-80);
+      const path = `.attachments/${t.number}/${Date.now()}-${safe}`;
+      const content = await toBase64(file);
+      // Files go to their own branch so attachments never add commits to main.
+      const put = () => rest<{ content: { html_url: string } }>(`${repoPath}/contents/${path}`, {
+        method: "PUT",
+        body: JSON.stringify({ message: `chore(attachments): add ${safe} to #${t.number}`, content, branch: ATTACH_BRANCH }),
+      });
+      const res = await put().catch(async (e) => {
+        if (!(e instanceof GitHubError) || (e.status !== 404 && e.status !== 422)) throw e;
+        const repo = await rest<{ default_branch: string }>(repoPath);
+        const head = await rest<{ object: { sha: string } }>(`${repoPath}/git/ref/heads/${repo.default_branch}`);
+        await rest(`${repoPath}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${ATTACH_BRANCH}`, sha: head.object.sha }) });
+        return put();
+      });
+      const isImage = file.type.startsWith("image/");
+      const url = res.content.html_url + (isImage ? "?raw=true" : "");
+      await rest(`${repoPath}/issues/${t.number}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body: `📎 Attached **${file.name}**\n\n${isImage ? `![${file.name}](${url})` : `[${file.name}](${url})`}` }),
+      });
+      return { name: file.name, url, isImage };
+    },
+
+    async logTime(board, t, minutes, note) {
+      const h = Math.floor(minutes / 60), m = minutes % 60;
+      await rest(`${repoPath}/issues/${t.number}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}` }),
+      });
+      // Adds to the board's "Time spent (h)" field when the board has one.
+      if (board.fields.some((f) => f.name === "Time spent (h)" && f.kind === "number")) {
+        const current = Number((t.fields as Record<string, unknown>)["Time spent (h)"] ?? 0);
+        await setField(board, t, "Time spent (h)" as FieldName, Math.round((current + minutes / 60) * 100) / 100);
+      }
     },
 
     async create(board, input: NewTicket) {
@@ -215,6 +280,15 @@ function toTicket(n: RawItem): Ticket {
     assignees: c.assignees.nodes, labels: c.labels.nodes, commentCount: c.comments.totalCount, parent: c.parent?.number ?? null,
     subIssues: c.subIssuesSummary ?? { total: 0, completed: 0 }, fields: fields as FieldValues,
   };
+}
+
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = () => reject(new GitHubError("Couldn't read that file."));
+    r.readAsDataURL(file);
+  });
 }
 
 function toComment(c: RestComment): Comment {

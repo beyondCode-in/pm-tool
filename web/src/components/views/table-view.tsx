@@ -115,7 +115,7 @@ function Row({ board, t }: { board: Board; t: Ticket }) {
       <td className="px-1"><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></td>
       {hasField(board, "Sprint") && <td className="px-1"><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></td>}
       {hasField(board, "Story Points") && <td className="px-1"><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></td>}
-      <td className="px-1"><DateInput label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></td>
+      <td className="px-1"><DateInput warnPast={!isDone(t)} label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></td>
     </tr>
   );
 }
