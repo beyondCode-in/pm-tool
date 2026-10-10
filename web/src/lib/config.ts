@@ -1,10 +1,14 @@
-// Everything that ties the app to one GitHub organisation, repository and
-// project board. Set these as repository variables for the Pages build
-// (see web/README.md); the defaults point at beyondCode-in's board.
+import { currentTenant, pinned } from "./tenant";
+
+// Everything that ties the app to a GitHub organisation, repository and
+// project board. The board is chosen at run time (lib/tenant.ts): fixed by
+// the build in a company's own copy, picked after sign-in on the shared site.
 export const config = {
-  owner: process.env.NEXT_PUBLIC_GITHUB_OWNER ?? "beyondCode-in",
-  repo: process.env.NEXT_PUBLIC_GITHUB_REPO ?? "pm-tool",
-  projectNumber: Number(process.env.NEXT_PUBLIC_PROJECT_NUMBER ?? 34),
+  get owner() { return currentTenant()?.owner ?? ""; },
+  get repo() { return currentTenant()?.repo ?? ""; },
+  get projectNumber() { return currentTenant()?.project ?? 0; },
+  /** True when this build is locked to one board (a company's own copy). */
+  pinned,
   // GitHub OAuth app client ID (public) and the Cloudflare Worker that swaps the
   // login code for a token (it holds the client secret).
   oauthClientId: process.env.NEXT_PUBLIC_OAUTH_CLIENT_ID ?? "",
@@ -13,3 +17,4 @@ export const config = {
 };
 
 export const oauthEnabled = Boolean(config.oauthClientId && config.authWorkerUrl);
+export const hasBoard = () => !!currentTenant();

@@ -52,7 +52,7 @@ export default function Login() {
             ))}
           </ul>
         </div>
-        <p className="text-xs text-muted-foreground">Connected to {config.owner} · board #{config.projectNumber}</p>
+        <p className="text-xs text-muted-foreground">{config.owner ? <>Connected to {config.owner} · board #{config.projectNumber}</> : "Works with any GitHub organisation and project board."}</p>
       </section>
 
       <section className="relative grid place-items-center p-4 sm:p-8">
@@ -64,7 +64,7 @@ export default function Login() {
               <LogoMark size={52} animated />
             </span>
             <h2 className="text-2xl font-semibold tracking-tight">Welcome</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">Sign in to see {config.owner}&apos;s board.</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{config.owner ? <>Sign in to see {config.owner}&apos;s board.</> : "Sign in with GitHub, then pick your team's board."}</p>
           </div>
 
           <div className="space-y-3">

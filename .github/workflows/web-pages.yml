@@ -6,6 +6,9 @@ name: Publish web app
 #   OAUTH_CLIENT_ID   GitHub OAuth app client ID
 #   AUTH_WORKER_URL   URL of the deployed web/worker sign-in Worker
 #   PROJECT_NUMBER    project board number (default 34)
+#   PIN_BOARD         "true" locks the site to this repo's board (a company's
+#                     own copy); leave unset to let people pick any board
+#                     after signing in (the shared site)
 
 on:
   push:
@@ -47,6 +50,7 @@ jobs:
           NEXT_PUBLIC_PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER || '34' }}
           NEXT_PUBLIC_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID }}
           NEXT_PUBLIC_AUTH_WORKER_URL: ${{ vars.AUTH_WORKER_URL }}
+          NEXT_PUBLIC_PIN_BOARD: ${{ vars.PIN_BOARD }}
       # Static hosts need a real file for unknown paths; Next exports 404.html.
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3
