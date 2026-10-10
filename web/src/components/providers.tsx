@@ -30,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <NuqsAdapter>
         <DataProvider>
           <TooltipProvider delay={300}>{children}</TooltipProvider>
-          <Toaster position="bottom-right" richColors closeButton />
+          <Toaster position="bottom-right" closeButton />
         </DataProvider>
       </NuqsAdapter>
     </ThemeProvider>

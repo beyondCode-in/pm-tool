@@ -35,8 +35,8 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
   useEffect(() => {
     if (!board) return;
     const added = digest(board);
-    if (added.length === 1) toast(added[0].title, { description: added[0].text });
-    else if (added.length > 1) toast(`${added.length} new notifications`);
+    if (added.length === 1) toast(added[0].title, { description: added[0].text, icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
+    else if (added.length > 1) toast(`${added.length} new notifications`, { icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
   }, [board, dataUpdatedAt]);
 
   const shown = tab === "unread" ? list.filter((n) => !n.read) : list;
