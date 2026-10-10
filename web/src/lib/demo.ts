@@ -1,5 +1,5 @@
 import { addDays, today } from "./board";
-import type { Board, Comment, DataSource, Field, FieldValues, Person, Ticket } from "./types";
+import type { Board, Comment, DataSource, Field, FieldValues, Person, Ticket, HistoryEvent } from "./types";
 
 // A realistic, self-contained board so anyone can try every screen without
 // signing in. Changes live in memory until the page is reloaded.
@@ -98,7 +98,27 @@ export function createDemoSource(): DataSource {
   ]);
   const blockers = new Map<number, number[]>([[104, [107]], [103, [102]]]); // ticket → tickets blocking it
   const wait = () => new Promise((r) => setTimeout(r, 120));
+  const history = new Map<number, HistoryEvent[]>();
+  const log = (n: number, e: Omit<HistoryEvent, "id" | "at" | "actor">) =>
+    history.set(n, [...(history.get(n) ?? []), { ...e, id: crypto.randomUUID(), at: new Date().toISOString(), actor: you }]);
+  const record = (a: Ticket, b: Ticket) => {
+    for (const k of new Set([...Object.keys(a.fields), ...Object.keys(b.fields)])) {
+      const was = (a.fields as Record<string, unknown>)[k], now = (b.fields as Record<string, unknown>)[k];
+      if (String(was ?? "") !== String(now ?? "")) log(b.number, { kind: k === "Status" ? "status" : "field", field: k, from: was == null ? undefined : String(was), to: now == null ? undefined : String(now) });
+    }
+    const al = a.assignees.map((p) => p.login), bl = b.assignees.map((p) => p.login);
+    bl.filter((x) => !al.includes(x)).forEach((x) => log(b.number, { kind: "assigned", to: x }));
+    al.filter((x) => !bl.includes(x)).forEach((x) => log(b.number, { kind: "unassigned", from: x }));
+    const an = a.labels.map((l) => l.name), bn = b.labels.map((l) => l.name);
+    bn.filter((x) => !an.includes(x)).forEach((x) => log(b.number, { kind: "labeled", to: x }));
+    an.filter((x) => !bn.includes(x)).forEach((x) => log(b.number, { kind: "unlabeled", from: x }));
+    if (a.title !== b.title) log(b.number, { kind: "renamed", from: a.title, to: b.title });
+    if (a.state !== b.state) log(b.number, { kind: b.state === "CLOSED" ? "closed" : "reopened" });
+    if (a.parent !== b.parent) log(b.number, { kind: "parent", to: b.parent ? `#${b.parent}` : undefined, text: b.parent ? "moved under" : "removed from its parent" });
+  };
   const patch = (n: number, p: (t: Ticket) => Ticket) => {
+    const before = board.tickets.find((t) => t.number === n);
+    if (before) record(before, p(before));
     board = { ...board, tickets: withRollups(board.tickets.map((t) => (t.number === n ? { ...p(t), updatedAt: new Date().toISOString() } : t))) };
   };
 
@@ -107,7 +127,7 @@ export function createDemoSource(): DataSource {
     async load() { await wait(); return structuredClone(board); },
     async setField(_b, t, field, value) { await wait(); patch(t.number, (x) => ({ ...x, fields: { ...x.fields, [field]: value ?? undefined } })); },
     async setAssignees(_b, t, logins) { await wait(); patch(t.number, (x) => ({ ...x, assignees: board.people.filter((p) => logins.includes(p.login)) })); },
-    async setLabels(_b, t, labels) { await wait(); patch(t.number, (x) => ({ ...x, labels: labels.map((name) => ({ name, color: "c2e0c6" })) })); },
+    async setLabels(_b, t, labels) { await wait(); patch(t.number, (x) => ({ ...x, labels: labels.map((name) => x.labels.find((l) => l.name === name) ?? board.labels.find((l) => l.name === name) ?? { name, color: "c2e0c6" }) })); },
     async setState(t, state) {
       await wait();
       patch(t.number, (x) => ({ ...x, state, closedAt: state === "CLOSED" ? new Date().toISOString() : null }));
@@ -120,6 +140,10 @@ export function createDemoSource(): DataSource {
       comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
       return c;
+    },
+    async history(t) {
+      await wait();
+      return [{ id: "created", at: t.createdAt, actor: t.author ?? null, kind: "created" as const }, ...(history.get(t.number) ?? [])];
     },
     async updateComment(t, c, body) {
       await wait();

@@ -46,6 +46,10 @@ export type Ticket = {
   fields: FieldValues;
 };
 
+// One change in a ticket's life: who did what, when.
+export type HistoryKind = "created" | "status" | "field" | "assigned" | "unassigned" | "labeled" | "unlabeled" | "renamed" | "closed" | "reopened" | "parent" | "linked" | "other";
+export type HistoryEvent = { id: string; at: string; actor: Person | null; kind: HistoryKind; field?: string; from?: string; to?: string; text?: string };
+
 export type Comment = { id: string; restId?: number; author: Person | null; body: string; createdAt: string; editedAt?: string };
 
 export type Board = {
@@ -84,6 +88,7 @@ export interface DataSource {
   comments(t: Ticket): Promise<Comment[]>;
   addComment(t: Ticket, body: string): Promise<Comment>;
   updateComment(t: Ticket, c: Comment, body: string): Promise<void>;
+  history(t: Ticket): Promise<HistoryEvent[]>;
   deleteComment(t: Ticket, c: Comment): Promise<void>;
   create(board: Board, input: NewTicket): Promise<number>;
   // Relationships: Jira's "blocks / is blocked by", plus the parent link.

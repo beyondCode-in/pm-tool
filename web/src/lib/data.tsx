@@ -164,6 +164,12 @@ export function useComments(t: Ticket | null) {
   return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: false });
 }
 
+// The change history; refetched whenever the ticket itself changes.
+export function useHistory(t: Ticket | null) {
+  const source = useSource();
+  return useQuery({ queryKey: ["history", t?.url, t?.updatedAt, t?.labels.length, t?.assignees.length], enabled: !!source && !!t, queryFn: () => source!.history(t!), refetchInterval: false, placeholderData: (prev) => prev });
+}
+
 export function useAddComment() {
   const source = useSource();
   const qc = useQueryClient();

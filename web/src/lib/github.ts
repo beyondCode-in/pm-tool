@@ -1,5 +1,5 @@
 import { config } from "./config";
-import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket } from "./types";
+import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent } from "./types";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
 
@@ -123,6 +123,35 @@ export function createGitHubSource(token: string): DataSource {
 
     async addComment(t, body) {
       return toComment(await rest<RestComment>(`${at(t)}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
+    },
+
+    // GitHub's issue timeline: labels, assignees, renames, closes, links.
+    // Project field changes appear when GitHub reports them (status changes).
+    async history(t) {
+      type Ev = { id?: number; node_id?: string; event: string; created_at?: string; actor?: { login: string; avatar_url: string } | null;
+        label?: { name: string }; assignee?: { login: string }; rename?: { from: string; to: string }; state_reason?: string | null;
+        source?: { issue?: { number: number; title: string } }; project_card?: unknown; previous_status?: string; status?: string };
+      const list = await rest<Ev[]>(`${at(t)}/issues/${t.number}/timeline?per_page=100`);
+      const out: HistoryEvent[] = [{ id: "created", at: t.createdAt, actor: t.author ?? null, kind: "created" }];
+      for (const e of list) {
+        if (!e.created_at || e.event === "commented") continue;
+        const base = { id: String(e.id ?? e.node_id ?? `${e.event}-${e.created_at}`), at: e.created_at, actor: e.actor ? { login: e.actor.login, avatarUrl: e.actor.avatar_url } : null };
+        switch (e.event) {
+          case "labeled": out.push({ ...base, kind: "labeled", to: e.label?.name }); break;
+          case "unlabeled": out.push({ ...base, kind: "unlabeled", from: e.label?.name }); break;
+          case "assigned": out.push({ ...base, kind: "assigned", to: e.assignee?.login }); break;
+          case "unassigned": out.push({ ...base, kind: "unassigned", from: e.assignee?.login }); break;
+          case "renamed": out.push({ ...base, kind: "renamed", from: e.rename?.from, to: e.rename?.to }); break;
+          case "closed": out.push({ ...base, kind: "closed", text: e.state_reason === "not_planned" ? "won't do" : "completed" }); break;
+          case "reopened": out.push({ ...base, kind: "reopened" }); break;
+          case "cross-referenced": if (e.source?.issue) out.push({ ...base, kind: "linked", to: `#${e.source.issue.number} ${e.source.issue.title}` }); break;
+          case "parent_issue_added": case "sub_issue_added": case "parent_issue_removed": case "sub_issue_removed":
+            out.push({ ...base, kind: "parent", text: e.event.replace(/_/g, " ") }); break;
+          case "project_v2_item_status_changed": out.push({ ...base, kind: "status", from: e.previous_status, to: e.status }); break;
+          default: if (!/^(subscribed|mentioned|referenced|unsubscribed)$/.test(e.event)) out.push({ ...base, kind: "other", text: e.event.replace(/_/g, " ") });
+        }
+      }
+      return out;
     },
 
     async updateComment(t, c, body) {

@@ -5,9 +5,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Skeleton } from "@/components/ui/skeleton";
 import { byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
 import { config } from "@/lib/config";
-import { useActions, useAddComment, useBoard, useComments, useSource } from "@/lib/data";
+import { useActions, useAddComment, useBoard, useComments, useHistory, useSource } from "@/lib/data";
 import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
-import type { Board, Comment, Ticket } from "@/lib/types";
+import type { Board, Comment, HistoryEvent, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
@@ -357,9 +357,14 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
   const add = useAddComment();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [filter, setFilter] = useState<"all" | "comments" | "time">("all");
+  const [filter, setFilter] = useState<"all" | "comments" | "history" | "time">("all");
+  const { data: history } = useHistory(t);
   const endRef = useRef<HTMLDivElement>(null);
-  const shown = (comments ?? []).filter((c) => filter === "all" || (filter === "time" ? c.body.startsWith("⏱️") : !c.body.startsWith("⏱️") && !ATTACHMENT.test(c.body)));
+  const shown = (comments ?? []).filter((c) => filter === "all" || (filter === "time" ? c.body.startsWith("⏱️") : filter === "comments" && !c.body.startsWith("⏱️") && !ATTACHMENT.test(c.body)));
+  const events = filter === "all" || filter === "history" ? (history ?? []) : [];
+  // Comments and changes in one timeline, oldest first like a conversation.
+  const feed = [...shown.map((c) => ({ at: c.createdAt, c, e: null as HistoryEvent | null })), ...events.map((e) => ({ at: e.at, c: null as Comment | null, e }))]
+    .sort((a, b) => a.at.localeCompare(b.at));
   const seen = useRef<number | null>(null);
   useEffect(() => {
     const n = comments?.length;
@@ -374,14 +379,14 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
     setBusy(false);
   };
   return (
-    <Section id="activity" icon={MessageSquare} title="Activity" count={comments?.length}
+    <Section id="activity" icon={MessageSquare} title="Activity" count={(comments?.length ?? 0) + (history?.length ?? 0)}
       action={
-        <Segmented size="xs" label="Show" value={filter} onChange={setFilter} options={[["all", "All"], ["comments", "Comments"], ["time", "Time log"]] as const} />
+        <Segmented size="xs" label="Show" value={filter} onChange={setFilter} options={[["all", "All"], ["comments", "Comments"], ["history", "History"], ["time", "Time log"]] as const} />
       }>
       {isLoading ? <Skeleton className="h-20 w-full" /> : (
         <ol className="space-y-4">
-          {shown.map((c) => <Message key={c.id} c={c} ticket={t} />)}
-          {!shown.length && <li className="rounded-xl bg-muted/40 p-4 text-center text-sm text-muted-foreground">No messages yet. Start the conversation below.</li>}
+          {feed.map((x) => (x.c ? <Message key={x.c.id} c={x.c} ticket={t} /> : <Change key={x.e!.id} e={x.e!} />))}
+          {!feed.length && <li className="rounded-xl bg-muted/40 p-4 text-center text-sm text-muted-foreground">{filter === "history" ? "No changes recorded yet." : filter === "time" ? "No time logged yet. Use the timer or Time tracking on the right." : "No messages yet. Start the conversation below."}</li>}
         </ol>
       )}
       <div ref={endRef} />
@@ -395,6 +400,41 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
         </div>
       </div>
     </Section>
+  );
+}
+
+// One change, as a compact line: "Maya moved this from Todo to In Progress".
+function Change({ e }: { e: HistoryEvent }) {
+  const { data: board } = useBoard();
+  const who = e.actor ? (board?.people.find((p) => p.login === e.actor!.login)?.name || e.actor.login) : "Someone";
+  const name = (login?: string) => board?.people.find((p) => p.login === login)?.name || login;
+  const v = (s?: string) => <b className="font-medium text-foreground">{s ? plain(s) : "empty"}</b>;
+  const what: ReactNode = (() => {
+    switch (e.kind) {
+      case "created": return <>created this ticket</>;
+      case "status": return <>moved it {e.from && <>from <span className="inline-flex items-center gap-1 align-middle"><StatusIcon name={e.from} size={12} />{v(e.from)}</span> </>}to <span className="inline-flex items-center gap-1 align-middle"><StatusIcon name={e.to} size={12} />{v(e.to)}</span></>;
+      case "field": return e.to ? <>set <b className="font-medium text-foreground">{e.field}</b> to {v(e.to)}{e.from && <> (was {plain(e.from)})</>}</> : <>cleared <b className="font-medium text-foreground">{e.field}</b></>;
+      case "assigned": return <>assigned {v(name(e.to))}</>;
+      case "unassigned": return <>unassigned {v(name(e.from))}</>;
+      case "labeled": return <>added the tag <LabelChip name={e.to ?? ""} color={board?.labels.find((l) => l.name === e.to)?.color} /></>;
+      case "unlabeled": return <>removed the tag <LabelChip name={e.from ?? ""} color={board?.labels.find((l) => l.name === e.from)?.color} /></>;
+      case "renamed": return <>renamed it to {v(e.to)}</>;
+      case "closed": return <>closed it as {e.text ?? "completed"}</>;
+      case "reopened": return <>reopened it</>;
+      case "parent": return <>{e.text}{e.to && <> {v(e.to)}</>}</>;
+      case "linked": return <>mentioned it in {v(e.to)}</>;
+      default: return <>{e.text}</>;
+    }
+  })();
+  const dot: Record<string, string> = { status: "bg-primary", closed: "bg-success", reopened: "bg-amber-500", labeled: "bg-sky-500", unlabeled: "bg-muted-foreground", created: "bg-primary" };
+  return (
+    <li className="relative flex gap-3 pl-[11px] text-xs text-muted-foreground">
+      <span className={cn("mt-1.5 size-2 shrink-0 rounded-full ring-4 ring-background", dot[e.kind] ?? "bg-muted-foreground/60")} aria-hidden />
+      <p className="min-w-0 flex-1 leading-relaxed">
+        <span className="font-semibold text-foreground">{who}</span> {what}
+        <span title={format(parseISO(e.at), "PPpp")}> · {formatDistanceToNow(parseISO(e.at))} ago</span>
+      </p>
+    </li>
   );
 }
 
@@ -561,7 +601,9 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const [m, setM] = useState("");
   const [note, setNote] = useState("");
   const minutes = (Number(h) || 0) * 60 + (Number(m) || 0);
-  const spent = (t.fields as Record<string, unknown>)["Time spent (h)"] as number | undefined;
+  const { data: comments } = useComments(t);
+  const entries = (comments ?? []).flatMap((c) => { const x = parseTime(c.body); return x ? [{ c, ...x }] : []; });
+  const total = entries.reduce((s, x) => s + x.minutes, 0);
   const log = async () => {
     if (minutes <= 0) return;
     if ((await extras.logTime(board, t, minutes, note.trim())) !== null) { setH(""); setM(""); setNote(""); }
@@ -572,9 +614,23 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
       <div className="space-y-2 rounded-xl border bg-card p-3 shadow-card">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="size-4 text-muted-foreground" aria-hidden />
-          <span>{spent ? `${spent}h logged` : "No time logged on the board yet"}</span>
+          <span className="min-w-0">
+            {total ? <><b className="tabular">{fmtMinutes(total)}</b> logged <span className="text-muted-foreground">· {entries.length} entr{entries.length === 1 ? "y" : "ies"}</span></> : <span className="text-muted-foreground">No time logged yet</span>}
+          </span>
           <span className="ml-auto"><TimerButton board={board} ticket={t} withLabel /></span>
         </div>
+        {entries.length > 0 && (
+          <ul className="max-h-40 space-y-1 overflow-y-auto">
+            {entries.slice().reverse().map((x) => (
+              <li key={x.c.id} className="flex items-center gap-2 text-xs">
+                {x.c.author ? <Avatar person={x.c.author} size={16} /> : <span className="size-4 rounded-full bg-muted" />}
+                <b className="w-14 shrink-0 tabular">{fmtMinutes(x.minutes)}</b>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">{x.note || "—"}</span>
+                <span className="shrink-0 text-muted-foreground" title={format(parseISO(x.c.createdAt), "PPpp")}>{format(parseISO(x.c.createdAt), "d MMM")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <form className="grid gap-2 border-t pt-3" onSubmit={(e) => { e.preventDefault(); void log(); }}>
           <div className="flex items-center gap-2">
             {[["Hours", "h", h, setH], ["Minutes", "m", m, setM]].map(([label, unit, v, set]) => (
@@ -596,7 +652,7 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
               className="h-8 min-w-0 flex-1 rounded-lg border bg-background px-2.5 text-sm outline-none focus:border-ring" />
             <Button type="submit" size="sm" disabled={minutes <= 0}>Log {minutes > 0 ? fmtMinutes(minutes) : "time"}</Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">Entries appear under Activity → Time log, where you can edit or delete them.</p>
+          <p className="text-[11px] text-muted-foreground">Edit or delete entries under Activity → Time log; the total updates with them.</p>
         </form>
       </div>
     </div>
