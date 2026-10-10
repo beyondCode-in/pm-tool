@@ -1,20 +1,79 @@
-name: Epic Specification Template
-description: Large body of work spanning multiple features and stories
-title: "[EPIC]: "
-labels: ["epic", "architecture"]
-assignees: []
+name: "🗺️ Epic"
+description: "A large piece of work broken into features and tasks."
+title: "[Epic] "
+labels: ["epic"]
+projects: ["beyondCode-in/34"]
 body:
   - type: textarea
-    id: epic_vision
+    id: goal
     attributes:
-      label: Strategic Vision & High-Level Goal
-      placeholder: "Deliver multi-tenant OAuth refresh engine..."
+      label: "Goal"
+      description: "What outcome does this deliver, and for whom?"
     validations:
       required: true
+
   - type: textarea
-    id: feature_breakdown
+    id: metrics
     attributes:
-      label: Child Feature & Story Breakdown
-      placeholder: "- [ ] Feature A\n- [ ] Feature B"
+      label: "How we'll measure success"
+      placeholder: "Report exports per week go from 0 to 200"
+
+  - type: textarea
+    id: breakdown
+    attributes:
+      label: "Breakdown"
+      description: "Child issues. Add them as sub-issues once created."
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
     validations:
       required: true
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: "Areas affected"
+      multiple: true
+      options:
+        - "🌐 Web app"
+        - "📱 Mobile app"
+        - "⚙️ API / backend"
+        - "🗄️ Database / data"
+        - "🔐 Login & accounts"
+        - "💳 Billing & payments"
+        - "📊 Reports & analytics"
+        - "📧 Emails & notifications"
+        - "🎨 Design system / UI"
+        - "🏗️ Infrastructure / DevOps"
+        - "📄 Docs"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: timeframe
+    attributes:
+      label: "Target timeframe"
+      options:
+        - "This sprint"
+        - "Next sprint"
+        - "This quarter"
+        - "Later / backlog"
+      default: 2
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: "Out of scope"
+      description: "What this epic deliberately won't do."

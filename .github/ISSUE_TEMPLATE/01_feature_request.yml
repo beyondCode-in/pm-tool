@@ -1,47 +1,114 @@
-name: Feature Request
-description: Propose a new feature, functional capability, or enhancement
-title: "[FEATURE]: "
+name: "✨ Feature / user story"
+description: "Something new to build, written as a user story with acceptance criteria."
+title: "[Feature] "
 labels: ["feature", "triage"]
-assignees: []
+projects: ["beyondCode-in/34"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thank you for proposing a feature for the **beyondCode-in** Project Management Engine!
   - type: input
-    id: epic_link
+    id: story
     attributes:
-      label: Parent Epic / Feature Key
-      description: Enter the parent Epic key (e.g. `PM-100` or `#42`).
-      placeholder: "PM-100"
-    validations:
-      required: false
-  - type: textarea
-    id: problem_statement
-    attributes:
-      label: Problem Statement / User Need
-      description: Describe the core user requirement from the end-user perspective.
-      placeholder: "As a developer, I want..."
+      label: "User story"
+      description: "As a … I want … so that …"
+      placeholder: "As a sales manager, I want to export the monthly report as CSV so that I can share it with finance"
     validations:
       required: true
+
   - type: textarea
-    id: proposed_solution
+    id: problem
     attributes:
-      label: Proposed Solution & Acceptance Criteria
-      description: Outline the functional specification and acceptance criteria.
-      placeholder: "1. Acceptance Criteria A\n2. Acceptance Criteria B"
+      label: "Problem"
+      description: "What's painful or impossible today?"
     validations:
       required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed solution"
+      description: "What should it do? Mock-ups and screenshots welcome."
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria"
+      description: "How will we know it's done? One per line."
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
   - type: dropdown
     id: priority
     attributes:
-      label: Priority Ranking
+      label: "Priority"
       options:
-        - Critical
-        - Highest
-        - High
-        - Medium
-        - Low
-        - Lowest
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
     validations:
       required: true
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: "Areas affected"
+      multiple: true
+      options:
+        - "🌐 Web app"
+        - "📱 Mobile app"
+        - "⚙️ API / backend"
+        - "🗄️ Database / data"
+        - "🔐 Login & accounts"
+        - "💳 Billing & payments"
+        - "📊 Reports & analytics"
+        - "📧 Emails & notifications"
+        - "🎨 Design system / UI"
+        - "🏗️ Infrastructure / DevOps"
+        - "📄 Docs"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: "Size estimate"
+      description: "Your best guess. The team will refine it during planning."
+      options:
+        - "XS — a few hours"
+        - "S — about a day"
+        - "M — 2 to 3 days"
+        - "L — about a week"
+        - "XL — more than a week (should be split)"
+        - "❔ Not sure yet"
+      default: 5
+
+  - type: dropdown
+    id: timeframe
+    attributes:
+      label: "Target timeframe"
+      options:
+        - "This sprint"
+        - "Next sprint"
+        - "This quarter"
+        - "Later / backlog"
+      default: 3
+
+  - type: input
+    id: epic
+    attributes:
+      label: "Parent epic (optional)"
+      placeholder: "#42"
+
+  - type: checkboxes
+    id: ready
+    attributes:
+      label: "Ready for planning?"
+      description: "Tick what's already true. Unticked items are fine; they tell the team what's missing."
+      options:
+        - label: "Design or mock-ups are attached or not needed"
+        - label: "Dependencies are known and linked"
+        - label: "Analytics or tracking needs are described"

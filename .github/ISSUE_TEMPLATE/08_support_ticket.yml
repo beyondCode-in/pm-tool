@@ -1,45 +1,81 @@
-name: "🎧 Customer Support Ticket"
-description: "Customer inquiry or support request with SLA tracking"
-title: "[SUPPORT]: "
+name: "🎧 Customer support"
+description: "A customer or client needs help with their account or our product."
+title: "[Support] "
 labels: ["support", "triage"]
+projects: ["beyondCode-in/34"]
 body:
   - type: markdown
     attributes:
       value: |
-        ### Customer Support Ticket 🎧
-        Submit customer support requests, account inquiries, or SLA escalation items.
+        ⚠️ This issue may be visible to others. **Don't paste passwords, card numbers or personal data.** Refer to the customer by account ID or company name.
 
   - type: input
-    id: client_name
+    id: customer
     attributes:
-      label: "Customer / Organization Name"
-      placeholder: "e.g., Acme Corp / Enterprise Tier"
+      label: "Customer or account"
+      placeholder: "Acme Ltd · account #10293"
     validations:
       required: true
 
   - type: input
-    id: issue_summary
+    id: summary
     attributes:
-      label: "Support Issue Summary"
-      placeholder: "e.g., Unable to invite new team members to organization space"
+      label: "What do they need?"
     validations:
       required: true
 
   - type: dropdown
-    id: sla_tier
+    id: category
     attributes:
-      label: "SLA Priority Tier"
+      label: "Category"
       options:
-        - "🔴 Tier 1 — Critical (2h SLA Response)"
-        - "🟠 Tier 2 — High (4h SLA Response)"
-        - "🟡 Tier 3 — Standard (24h SLA Response)"
+        - "Can't log in / access"
+        - "Billing or invoice"
+        - "Data looks wrong"
+        - "How do I…?"
+        - "Feature request from customer"
+        - "Something is broken"
+        - "Other"
     validations:
       required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: "Customer tier"
+      options:
+        - "Enterprise"
+        - "Business"
+        - "Standard"
+        - "Free / trial"
+      default: 2
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: channel
+    attributes:
+      label: "How did they contact us?"
+      options:
+        - "Email"
+        - "Chat"
+        - "Phone"
+        - "Account manager"
+        - "Social media"
 
   - type: textarea
     id: details
     attributes:
-      label: "Customer Request Details"
-      placeholder: "Paste customer communications, logs, or steps reported by user..."
-    validations:
-      required: true
+      label: "Details"
+      description: "What they said, what you already tried. Drag screenshots in."
