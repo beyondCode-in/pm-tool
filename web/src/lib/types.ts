@@ -30,6 +30,7 @@ export type Ticket = {
   title: string;
   body: string;
   url: string;
+  repo: string; // "owner/name": a board can hold issues from several repositories
   state: "OPEN" | "CLOSED";
   stateReason?: string | null;
   createdAt: string;
@@ -40,6 +41,7 @@ export type Ticket = {
   labels: Label[];
   commentCount: number;
   parent?: number | null;
+  parentUrl?: string | null;
   subIssues: { total: number; completed: number };
   fields: FieldValues;
 };
@@ -83,10 +85,11 @@ export interface DataSource {
   addComment(t: Ticket, body: string): Promise<Comment>;
   create(board: Board, input: NewTicket): Promise<number>;
   // Relationships: Jira's "blocks / is blocked by", plus the parent link.
-  dependencies(t: Ticket): Promise<{ blockedBy: number[]; blocking: number[] }>;
-  addBlocker(t: Ticket, blocker: number): Promise<void>;
-  removeBlocker(t: Ticket, blocker: number): Promise<void>;
-  setParent(t: Ticket, parent: number | null): Promise<void>;
+  // Related tickets are identified by URL, which is unique across repositories.
+  dependencies(t: Ticket): Promise<{ blockedBy: string[]; blocking: string[] }>;
+  addBlocker(t: Ticket, blocker: Ticket): Promise<void>;
+  removeBlocker(t: Ticket, blocker: Ticket): Promise<void>;
+  setParent(t: Ticket, parent: Ticket | null, current: Ticket | null): Promise<void>;
   // Files are stored in the repository under .attachments/<ticket>/ and linked in a comment.
   attach(t: Ticket, file: File): Promise<Attachment>;
   logTime(board: Board, t: Ticket, minutes: number, note: string): Promise<void>;

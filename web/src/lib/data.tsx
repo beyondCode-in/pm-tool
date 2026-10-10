@@ -7,6 +7,7 @@ import { getToken, isDemo } from "./auth";
 import { markDone } from "./onboarding";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
+import { plain } from "./board";
 import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
 
 const BOARD_KEY = ["board"] as const;
@@ -58,8 +59,9 @@ export function useActions() {
 
   return useMemo(() => {
     const board = () => qc.getQueryData<Board>(BOARD_KEY)!;
-    const patchTicket = (n: number, fn: (t: Ticket) => Ticket) =>
-      qc.setQueryData<Board>(BOARD_KEY, (b) => (b ? { ...b, tickets: b.tickets.map((t) => (t.number === n ? fn(t) : t)) } : b));
+    // Keyed by board item id: unique even when several repositories share issue numbers.
+    const patchTicket = (id: string, fn: (t: Ticket) => Ticket) =>
+      qc.setQueryData<Board>(BOARD_KEY, (b) => (b ? { ...b, tickets: b.tickets.map((t) => (t.itemId === id ? fn(t) : t)) } : b));
     const refresh = () => setTimeout(() => qc.invalidateQueries({ queryKey: BOARD_KEY }), 1500);
 
     async function run(label: string, optimistic: () => void, write: () => Promise<unknown>, undo?: () => void) {
@@ -77,22 +79,44 @@ export function useActions() {
       }
     }
 
+    // Priority and Size also live as tags ("priority: p1", "size: m") because the
+    // GitHub forms and the triage workflow work from tags. Keep the two in step,
+    // otherwise the workflow would later "correct" the board back to the old tag.
+    const syncTag = async (id: string, field: FieldName, value: FieldValue) => {
+      const prefix = field === "Priority" ? "priority: " : field === "Size" ? "size: " : null;
+      if (!prefix) return;
+      const word = plain(typeof value === "string" ? value : "").toLowerCase();
+      const tag = !word ? null : field === "Priority" ? ({ critical: "p0", high: "p1", medium: "p2", low: "p3" } as Record<string, string>)[word] : word;
+      const t = board().tickets.find((x) => x.itemId === id);
+      if (!t) return;
+      const names = t.labels.map((l) => l.name).filter((l) => !l.startsWith(prefix));
+      const next = tag ? [...names, prefix + tag] : names;
+      if (next.length === t.labels.length && next.every((l) => t.labels.some((x) => x.name === l))) return;
+      patchTicket(id, (x) => ({ ...x, labels: next.map((name) => board().labels.find((l) => l.name === name) ?? { name, color: "c2e0c6" }) }));
+      await source!.setLabels(board(), t, next).catch(() => toast.warning(`Saved ${field}, but couldn't update its tag on #${t.number}.`));
+    };
+
     const setField = (t: Ticket, field: FieldName, value: FieldValue, opts: { silent?: boolean } = {}): Promise<boolean> => {
       const previous = t.fields[field] ?? null;
       if (previous === value) return Promise.resolve(true);
       const pretty = typeof value === "string" ? value : value ?? "none";
-      return run(
+      return runThenSync(t.itemId, field, value, () => run(
         `#${t.number} → ${field}: ${pretty}`,
-        () => patchTicket(t.number, (x) => ({ ...x, fields: { ...x.fields, [field]: value ?? undefined } })),
+        () => patchTicket(t.itemId, (x) => ({ ...x, fields: { ...x.fields, [field]: value ?? undefined } })),
         () => source!.setField(board(), t, field, value),
         opts.silent ? undefined : () => void setField({ ...t, fields: { ...t.fields, [field]: value ?? undefined } }, field, previous, { silent: true }),
-      );
+      ));
+    };
+    const runThenSync = async (id: string, field: FieldName, value: FieldValue, write: () => Promise<boolean>) => {
+      const ok = await write();
+      if (ok) await syncTag(id, field, value);
+      return ok;
     };
 
     const setState = (t: Ticket, state: "OPEN" | "CLOSED", reason?: "COMPLETED" | "NOT_PLANNED") =>
       run(
         state === "CLOSED" ? (reason === "NOT_PLANNED" ? `#${t.number} marked won't do` : `#${t.number} closed`) : `#${t.number} reopened`,
-        () => patchTicket(t.number, (x) => ({ ...x, state, stateReason: reason ?? null, closedAt: state === "CLOSED" ? new Date().toISOString() : null })),
+        () => patchTicket(t.itemId, (x) => ({ ...x, state, stateReason: reason ?? null, closedAt: state === "CLOSED" ? new Date().toISOString() : null })),
         () => source!.setState(t, state, reason),
         () => void source!.setState(t, t.state).then(() => qc.invalidateQueries({ queryKey: BOARD_KEY })),
       );
@@ -110,14 +134,14 @@ export function useActions() {
       },
       setAssignees: (t: Ticket, logins: string[]) =>
         run(`#${t.number} assignees updated`,
-          () => patchTicket(t.number, (x) => ({ ...x, assignees: board().people.filter((p) => logins.includes(p.login)) })),
+          () => patchTicket(t.itemId, (x) => ({ ...x, assignees: board().people.filter((p) => logins.includes(p.login)) })),
           () => source!.setAssignees(board(), t, logins)),
       setLabels: (t: Ticket, labels: string[]) =>
         run(`#${t.number} tags updated`,
-          () => patchTicket(t.number, (x) => ({ ...x, labels: labels.map((name) => board().labels.find((l) => l.name === name) ?? { name, color: "c2e0c6" }) })),
+          () => patchTicket(t.itemId, (x) => ({ ...x, labels: labels.map((name) => board().labels.find((l) => l.name === name) ?? { name, color: "c2e0c6" }) })),
           () => source!.setLabels(board(), t, labels)),
       updateText: (t: Ticket, patch: { title?: string; body?: string }) =>
-        run(`#${t.number} saved`, () => patchTicket(t.number, (x) => ({ ...x, ...patch })), () => source!.updateText(t, patch)),
+        run(`#${t.number} saved`, () => patchTicket(t.itemId, (x) => ({ ...x, ...patch })), () => source!.updateText(t, patch)),
       async create(input: NewTicket) {
         try {
           const n = await source!.create(board(), input);
@@ -135,7 +159,7 @@ export function useActions() {
 
 export function useComments(t: Ticket | null) {
   const source = useSource();
-  return useQuery({ queryKey: ["comments", t?.number], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: false });
+  return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: false });
 }
 
 export function useAddComment() {
@@ -144,7 +168,7 @@ export function useAddComment() {
   return async (t: Ticket, body: string) => {
     try {
       await source!.addComment(t, body);
-      await qc.invalidateQueries({ queryKey: ["comments", t.number] });
+      await qc.invalidateQueries({ queryKey: ["comments", t.url] });
       return true;
     } catch (e) {
       toast.error(`Couldn't post the comment: ${message(e)}`);

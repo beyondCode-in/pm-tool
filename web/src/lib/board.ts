@@ -6,6 +6,13 @@ export const iterationField = (b: Board, name = "Sprint") => b.fields.find((f): 
 export const options = (b: Board, name: string): Option[] => singleField(b, name)?.options ?? [];
 export const hasField = (b: Board, name: FieldName) => b.fields.some((f) => f.name === name);
 
+// Parent/child links compare URLs when known, so same-numbered issues from
+// different repositories on one board are never confused.
+export const isChildOf = (c: Ticket, p: Ticket) => (c.parentUrl ? c.parentUrl === p.url : c.parent === p.number && c.repo === p.repo);
+export const parentOf = (b: Board, t: Ticket) => b.tickets.find((p) => isChildOf(t, p)) ?? null;
+export const childrenOf = (b: Board, t: Ticket) => b.tickets.filter((c) => isChildOf(c, t));
+export const byUrl = (b: Board, url: string) => b.tickets.find((x) => x.url === url) ?? null;
+
 export const isDone = (t: Ticket) => t.state === "CLOSED" || /done/i.test(t.fields.Status ?? "");
 export const isDoneStatus = (s?: string) => /done/i.test(s ?? "");
 
@@ -25,7 +32,7 @@ export const dotClass = (color?: string) => COLOR[color ?? "GRAY"] ?? COLOR.GRAY
 
 // Tag tint for a GitHub option colour: [hue, chroma] in OKLCH.
 const TINT: Record<string, [number, number]> = {
-  GRAY: [280, 0.02], BLUE: [255, 0.16], GREEN: [155, 0.15], YELLOW: [85, 0.15],
+  GRAY: [70, 0.02], BLUE: [255, 0.16], GREEN: [155, 0.15], YELLOW: [85, 0.15],
   ORANGE: [55, 0.17], RED: [25, 0.2], PINK: [350, 0.18], PURPLE: [300, 0.18],
 };
 export const tint = (color?: string) => {

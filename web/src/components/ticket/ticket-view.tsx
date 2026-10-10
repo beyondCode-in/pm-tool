@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { hasField, isDone, options } from "@/lib/board";
+import { byUrl, childrenOf, hasField, isDone, options, parentOf } from "@/lib/board";
 import { config } from "@/lib/config";
 import { useActions, useAddComment, useComments, useSource } from "@/lib/data";
 import { fmtElapsed, fmtMinutes, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
@@ -30,7 +30,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
   const actions = useActions();
   const source = useSource();
   const [, open] = useOpenTicket();
-  const parent = t.parent ? board.tickets.find((p) => p.number === t.parent) : null;
+  const parent = parentOf(board, t);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -135,7 +135,7 @@ function QuickActions({ board, ticket: t }: { board: Board; ticket: Ticket }) {
     <div className="flex flex-wrap gap-2">
       <Button size="sm" variant="outline" onClick={() => document.getElementById(`add-sub-${t.number}`)?.focus()}><GitBranch />Add sub-task</Button>
       <TicketSearch tickets={board.tickets} exclude={[t.number]} placeholder="Which ticket blocks this one?"
-        onPick={(o) => void extras.addBlocker(t, o.number)} trigger={<Button size="sm" variant="outline"><ShieldAlert />Add blocker</Button>} />
+        onPick={(o) => void extras.addBlocker(t, o)} trigger={<Button size="sm" variant="outline"><ShieldAlert />Add blocker</Button>} />
       <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Paperclip />Attach file</Button>
       <input ref={fileRef} type="file" hidden multiple onChange={(e) => { for (const f of e.target.files ?? []) void extras.attach(t, f); e.target.value = ""; }} />
     </div>
@@ -203,7 +203,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
 function SubTasks({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const actions = useActions();
   const [, open] = useOpenTicket();
-  const kids = board.tickets.filter((c) => c.parent === t.number);
+  const kids = childrenOf(board, t);
   const done = kids.filter(isDone).length;
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -249,31 +249,32 @@ function Dependencies({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const { data, isLoading } = useDependencies(t);
   const extras = useTicketExtras();
   const [, open] = useOpenTicket();
-  const find = (n: number) => board.tickets.find((x) => x.number === n);
-  const row = (n: number, kind: "blockedBy" | "blocking") => {
-    const o = find(n);
+  const row = (url: string, kind: "blockedBy" | "blocking") => {
+    const o = byUrl(board, url);
+    const n = Number(url.split("/").pop());
     return (
-      <li key={`${kind}-${n}`} className="group flex items-center gap-2 px-3 py-2 text-sm">
+      <li key={`${kind}-${url}`} className="group flex items-center gap-2 px-3 py-2 text-sm">
         <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-semibold", kind === "blockedBy" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-foreground")}>
           {kind === "blockedBy" ? "Blocked by" : "Blocks"}
         </span>
         {o ? <TypeIcon ticket={o} /> : null}
-        <button onClick={() => void open(n)} className={cn("min-w-0 flex-1 truncate text-left hover:underline", o && isDone(o) && "text-muted-foreground line-through")}>
-          <span className="font-mono text-xs text-muted-foreground">#{n}</span> {o ? cleanTitle(o.title) : "(not on this board)"}
+        <button onClick={() => { if (o) void open(o.number); else window.open(url, "_blank"); }} className={cn("min-w-0 flex-1 truncate text-left hover:underline", o && isDone(o) && "text-muted-foreground line-through")}>
+          <span className="font-mono text-xs text-muted-foreground">#{n}</span> {o ? cleanTitle(o.title) : `(in ${url.split("/").slice(3, 5).join("/")}, not on this board)`}
         </button>
         {o && <OptionPill board={board} field="Status" value={o.fields.Status} />}
         <Button size="icon-xs" variant="ghost" aria-label={`Remove link to #${n}`} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-          onClick={() => void (kind === "blockedBy" ? extras.removeBlocker(t, n) : o && extras.removeBlocker(o, t.number))}><X /></Button>
+          disabled={!o} onClick={() => { if (o) void (kind === "blockedBy" ? extras.removeBlocker(t, o) : extras.removeBlocker(o, t)); }}><X /></Button>
       </li>
     );
   };
-  const blockedOpen = (data?.blockedBy ?? []).filter((n) => { const o = find(n); return !o || !isDone(o); }).length;
-  const exclude = [t.number, ...(data?.blockedBy ?? []), ...(data?.blocking ?? [])];
+  const blockedOpen = (data?.blockedBy ?? []).filter((u) => { const o = byUrl(board, u); return !o || !isDone(o); }).length;
+  const linked = [...(data?.blockedBy ?? []), ...(data?.blocking ?? [])].map((u) => byUrl(board, u)?.number).filter((x): x is number => !!x);
+  const exclude = [t.number, ...linked];
   return (
     <Section icon={ShieldAlert} title="Dependencies" count={data ? data.blockedBy.length + data.blocking.length : undefined}
       action={
         <div className="flex gap-1">
-          <TicketSearch tickets={board.tickets} exclude={exclude} placeholder="Which ticket blocks this one?" onPick={(o) => void extras.addBlocker(t, o.number)}
+          <TicketSearch tickets={board.tickets} exclude={exclude} placeholder="Which ticket blocks this one?" onPick={(o) => void extras.addBlocker(t, o)}
             trigger={<Button size="xs" variant="ghost"><Plus />Blocked by</Button>} />
           <TicketSearch tickets={board.tickets} exclude={exclude} placeholder="Which ticket does this one block?" onPick={(o) => void extras.addBlocking(t, o)}
             trigger={<Button size="xs" variant="ghost"><Plus />Blocks</Button>} />
@@ -282,8 +283,8 @@ function Dependencies({ board, ticket: t }: { board: Board; ticket: Ticket }) {
       {blockedOpen > 0 && <p className="mb-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">Waiting on {blockedOpen} open {blockedOpen === 1 ? "ticket" : "tickets"} before this can be finished.</p>}
       {isLoading ? <Skeleton className="h-10 w-full" /> : (data && (data.blockedBy.length || data.blocking.length)) ? (
         <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-          {data.blockedBy.map((n) => row(n, "blockedBy"))}
-          {data.blocking.map((n) => row(n, "blocking"))}
+          {data.blockedBy.map((u) => row(u, "blockedBy"))}
+          {data.blocking.map((u) => row(u, "blocking"))}
         </ul>
       ) : <p className="text-sm text-muted-foreground">Nothing blocks this, and it blocks nothing.</p>}
     </Section>
@@ -418,8 +419,8 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const actions = useActions();
   const extras = useTicketExtras();
   const [, open] = useOpenTicket();
-  const parent = t.parent ? board.tickets.find((p) => p.number === t.parent) : null;
-  const descendants = (n: number): number[] => board.tickets.filter((c) => c.parent === n).flatMap((c) => [c.number, ...descendants(c.number)]);
+  const parent = parentOf(board, t);
+  const descendants = (p: Ticket): number[] => childrenOf(board, p).flatMap((c) => [c.number, ...descendants(c)]);
   return (
     <div className="space-y-5">
       <div>
@@ -441,14 +442,14 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
           </Field>
           <Field label="Parent">
             <div className="flex items-center gap-1">
-              <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t.number)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p.number)}
+              <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
                 trigger={
                   <Button variant="ghost" size="sm" className="h-8 min-w-0 flex-1 justify-start px-2 font-normal">
                     {parent ? <span className="flex min-w-0 items-center gap-1.5"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></span> : <span className="text-muted-foreground">None</span>}
                   </Button>
                 } />
               {parent && <Button size="icon-xs" variant="ghost" aria-label="Open parent" onClick={() => void open(parent.number)}><ChevronRight /></Button>}
-              {parent && <Button size="icon-xs" variant="ghost" aria-label="Remove parent" onClick={() => void extras.setParent(t, null)}><X /></Button>}
+              {parent && <Button size="icon-xs" variant="ghost" aria-label="Remove parent" onClick={() => void extras.setParent(t, null, parent)}><X /></Button>}
             </div>
           </Field>
         </div>

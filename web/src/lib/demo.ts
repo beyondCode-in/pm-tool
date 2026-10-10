@@ -72,16 +72,16 @@ function seed(): Ticket[] {
   const color: Record<string, string> = { bug: "d73a4a", feature: "a855f7", epic: "8b5cf6", incident: "991b1b", request: "3b82f6", support: "0e8a16", task: "1d76db", triage: "fbca04" };
   return rows.map(([number, title, body, f, assignees, labels, extra]) => ({
     itemId: `item-${number}`, issueId: `issue-${number}`, number, title, body,
-    url: `https://github.com/demo/board/issues/${number}`, state: "OPEN", createdAt: new Date(Date.now() - (120 - number) * 36e5 * 10).toISOString(),
+    url: `https://github.com/demo/board/issues/${number}`, repo: "demo/board", state: "OPEN", createdAt: new Date(Date.now() - (120 - number) * 36e5 * 10).toISOString(),
     updatedAt: new Date().toISOString(), author: people[0], assignees: [you, ...people].filter((p) => assignees.includes(p.login)),
     labels: labels.map((name) => ({ name, color: color[name] ?? (name.startsWith("priority") ? "d93f0b" : "c2e0c6") })),
     commentCount: number % 3, parent: null, subIssues: { total: 0, completed: 0 }, fields: f as FieldValues, ...extra,
-  }));
+  })).map((t): Ticket => ({ ...t, state: t.state as Ticket["state"], parentUrl: t.parent ? `https://github.com/demo/board/issues/${t.parent}` : null }));
 }
 
 function withRollups(tickets: Ticket[]): Ticket[] {
   return tickets.map((t) => {
-    const kids = tickets.filter((k) => k.parent === t.number);
+    const kids = tickets.filter((k) => k.parentUrl === t.url);
     return { ...t, subIssues: { total: kids.length, completed: kids.filter((k) => k.state === "CLOSED").length } };
   });
 }
@@ -123,19 +123,20 @@ export function createDemoSource(): DataSource {
     },
     async dependencies(t) {
       await wait();
-      return { blockedBy: blockers.get(t.number) ?? [], blocking: [...blockers].filter(([, b]) => b.includes(t.number)).map(([n]) => n) };
+      const url = (n: number) => `https://github.com/demo/board/issues/${n}`;
+      return { blockedBy: (blockers.get(t.number) ?? []).map(url), blocking: [...blockers].filter(([, b]) => b.includes(t.number)).map(([n]) => url(n)) };
     },
-    async addBlocker(t, blocker) {
+    async addBlocker(t, b) {
       await wait();
-      if (blocker === t.number) throw new Error("A ticket can't block itself.");
-      if ((blockers.get(blocker) ?? []).includes(t.number)) throw new Error(`#${blocker} is already blocked by #${t.number}; that would be a loop.`);
-      blockers.set(t.number, [...new Set([...(blockers.get(t.number) ?? []), blocker])]);
+      if (b.number === t.number) throw new Error("A ticket can't block itself.");
+      if ((blockers.get(b.number) ?? []).includes(t.number)) throw new Error(`#${b.number} is already blocked by #${t.number}; that would be a loop.`);
+      blockers.set(t.number, [...new Set([...(blockers.get(t.number) ?? []), b.number])]);
     },
-    async removeBlocker(t, blocker) { await wait(); blockers.set(t.number, (blockers.get(t.number) ?? []).filter((n) => n !== blocker)); },
+    async removeBlocker(t, b) { await wait(); blockers.set(t.number, (blockers.get(t.number) ?? []).filter((n) => n !== b.number)); },
     async setParent(t, parent) {
       await wait();
-      if (parent === t.number) throw new Error("A ticket can't be its own parent.");
-      patch(t.number, (x) => ({ ...x, parent }));
+      if (parent?.number === t.number) throw new Error("A ticket can't be its own parent.");
+      patch(t.number, (x) => ({ ...x, parent: parent?.number ?? null, parentUrl: parent?.url ?? null }));
     },
     async attach(t, file) {
       await wait();
@@ -157,10 +158,10 @@ export function createDemoSource(): DataSource {
       await wait();
       const number = Math.max(...board.tickets.map((t) => t.number)) + 1;
       const t: Ticket = {
-        itemId: `item-${number}`, issueId: `issue-${number}`, number, title: input.title, body: input.body, url: `https://github.com/demo/board/issues/${number}`,
+        itemId: `item-${number}`, issueId: `issue-${number}`, number, title: input.title, body: input.body, url: `https://github.com/demo/board/issues/${number}`, repo: "demo/board",
         state: "OPEN", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), author: you,
         assignees: board.people.filter((p) => input.assignees.includes(p.login)), labels: input.labels.map((name) => ({ name, color: "c2e0c6" })),
-        commentCount: 0, parent: input.parent ?? null, subIssues: { total: 0, completed: 0 }, fields: input.fields,
+        commentCount: 0, parent: input.parent ?? null, parentUrl: input.parent ? `https://github.com/demo/board/issues/${input.parent}` : null, subIssues: { total: 0, completed: 0 }, fields: input.fields,
       };
       board = { ...board, tickets: withRollups([t, ...board.tickets]) };
       return number;

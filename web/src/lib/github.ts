@@ -38,8 +38,10 @@ export function createGitHubSource(token: string): DataSource {
   }
 
   const repoPath = `/repos/${config.owner}/${config.repo}`;
+  // Writes go to the ticket's own repository; new tickets go to the configured one.
+  const at = (t: { repo: string }) => `/repos/${t.repo}`;
   // The REST "id" (not the number) is what the sub-issue and dependency APIs expect.
-  const restId = async (n: number) => (await rest<{ id: number }>(`${repoPath}/issues/${n}`)).id;
+  const restId = async (t: Ticket) => (await rest<{ id: number }>(`${at(t)}/issues/${t.number}`)).id;
 
   async function setField(board: Board, t: Ticket, name: FieldName, value: FieldValue) {
     const field = board.fields.find((f) => f.name === name);
@@ -95,54 +97,54 @@ export function createGitHubSource(token: string): DataSource {
       const current = t.assignees.map((a) => a.login);
       const add = logins.filter((l) => !current.includes(l));
       const remove = current.filter((l) => !logins.includes(l));
-      if (add.length) await rest(`${repoPath}/issues/${t.number}/assignees`, { method: "POST", body: JSON.stringify({ assignees: add }) });
-      if (remove.length) await rest(`${repoPath}/issues/${t.number}/assignees`, { method: "DELETE", body: JSON.stringify({ assignees: remove }) });
+      if (add.length) await rest(`${at(t)}/issues/${t.number}/assignees`, { method: "POST", body: JSON.stringify({ assignees: add }) });
+      if (remove.length) await rest(`${at(t)}/issues/${t.number}/assignees`, { method: "DELETE", body: JSON.stringify({ assignees: remove }) });
     },
 
     async setLabels(_board, t, labels) {
-      await rest(`${repoPath}/issues/${t.number}/labels`, { method: "PUT", body: JSON.stringify({ labels }) });
+      await rest(`${at(t)}/issues/${t.number}/labels`, { method: "PUT", body: JSON.stringify({ labels }) });
     },
 
     async setState(t, state, reason) {
-      await rest(`${repoPath}/issues/${t.number}`, {
+      await rest(`${at(t)}/issues/${t.number}`, {
         method: "PATCH",
         body: JSON.stringify({ state: state === "OPEN" ? "open" : "closed", state_reason: state === "OPEN" ? "reopened" : reason === "NOT_PLANNED" ? "not_planned" : "completed" }),
       });
     },
 
     async updateText(t, patch) {
-      await rest(`${repoPath}/issues/${t.number}`, { method: "PATCH", body: JSON.stringify(patch) });
+      await rest(`${at(t)}/issues/${t.number}`, { method: "PATCH", body: JSON.stringify(patch) });
     },
 
     async comments(t) {
-      const list = await rest<RestComment[]>(`${repoPath}/issues/${t.number}/comments?per_page=100`);
+      const list = await rest<RestComment[]>(`${at(t)}/issues/${t.number}/comments?per_page=100`);
       return list.map(toComment);
     },
 
     async addComment(t, body) {
-      return toComment(await rest<RestComment>(`${repoPath}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
+      return toComment(await rest<RestComment>(`${at(t)}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
     },
 
     async dependencies(t) {
       const [by, ing] = await Promise.all([
-        rest<{ number: number }[]>(`${repoPath}/issues/${t.number}/dependencies/blocked_by?per_page=100`),
-        rest<{ number: number }[]>(`${repoPath}/issues/${t.number}/dependencies/blocking?per_page=100`),
+        rest<{ html_url: string }[]>(`${at(t)}/issues/${t.number}/dependencies/blocked_by?per_page=100`),
+        rest<{ html_url: string }[]>(`${at(t)}/issues/${t.number}/dependencies/blocking?per_page=100`),
       ]);
-      return { blockedBy: by.map((i) => i.number), blocking: ing.map((i) => i.number) };
+      return { blockedBy: by.map((i) => i.html_url), blocking: ing.map((i) => i.html_url) };
     },
 
     async addBlocker(t, blocker) {
-      await rest(`${repoPath}/issues/${t.number}/dependencies/blocked_by`, { method: "POST", body: JSON.stringify({ issue_id: await restId(blocker) }) });
+      await rest(`${at(t)}/issues/${t.number}/dependencies/blocked_by`, { method: "POST", body: JSON.stringify({ issue_id: await restId(blocker) }) });
     },
 
     async removeBlocker(t, blocker) {
-      await rest(`${repoPath}/issues/${t.number}/dependencies/blocked_by/${await restId(blocker)}`, { method: "DELETE" });
+      await rest(`${at(t)}/issues/${t.number}/dependencies/blocked_by/${await restId(blocker)}`, { method: "DELETE" });
     },
 
-    async setParent(t, parent) {
-      const id = await restId(t.number);
-      if (t.parent) await rest(`${repoPath}/issues/${t.parent}/sub_issue`, { method: "DELETE", body: JSON.stringify({ sub_issue_id: id }) });
-      if (parent) await rest(`${repoPath}/issues/${parent}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: id }) });
+    async setParent(t, parent, current) {
+      const id = await restId(t);
+      if (current) await rest(`${at(current)}/issues/${current.number}/sub_issue`, { method: "DELETE", body: JSON.stringify({ sub_issue_id: id }) });
+      if (parent) await rest(`${at(parent)}/issues/${parent.number}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: id }) });
     },
 
     async attach(t, file) {
@@ -151,20 +153,20 @@ export function createGitHubSource(token: string): DataSource {
       const path = `.attachments/${t.number}/${Date.now()}-${safe}`;
       const content = await toBase64(file);
       // Files go to their own branch so attachments never add commits to main.
-      const put = () => rest<{ content: { html_url: string } }>(`${repoPath}/contents/${path}`, {
+      const put = () => rest<{ content: { html_url: string } }>(`${at(t)}/contents/${path}`, {
         method: "PUT",
         body: JSON.stringify({ message: `chore(attachments): add ${safe} to #${t.number}`, content, branch: ATTACH_BRANCH }),
       });
       const res = await put().catch(async (e) => {
         if (!(e instanceof GitHubError) || (e.status !== 404 && e.status !== 422)) throw e;
-        const repo = await rest<{ default_branch: string }>(repoPath);
-        const head = await rest<{ object: { sha: string } }>(`${repoPath}/git/ref/heads/${repo.default_branch}`);
-        await rest(`${repoPath}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${ATTACH_BRANCH}`, sha: head.object.sha }) });
+        const repo = await rest<{ default_branch: string }>(at(t));
+        const head = await rest<{ object: { sha: string } }>(`${at(t)}/git/ref/heads/${repo.default_branch}`);
+        await rest(`${at(t)}/git/refs`, { method: "POST", body: JSON.stringify({ ref: `refs/heads/${ATTACH_BRANCH}`, sha: head.object.sha }) });
         return put();
       });
       const isImage = file.type.startsWith("image/");
       const url = res.content.html_url + (isImage ? "?raw=true" : "");
-      await rest(`${repoPath}/issues/${t.number}/comments`, {
+      await rest(`${at(t)}/issues/${t.number}/comments`, {
         method: "POST",
         body: JSON.stringify({ body: `📎 Attached **${file.name}**\n\n${isImage ? `![${file.name}](${url})` : `[${file.name}](${url})`}` }),
       });
@@ -173,7 +175,7 @@ export function createGitHubSource(token: string): DataSource {
 
     async logTime(board, t, minutes, note) {
       const h = Math.floor(minutes / 60), m = minutes % 60;
-      await rest(`${repoPath}/issues/${t.number}/comments`, {
+      await rest(`${at(t)}/issues/${t.number}/comments`, {
         method: "POST",
         body: JSON.stringify({ body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}` }),
       });
@@ -225,7 +227,7 @@ const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV
   items(first:100,after:$after){ pageInfo{hasNextPage endCursor} nodes{ id
     content{ __typename ... on Issue{ id number title body url state stateReason createdAt updatedAt closedAt
       author{login avatarUrl} assignees(first:10){nodes{login avatarUrl name}} labels(first:30){nodes{name color}}
-      comments{totalCount} parent{number} subIssuesSummary{total completed} } }
+      comments{totalCount} parent{number url} repository{nameWithOwner} subIssuesSummary{total completed} } }
     fieldValues(first:30){ nodes{ __typename
       ... on ProjectV2ItemFieldSingleSelectValue{name field{... on ProjectV2FieldCommon{name}}}
       ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}
@@ -249,7 +251,7 @@ type RawItem = {
     __typename: string; id: string; number: number; title: string; body: string; url: string; state: "OPEN" | "CLOSED";
     stateReason: string | null; createdAt: string; updatedAt: string; closedAt: string | null; author: Person | null;
     assignees: { nodes: Person[] }; labels: { nodes: Label[] }; comments: { totalCount: number };
-    parent: { number: number } | null; subIssuesSummary: { total: number; completed: number } | null;
+    parent: { number: number; url: string } | null; repository: { nameWithOwner: string }; subIssuesSummary: { total: number; completed: number } | null;
   };
   fieldValues: { nodes: { __typename: string; name?: string; date?: string; number?: number; iterationId?: string; field?: { name: string } }[] };
 };
@@ -278,6 +280,7 @@ function toTicket(n: RawItem): Ticket {
     itemId: n.id, issueId: c.id, number: c.number, title: c.title, body: c.body, url: c.url, state: c.state,
     stateReason: c.stateReason, createdAt: c.createdAt, updatedAt: c.updatedAt, closedAt: c.closedAt, author: c.author,
     assignees: c.assignees.nodes, labels: c.labels.nodes, commentCount: c.comments.totalCount, parent: c.parent?.number ?? null,
+    parentUrl: c.parent?.url ?? null, repo: c.repository.nameWithOwner,
     subIssues: c.subIssuesSummary ?? { total: 0, completed: 0 }, fields: fields as FieldValues,
   };
 }

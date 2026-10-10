@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { addDays, currentSprint, isDone, isEpic, iterationField, sprintById, sprintEnd, today } from "@/lib/board";
+import { addDays, currentSprint, isChildOf, isDone, isEpic, iterationField, sprintById, sprintEnd, today } from "@/lib/board";
 import type { Board, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ export function RoadmapView({ board, tickets }: { board: Board; tickets: Ticket[
     const used = new Set<number>();
     for (const e of epics) {
       out.push({ t: e, depth: 0 }); used.add(e.number);
-      for (const c of dated.filter((c) => c.parent === e.number)) { out.push({ t: c, depth: 1 }); used.add(c.number); }
+      for (const c of dated.filter((c) => isChildOf(c, e))) { out.push({ t: c, depth: 1 }); used.add(c.number); }
     }
     for (const t of dated) if (!used.has(t.number)) out.push({ t, depth: 0 });
     return out;

@@ -1,6 +1,6 @@
 "use client";
 
-import { isDone, isEpic } from "@/lib/board";
+import { isChildOf, isDone, isEpic } from "@/lib/board";
 import type { Board, Ticket } from "@/lib/types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,9 @@ import { AvatarStack, cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ti
 // Epic → feature → task hierarchy with progress, like Jira's issue hierarchy.
 export function EpicsView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
   const [, newTicket] = useNewTicket();
-  const ids = new Set(tickets.map((t) => t.number));
-  const roots = tickets.filter((t) => isEpic(t) || (!t.parent || !ids.has(t.parent)) && tickets.some((c) => c.parent === t.number));
-  const loose = tickets.filter((t) => !roots.includes(t) && (!t.parent || !ids.has(t.parent)));
+  const hasParentHere = (t: Ticket) => tickets.some((p) => isChildOf(t, p));
+  const roots = tickets.filter((t) => isEpic(t) || (!hasParentHere(t) && tickets.some((c) => isChildOf(c, t))));
+  const loose = tickets.filter((t) => !roots.includes(t) && !hasParentHere(t));
   if (!roots.length) {
     return (
       <EmptyState icon={Network} title="No epics yet" text="An epic groups many tickets under one goal, and its progress fills in as they’re done."
@@ -38,7 +38,7 @@ export function EpicsView({ board, tickets }: { board: Board; tickets: Ticket[] 
 function Node({ board, t, all, depth, flat }: { board: Board; t: Ticket; all: Ticket[]; depth: number; flat?: boolean }) {
   const [openRow, setOpenRow] = useState(depth < 1);
   const [, open] = useOpenTicket();
-  const kids = all.filter((c) => c.parent === t.number);
+  const kids = all.filter((c) => isChildOf(c, t));
   const done = kids.filter(isDone).length;
   const pct = kids.length ? Math.round((done / kids.length) * 100) : isDone(t) ? 100 : 0;
   const top = depth === 0 && !flat;

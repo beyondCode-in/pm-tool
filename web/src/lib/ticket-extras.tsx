@@ -13,7 +13,7 @@ const message = (e: unknown) => (e instanceof Error ? e.message : "Something wen
 export function useDependencies(t: Ticket | null) {
   const source = useSource();
   return useQuery({
-    queryKey: ["deps", t?.number],
+    queryKey: ["deps", t?.url],
     enabled: !!source && !!t,
     queryFn: () => source!.dependencies(t!),
     refetchInterval: false,
@@ -24,8 +24,8 @@ export function useTicketExtras() {
   const source = useSource();
   const qc = useQueryClient();
   const refreshBoard = () => qc.invalidateQueries({ queryKey: ["board"] });
-  const refreshDeps = (n: number) => qc.invalidateQueries({ queryKey: ["deps", n] });
-  const refreshComments = (n: number) => qc.invalidateQueries({ queryKey: ["comments", n] });
+  const refreshDeps = (t: Ticket) => qc.invalidateQueries({ queryKey: ["deps", t.url] });
+  const refreshComments = (t: Ticket) => qc.invalidateQueries({ queryKey: ["comments", t.url] });
 
   async function attempt<T>(work: () => Promise<T>, done: string, after: () => unknown): Promise<T | null> {
     try {
@@ -40,19 +40,19 @@ export function useTicketExtras() {
   }
 
   return {
-    addBlocker: (t: Ticket, blocker: number) =>
-      attempt(() => source!.addBlocker(t, blocker), `#${t.number} is now blocked by #${blocker}`, () => Promise.all([refreshDeps(t.number), refreshDeps(blocker)])),
-    removeBlocker: (t: Ticket, blocker: number) =>
-      attempt(() => source!.removeBlocker(t, blocker), `#${blocker} no longer blocks #${t.number}`, () => Promise.all([refreshDeps(t.number), refreshDeps(blocker)])),
+    addBlocker: (t: Ticket, blocker: Ticket) =>
+      attempt(() => source!.addBlocker(t, blocker), `#${t.number} is now blocked by #${blocker.number}`, () => Promise.all([refreshDeps(t), refreshDeps(blocker)])),
+    removeBlocker: (t: Ticket, blocker: Ticket) =>
+      attempt(() => source!.removeBlocker(t, blocker), `#${blocker.number} no longer blocks #${t.number}`, () => Promise.all([refreshDeps(t), refreshDeps(blocker)])),
     // "t blocks other" is stored on the other ticket as "blocked by t".
     addBlocking: (t: Ticket, other: Ticket) =>
-      attempt(() => source!.addBlocker(other, t.number), `#${t.number} now blocks #${other.number}`, () => Promise.all([refreshDeps(t.number), refreshDeps(other.number)])),
-    setParent: (t: Ticket, parent: number | null) =>
-      attempt(() => source!.setParent(t, parent), parent ? `#${t.number} moved under #${parent}` : `#${t.number} is no longer a sub-task`, refreshBoard),
+      attempt(() => source!.addBlocker(other, t), `#${t.number} now blocks #${other.number}`, () => Promise.all([refreshDeps(t), refreshDeps(other)])),
+    setParent: (t: Ticket, parent: Ticket | null, current: Ticket | null) =>
+      attempt(() => source!.setParent(t, parent, current), parent ? `#${t.number} moved under #${parent.number}` : `#${t.number} is no longer a sub-task`, refreshBoard),
     attach: (t: Ticket, file: File) =>
-      attempt(() => source!.attach(t, file), `Attached ${file.name}`, () => Promise.all([refreshComments(t.number), refreshBoard()])),
+      attempt(() => source!.attach(t, file), `Attached ${file.name}`, () => Promise.all([refreshComments(t), refreshBoard()])),
     logTime: (b: Board, t: Ticket, minutes: number, note: string) =>
-      attempt(() => source!.logTime(b, t, minutes, note), `Logged ${fmtMinutes(minutes)} on #${t.number}`, () => Promise.all([refreshComments(t.number), refreshBoard()])),
+      attempt(() => source!.logTime(b, t, minutes, note), `Logged ${fmtMinutes(minutes)} on #${t.number}`, () => Promise.all([refreshComments(t), refreshBoard()])),
   };
 }
 
