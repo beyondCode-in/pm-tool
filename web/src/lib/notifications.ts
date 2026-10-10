@@ -10,7 +10,7 @@ import type { Board } from "./types";
 // cross-device inbox needs the server version (see docs/BUILD-PROMPT.md).
 
 export type NoticeKind = "assigned" | "status" | "comment" | "triage" | "due" | "overdue";
-export type Notice = { id: string; kind: NoticeKind; ticket: number; title: string; text: string; at: string; read: boolean };
+export type Notice = { id: string; kind: NoticeKind; ticket: number; title: string; text: string; at: string; read: boolean; later?: string; cleared?: boolean };
 
 type Snap = Record<string, { status?: string; assignees: string[]; comments: number; triage: boolean; state: string }>;
 const KEY = "beyondpm.notifications";
@@ -31,7 +31,22 @@ const save = (list: Notice[]) => {
 
 export const markRead = (id: string) => save(load().map((n) => (n.id === id ? { ...n, read: true } : n)));
 export const markAllRead = () => save(load().map((n) => ({ ...n, read: true })));
-export const clearAll = () => save([]);
+/** Clear moves notices to the Cleared tab (ClickUp); they can be brought back. */
+export const clearAll = () => save(load().map((n) => ({ ...n, read: true, cleared: true, later: undefined })));
+export const clearNotice = (id: string) => save(load().map((n) => (n.id === id ? { ...n, read: true, cleared: true, later: undefined } : n)));
+export const restoreNotice = (id: string) => save(load().map((n) => (n.id === id ? { ...n, cleared: false } : n)));
+/** Later: hide until 9 am tomorrow, then it comes back unread. */
+export function laterNotice(id: string) {
+  const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(9, 0, 0, 0);
+  save(load().map((n) => (n.id === id ? { ...n, read: true, later: t.toISOString() } : n)));
+}
+/** Bring back notices whose Later time has passed. */
+export function wakeLater(now = Date.now()) {
+  const list = load();
+  if (!list.some((n) => n.later && Date.parse(n.later) <= now)) return;
+  save(list.map((n) => (n.later && Date.parse(n.later) <= now ? { ...n, later: undefined, read: false } : n)));
+}
+export const isWaiting = (n: Notice, now: number) => !!n.later && Date.parse(n.later) > now;
 
 export function useNotifications(): Notice[] {
   const s = useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => { load(); return raw!; }, () => "[]");

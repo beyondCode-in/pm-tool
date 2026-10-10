@@ -13,7 +13,8 @@ import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependenci
 import type { Board, Comment, HistoryEvent, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
-import { Star as PStar } from "@phosphor-icons/react";
+import { Alarm as AlarmClock, Star as PStar } from "@phosphor-icons/react";
+import { openReminder } from "@/lib/reminders";
 import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
@@ -80,6 +81,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
               </>) : <DropdownMenuItem onClick={() => void actions.setState(t, "OPEN")}><RotateCcw />Reopen</DropdownMenuItem>}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => void actions.setAssignees(t, [...new Set([...t.assignees.map((a) => a.login), board.viewer.login])])}>Assign to me</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openReminder({ ticket: t.number, ticketTitle: cleanTitle(t.title) })}><AlarmClock className="ico" />Remind me…<kbd className="ml-auto text-[10px] text-muted-foreground">R</kbd></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {onClose && <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}><X /></Button>}

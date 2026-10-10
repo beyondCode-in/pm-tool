@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { addDays, byPriorityThenNumber, isDone, today } from "@/lib/board";
 import { useBoard } from "@/lib/data";
 import { toggleFavorite, useFavorites } from "@/lib/favorites";
+import { completeReminder, deleteReminder, openReminder, useReminders } from "@/lib/reminders";
 import type { Board, Ticket } from "@/lib/types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -52,7 +53,10 @@ export default function HomePage() {
       <LineUp board={board} />
       <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <ToDo board={board} />
-        <Agenda board={board} />
+        <div className="flex min-w-0 flex-col gap-5">
+          <Reminders />
+          <Agenda board={board} />
+        </div>
       </div>
     </div>
   );
@@ -203,6 +207,42 @@ function Agenda({ board }: { board: Board }) {
           );
         })}
       </ol>
+    </Panel>
+  );
+}
+
+const isPast = (iso: string) => new Date(iso).getTime() <= Date.now();
+
+// Your reminders (press R anywhere to add one).
+function Reminders() {
+  const list = useReminders().filter((r) => !r.done);
+  const [, open] = useOpenTicket();
+  return (
+    <Panel title={<span className="inline-flex items-center gap-2"><P.Alarm weight="duotone" className="ico size-4 text-primary" />Reminders</span>}
+      action={<Button size="xs" variant="ghost" onClick={() => openReminder()}><Plus />New<kbd className="ml-1 text-[10px] text-muted-foreground">R</kbd></Button>}>
+      <ul className="divide-y">
+        {list.slice(0, 6).map((r) => {
+          const due = isPast(r.at);
+          return (
+            <li key={r.id} className="group/rm flex items-start gap-2.5 px-4 py-2.5">
+              <button onClick={() => completeReminder(r.id)} aria-label={`Mark "${r.text}" done`} title="Done"
+                className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2 border-muted-foreground/40 transition-colors hover:border-success hover:bg-success/15" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">{r.text}</p>
+                <p className={cn("text-xs", due ? "font-medium text-destructive" : "text-muted-foreground")}>
+                  {due ? "Due · " : ""}{format(new Date(r.at), "EEE d MMM, h:mm a")}
+                  {r.ticket && <> · <button onClick={() => void open(r.ticket!)} className="hover:underline">#{r.ticket}</button></>}
+                </p>
+              </div>
+              <button onClick={() => deleteReminder(r.id)} aria-label={`Delete reminder "${r.text}"`} className="grid size-6 place-items-center rounded text-muted-foreground opacity-0 group-hover/rm:opacity-100 hover:text-destructive focus-visible:opacity-100 [@media(hover:none)]:opacity-100">
+                <X className="size-3" />
+              </button>
+            </li>
+          );
+        })}
+        {!list.length && <li className="px-4 py-5 text-center text-sm text-muted-foreground">No reminders. Press <kbd className="rounded border px-1 text-xs">R</kbd> anywhere to set one.</li>}
+        {list.length > 6 && <li className="px-4 py-2 text-xs text-muted-foreground">+{list.length - 6} more</li>}
+      </ul>
     </Panel>
   );
 }
