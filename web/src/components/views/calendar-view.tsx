@@ -3,13 +3,15 @@
 import { draggable, dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { byPriorityThenNumber, isDone, plain, today } from "@/lib/board";
-import { useActions } from "@/lib/data";
+import { byPriorityThenNumber, isDone, options, plain, today } from "@/lib/board";
+import { useActions, useBoard } from "@/lib/data";
 import type { Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isWeekend, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarX2, ChevronLeft, ChevronRight } from "@/components/icons";
+import { CalendarX2, ChevronLeft, ChevronRight, Plus, X } from "@/components/icons";
+import { toast } from "sonner";
+import { CardMenu } from "./card-menu";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { cleanTitle, TypeIcon } from "../ticket/bits";
 
@@ -95,7 +97,7 @@ function Day({ date, inMonth, tickets, lastCol }: { date: Date; inMonth: boolean
   const isToday = iso(date) === today();
   const extra = tickets.length - SHOWN_PER_DAY;
   return (
-    <DropZone day={iso(date)} className={cn("flex min-w-0 flex-col gap-1 border-b p-1.5", !lastCol && "border-r",
+    <DropZone day={iso(date)} className={cn("group/day flex min-w-0 flex-col gap-1 border-b p-1.5", !lastCol && "border-r",
       !inMonth && "bg-muted/35", inMonth && isWeekend(date) && "bg-muted/20", isToday && "bg-accent/40")}>
       <div className="flex items-center justify-between px-1">
         <span className={cn("grid size-6 place-items-center rounded-full text-xs tabular",
@@ -103,6 +105,7 @@ function Day({ date, inMonth, tickets, lastCol }: { date: Date; inMonth: boolean
           {format(date, "d")}
         </span>
         {date.getDate() === 1 && <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{format(date, "MMM")}</span>}
+        <AddOnDay date={date} />
       </div>
       {tickets.slice(0, SHOWN_PER_DAY).map((t) => <Chip key={t.number} t={t} />)}
       {extra > 0 && (
@@ -120,13 +123,52 @@ function Day({ date, inMonth, tickets, lastCol }: { date: Date; inMonth: boolean
   );
 }
 
+// Type a title and press Enter: a task due on that day.
+function AddOnDay({ date }: { date: Date }) {
+  const { data: board } = useBoard();
+  const actions = useActions();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  if (!board) return null;
+  const add = async () => {
+    if (!title.trim()) return;
+    const type = options(board, "Ticket Type").find((o) => /task/i.test(o.name))?.name;
+    const status = options(board, "Status")[0]?.name;
+    const n = await actions.create({ title: `[Task] ${title.trim()}`, body: "", labels: ["task"], assignees: [], fields: { Status: status, "Ticket Type": type, "Target date": iso(date) } });
+    if (n) { toast.success(`#${n} due ${format(date, "d MMM")}`); setTitle(""); setOpen(false); }
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={<Button variant="ghost" size="icon-xs" aria-label={`Add a ticket due ${format(date, "d MMMM")}`}
+        className="ml-auto opacity-0 group-hover/day:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 [@media(hover:none)]:hidden" />}>
+        <Plus />
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-3">
+        <form onSubmit={(e) => { e.preventDefault(); void add(); }} className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">New ticket due {format(date, "EEEE d MMMM")}</p>
+          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" aria-label="Title"
+            className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-ring" />
+          <div className="flex justify-end gap-1">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={!title.trim()}>Add</Button>
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Chip({ t }: { t: Ticket }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [, open] = useOpenTicket();
+  const { data: board } = useBoard();
+  const actions = useActions();
   useEffect(() => (ref.current ? draggable({ element: ref.current, getInitialData: () => ({ ticket: t.number }) }) : undefined), [t.number]);
   const overdue = !isDone(t) && !!t.fields["Target date"] && t.fields["Target date"] < today();
   const p = plain(t.fields.Priority).toLowerCase();
   return (
+    <MaybeMenu ticket={t}>
+    <div className="group/chip relative">
     <button ref={ref} onClick={() => void open(t.number)} title={`#${t.number} ${cleanTitle(t.title)}${p ? ` · ${plain(t.fields.Priority)} priority` : ""}${overdue ? " · overdue" : ""}`}
       className={cn("relative flex w-full min-w-0 cursor-grab items-center gap-1.5 overflow-hidden rounded-md border bg-background py-1 pr-1.5 pl-2.5 text-left text-xs shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-pop active:cursor-grabbing",
         "before:absolute before:inset-y-0 before:left-0 before:w-[3px]", EDGE[p] ?? "before:bg-border",
@@ -134,5 +176,20 @@ function Chip({ t }: { t: Ticket }) {
       <TypeIcon ticket={t} />
       <span className="truncate font-medium">{cleanTitle(t.title)}</span>
     </button>
+    {board && t.fields["Target date"] && (
+      <button type="button" aria-label={`Clear the due date of #${t.number}`} title="Clear due date"
+        onClick={() => void actions.setField(t, "Target date", null)}
+        className="absolute top-1/2 right-1 grid size-5 -translate-y-1/2 place-items-center rounded bg-background text-muted-foreground opacity-0 shadow-sm group-hover/chip:opacity-100 hover:text-destructive focus-visible:opacity-100">
+        <X className="size-3" />
+      </button>
+    )}
+    </div>
+    </MaybeMenu>
   );
+}
+
+// Right-click on a chip gives the same menu as a board card.
+function MaybeMenu({ ticket, children }: { ticket: Ticket; children: React.ReactElement }) {
+  const { data: board } = useBoard();
+  return board ? <CardMenu board={board} ticket={ticket}>{children}</CardMenu> : <>{children}</>;
 }
