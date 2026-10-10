@@ -326,3 +326,4 @@ table thead th button { text-transform: inherit; letter-spacing: inherit; font-w
 .ticket-ref:hover { background: color-mix(in oklch, var(--primary) 20%, transparent); }
 .mention { padding: 0 4px; border-radius: 5px; font-weight: 600; color: var(--primary); background: color-mix(in oklch, var(--primary) 12%, transparent); }
 .doc-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.chat-body p { margin: 0; } .chat-body p + p { margin-top: .35em; }

@@ -47,6 +47,11 @@ export type Ticket = {
   fields: FieldValues;
 };
 
+/** Chat on GitHub Discussions: a channel is a category, a message a discussion, a reply a comment. */
+export type ChatChannel = { id: string; name: string; emoji: string; description: string };
+export type ChatMessage = { id: string; number?: number; title?: string; body: string; author: Person | null; createdAt: string; replies?: number; url?: string };
+export type ChatInfo = { enabled: boolean; channels: ChatChannel[]; settingsUrl: string };
+
 /** A file in the repository (docs and whiteboards live in folders there). */
 export type RepoFile = { path: string; sha: string; updatedAt?: string };
 
@@ -113,6 +118,12 @@ export interface DataSource {
   createLabel(label: Label): Promise<void>;
   updateLabel(name: string, patch: Partial<Label>): Promise<void>;
   deleteLabel(name: string): Promise<void>;
+  // Chat: the repository's GitHub Discussions.
+  chatInfo(): Promise<ChatInfo>;
+  chatMessages(channelId: string): Promise<ChatMessage[]>;
+  chatReplies(messageId: string): Promise<ChatMessage[]>;
+  postMessage(channelId: string, body: string): Promise<void>;
+  postReply(messageId: string, body: string): Promise<void>;
   // Files in the board's repository (docs, whiteboards). Every save is a commit.
   listFiles(folder: string, ext: string): Promise<RepoFile[]>;
   readFile(path: string): Promise<{ text: string; sha: string }>;

@@ -52,7 +52,7 @@ export function Guide() {
         <PopoverTrigger data-tour="guide" aria-label="Open the guide"
           render={
             <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-              className="glow fixed right-4 bottom-20 z-40 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground md:right-6 md:bottom-6" />
+              className={cn("glow fixed right-4 bottom-20 z-40 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground md:right-6", pathname.startsWith("/chat") ? "bottom-36 md:bottom-28" : "md:bottom-6")} />
           }>
           <Sparkles className="size-5" />
           {count < CHECKLIST.length && (
