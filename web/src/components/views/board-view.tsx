@@ -60,10 +60,10 @@ function QuickAdd({ board, status, onDone }: { board: Board; status: string; onD
     if (n) { setTitle(""); toast.success(`#${n} added to ${plain(status)}`); }
   };
   return (
-    <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="rounded-xl border border-primary/50 bg-card p-2 shadow-pop">
+    <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="field-frame rounded-xl border border-primary/50 bg-card p-2 shadow-pop">
       <textarea autoFocus value={title} onChange={(e) => setTitle(e.target.value)} rows={2} placeholder="What needs doing?" aria-label="New ticket title"
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); } if (e.key === "Escape") onDone(); }}
-        className="w-full resize-none bg-transparent text-sm outline-none" />
+        className="field-bare w-full resize-none bg-transparent text-sm outline-none" />
       <div className="flex items-center gap-1">
         <Button type="submit" size="xs" disabled={busy}>{busy ? "Adding…" : "Add"}</Button>
         <Button type="button" size="xs" variant="ghost" onClick={onDone}>Cancel</Button>

@@ -5,7 +5,7 @@ import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { iterationField, options, plain, sprintEnd } from "@/lib/board";
+import { iterationField, options, sprintEnd } from "@/lib/board";
 import type { Board, Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";

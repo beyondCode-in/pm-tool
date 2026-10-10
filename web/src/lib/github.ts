@@ -125,6 +125,14 @@ export function createGitHubSource(token: string): DataSource {
       return toComment(await rest<RestComment>(`${at(t)}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
     },
 
+    async updateComment(t, c, body) {
+      await rest(`${at(t)}/issues/comments/${c.restId}`, { method: "PATCH", body: JSON.stringify({ body }) });
+    },
+
+    async deleteComment(t, c) {
+      await rest(`${at(t)}/issues/comments/${c.restId}`, { method: "DELETE" });
+    },
+
     async dependencies(t) {
       const [by, ing] = await Promise.all([
         rest<{ html_url: string }[]>(`${at(t)}/issues/${t.number}/dependencies/blocked_by?per_page=100`),
@@ -271,7 +279,7 @@ type RawItem = {
   fieldValues: { nodes: { __typename: string; name?: string; date?: string; number?: number; iterationId?: string; field?: { name: string } }[] };
 };
 type ItemsResult = { node: { items: { pageInfo: { hasNextPage: boolean; endCursor: string }; nodes: RawItem[] } } };
-type RestComment = { node_id: string; body: string; created_at: string; user: { login: string; avatar_url: string } | null };
+type RestComment = { id: number; node_id: string; body: string; created_at: string; updated_at?: string; user: { login: string; avatar_url: string } | null };
 
 function toField(f: RawField): Field | null {
   if (f.dataType === "SINGLE_SELECT" && f.options) return { id: f.id, name: f.name, kind: "single", options: f.options };
@@ -310,5 +318,5 @@ function toBase64(file: File): Promise<string> {
 }
 
 function toComment(c: RestComment): Comment {
-  return { id: c.node_id, body: c.body, createdAt: c.created_at, author: c.user ? { login: c.user.login, avatarUrl: c.user.avatar_url } : null };
+  return { id: c.node_id, restId: c.id, body: c.body, createdAt: c.created_at, editedAt: c.updated_at && c.updated_at !== c.created_at ? c.updated_at : undefined, author: c.user ? { login: c.user.login, avatarUrl: c.user.avatar_url } : null };
 }

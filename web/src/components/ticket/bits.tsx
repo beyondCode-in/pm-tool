@@ -69,11 +69,18 @@ export function PriorityMark({ value }: { value?: string }) {
   return <PriorityIcon value={value} size={15} />;
 }
 
-export function LabelChip({ name, color }: { name: string; color?: string }) {
+export function LabelChip({ name, color, onRemove }: { name: string; color?: string; onRemove?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground whitespace-nowrap">
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground whitespace-nowrap", onRemove && "pr-0.5")}
+      style={{ background: `color-mix(in oklch, #${color ?? "999"} 12%, transparent)`, borderColor: `color-mix(in oklch, #${color ?? "999"} 35%, transparent)` }}>
       <span className="size-1.5 rounded-full" style={{ background: `#${color ?? "999"}` }} aria-hidden />
       {name}
+      {onRemove && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label={`Remove tag ${name}`}
+          className="grid size-4 place-items-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive">
+          <svg viewBox="0 0 10 10" className="size-2" aria-hidden><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+        </button>
+      )}
     </span>
   );
 }

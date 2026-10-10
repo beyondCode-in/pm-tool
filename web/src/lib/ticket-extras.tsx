@@ -4,7 +4,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { useSource } from "./data";
-import type { Board, Ticket } from "./types";
+import type { Board, Comment, FieldName, Ticket } from "./types";
+
+// Time entries are comments shaped "⏱️ Logged **1h 30m** — note".
+export const timeBody = (minutes: number, note: string) => {
+  const h = Math.floor(minutes / 60), m = minutes % 60;
+  return `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}`;
+};
+export function parseTime(body: string): { minutes: number; note: string } | null {
+  const m = /^⏱️ Logged \*\*(?:(\d+)h )?(\d+)m\*\*(?: — ([\s\S]*))?/.exec(body);
+  return m ? { minutes: Number(m[1] ?? 0) * 60 + Number(m[2]), note: (m[3] ?? "").trim() } : null;
+}
 
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
@@ -26,6 +36,12 @@ export function useTicketExtras() {
   const refreshBoard = () => qc.invalidateQueries({ queryKey: ["board"] });
   const refreshDeps = (t: Ticket) => qc.invalidateQueries({ queryKey: ["deps", t.url] });
   const refreshComments = (t: Ticket) => qc.invalidateQueries({ queryKey: ["comments", t.url] });
+
+  async function adjustSpent(b: Board, t: Ticket, deltaMinutes: number) {
+    if (!deltaMinutes || !b.fields.some((f) => f.name === "Time spent (h)" && f.kind === "number")) return;
+    const current = Number((t.fields as Record<string, unknown>)["Time spent (h)"] ?? 0);
+    await source!.setField(b, t, "Time spent (h)" as FieldName, Math.max(0, Math.round((current + deltaMinutes / 60) * 100) / 100));
+  }
 
   async function attempt<T>(work: () => Promise<T>, done: string, after: () => unknown): Promise<T | null> {
     try {
@@ -51,6 +67,21 @@ export function useTicketExtras() {
       attempt(() => source!.setParent(t, parent, current), parent ? `#${t.number} moved under #${parent.number}` : `#${t.number} is no longer a sub-task`, refreshBoard),
     attach: (t: Ticket, file: File) =>
       attempt(() => source!.attach(t, file), `Attached ${file.name}`, () => Promise.all([refreshComments(t), refreshBoard()])),
+    editComment: (t: Ticket, c: Comment, body: string) =>
+      attempt(() => source!.updateComment(t, c, body), "Message updated", () => refreshComments(t)),
+    deleteComment: (t: Ticket, c: Comment) =>
+      attempt(() => source!.deleteComment(t, c), "Message deleted", () => Promise.all([refreshComments(t), refreshBoard()])),
+    // A time entry is a "⏱️ Logged" comment; changing it also corrects the total.
+    editTime: (b: Board, t: Ticket, c: Comment, minutes: number, note: string) =>
+      attempt(async () => {
+        await source!.updateComment(t, c, timeBody(minutes, note));
+        await adjustSpent(b, t, minutes - (parseTime(c.body)?.minutes ?? 0));
+      }, `Time entry updated to ${fmtMinutes(minutes)}`, () => Promise.all([refreshComments(t), refreshBoard()])),
+    deleteTime: (b: Board, t: Ticket, c: Comment) =>
+      attempt(async () => {
+        await source!.deleteComment(t, c);
+        await adjustSpent(b, t, -(parseTime(c.body)?.minutes ?? 0));
+      }, "Time entry removed", () => Promise.all([refreshComments(t), refreshBoard()])),
     logTime: (b: Board, t: Ticket, minutes: number, note: string) =>
       attempt(() => source!.logTime(b, t, minutes, note), `Logged ${fmtMinutes(minutes)} on #${t.number}`, () => Promise.all([refreshComments(t), refreshBoard()])),
   };

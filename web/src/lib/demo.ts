@@ -121,6 +121,15 @@ export function createDemoSource(): DataSource {
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
       return c;
     },
+    async updateComment(t, c, body) {
+      await wait();
+      comments.set(t.number, (comments.get(t.number) ?? []).map((x) => (x.id === c.id ? { ...x, body, editedAt: new Date().toISOString() } : x)));
+    },
+    async deleteComment(t, c) {
+      await wait();
+      comments.set(t.number, (comments.get(t.number) ?? []).filter((x) => x.id !== c.id));
+      patch(t.number, (x) => ({ ...x, commentCount: Math.max(0, x.commentCount - 1) }));
+    },
     async dependencies(t) {
       await wait();
       const url = (n: number) => `https://github.com/demo/board/issues/${n}`;

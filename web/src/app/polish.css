@@ -86,6 +86,14 @@ kbd { font-family: var(--font-code), ui-monospace, monospace; font-feature-setti
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
 }
+/* Bare fields inside a framed box (search in pickers, comment composer, input
+   groups): the frame glows, never the field, so there is one clean ring. */
+:is([data-slot="command-input"], [data-slot="input-group-control"], .field-bare):focus-visible { box-shadow: none !important; }
+:is([data-slot="input-group"], .field-frame) { transition: border-color .15s ease, box-shadow .18s ease; }
+:is([data-slot="input-group"], .field-frame):has(:focus-visible) {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent) !important;
+}
 :where(input, textarea)::placeholder { color: color-mix(in oklch, var(--muted-foreground) 80%, transparent); }
 
 /* ── Popups: menus, selects, popovers, previews, command palette ── */

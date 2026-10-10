@@ -52,7 +52,7 @@ export function LabelPicker({ all, value, onChange, trigger }: {
       <PopoverTrigger render={trigger} />
       <PopoverContent align="start" className="w-80 p-0">
         <Command>
-          <CommandInput placeholder="Find or create a tag…" value={q} onValueChange={setQ} autoFocus />
+          <CommandInput placeholder="Find or create a tag…" value={q} onValueChange={setQ} />
           <CommandList className="max-h-72">
             <CommandEmpty>{name ? "No tag with that name yet." : "No tags."}</CommandEmpty>
             {name && !exists && (

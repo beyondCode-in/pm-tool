@@ -46,7 +46,7 @@ export type Ticket = {
   fields: FieldValues;
 };
 
-export type Comment = { id: string; author: Person | null; body: string; createdAt: string };
+export type Comment = { id: string; restId?: number; author: Person | null; body: string; createdAt: string; editedAt?: string };
 
 export type Board = {
   projectId: string;
@@ -83,6 +83,8 @@ export interface DataSource {
   updateText(t: Ticket, patch: { title?: string; body?: string }): Promise<void>;
   comments(t: Ticket): Promise<Comment[]>;
   addComment(t: Ticket, body: string): Promise<Comment>;
+  updateComment(t: Ticket, c: Comment, body: string): Promise<void>;
+  deleteComment(t: Ticket, c: Comment): Promise<void>;
   create(board: Board, input: NewTicket): Promise<number>;
   // Relationships: Jira's "blocks / is blocked by", plus the parent link.
   // Related tickets are identified by URL, which is unique across repositories.

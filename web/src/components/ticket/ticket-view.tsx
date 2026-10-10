@@ -5,15 +5,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Skeleton } from "@/components/ui/skeleton";
 import { byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
 import { config } from "@/lib/config";
-import { useActions, useAddComment, useComments, useSource } from "@/lib/data";
-import { fmtElapsed, fmtMinutes, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
+import { useActions, useAddComment, useBoard, useComments, useSource } from "@/lib/data";
+import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
 import type { Board, Comment, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import {
   Ban, CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
-  Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Upload, X, XCircle,
+  Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Trash2, Upload, X, XCircle,
 } from "@/components/icons";
 import Link from "next/link";
 import { createContext, Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -77,7 +77,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_21rem] lg:overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden">
         <main className="min-w-0 space-y-7 px-4 py-5 sm:px-6 sm:py-6 lg:overflow-y-auto">
           <TitleAndStatus board={board} ticket={t} />
           <QuickActions board={board} ticket={t} />
@@ -175,7 +175,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
   return (
     <Section id="description" icon={FileText} title="Description" action={!editing && <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><Pencil />Edit</Button>}>
       {editing ? (
-        <div className="overflow-hidden rounded-xl border bg-card focus-within:border-ring">
+        <div className="overflow-hidden field-frame rounded-xl border bg-card">
           <div className="flex items-center gap-1 border-b bg-muted/40 px-2 py-1">
             {(["write", "preview"] as const).map((k) => (
               <button key={k} onClick={() => setTab(k)} className={cn("rounded-md px-2 py-1 text-xs font-medium capitalize", tab === k ? "bg-background shadow-card" : "text-muted-foreground")}>{k}</button>
@@ -193,7 +193,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
           {tab === "write" ? (
             <textarea ref={ref} value={body} onChange={(e) => setBody(e.target.value)} autoFocus rows={12} aria-label="Description"
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(t.body); setEditing(false); } }}
-              className="block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
+              className="field-bare block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
           ) : (
             <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown remarkPlugins={[remarkGfm]}>{body || "_Nothing to preview._"}</ReactMarkdown></div>
           )}
@@ -380,15 +380,15 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
       }>
       {isLoading ? <Skeleton className="h-20 w-full" /> : (
         <ol className="space-y-4">
-          {shown.map((c) => <Message key={c.id} c={c} />)}
+          {shown.map((c) => <Message key={c.id} c={c} ticket={t} />)}
           {!shown.length && <li className="rounded-xl bg-muted/40 p-4 text-center text-sm text-muted-foreground">No messages yet. Start the conversation below.</li>}
         </ol>
       )}
       <div ref={endRef} />
-      <div className="sticky bottom-0 mt-4 rounded-xl border bg-card p-2 shadow-pop focus-within:border-ring">
+      <div className="sticky bottom-0 mt-4 field-frame rounded-xl border bg-card p-2 shadow-pop">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="Write a message… Use @name to mention someone. Ctrl+Enter sends." aria-label="New message"
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send(); }}
-          className="block w-full resize-none bg-transparent p-1.5 text-sm outline-none" />
+          className="field-bare block w-full resize-none bg-transparent p-1.5 text-sm outline-none" />
         <div className="flex items-center justify-end gap-2">
           <span className="mr-auto pl-1 text-[11px] text-muted-foreground">Markdown supported</span>
           <Button size="sm" disabled={!text.trim() || busy} onClick={() => void send()}>{busy ? "Sending…" : "Send"}</Button>
@@ -398,19 +398,82 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
   );
 }
 
-function Message({ c }: { c: Comment }) {
-  const system = c.body.startsWith("⏱️") || c.body.startsWith("📎");
+// One message in the activity feed. Your own messages and time entries can be
+// edited in place or deleted; time entries edit as hours + minutes + note.
+function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
+  const { data: board } = useBoard();
+  const extras = useTicketExtras();
+  const time = parseTime(c.body);
+  const system = !!time || c.body.startsWith("📎");
+  const mine = !!board && (!c.author || c.author.login === board.viewer.login);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(c.body);
+  const [mins, setMins] = useState(String(time?.minutes ?? ""));
+  const [note, setNote] = useState(time?.note ?? "");
+  const [confirm, setConfirm] = useState(false);
+  const save = async () => {
+    if (!board) return;
+    const ok = time
+      ? await extras.editTime(board, t, c, Math.max(1, Number(mins) || 0), note.trim())
+      : draft.trim() && draft !== c.body ? await extras.editComment(t, c, draft.trim()) : true;
+    if (ok !== null) setEditing(false);
+  };
+  const remove = async () => {
+    if (!board) return;
+    setConfirm(false);
+    if (time) await extras.deleteTime(board, t, c); else await extras.deleteComment(t, c);
+  };
   return (
-    <li className="flex gap-3">
+    <li className="group/msg flex gap-3">
       {c.author ? <Avatar person={c.author} size={30} /> : <span className="size-[30px] rounded-full bg-muted" />}
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{c.author?.name || c.author?.login || "Someone"}</span>
           <span title={format(parseISO(c.createdAt), "PPpp")}> · {formatDistanceToNow(parseISO(c.createdAt))} ago</span>
-        </p>
-        <div className={cn("prose-ticket mt-1 w-fit max-w-full rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm", system ? "bg-transparent px-0 py-0 text-muted-foreground" : "bg-muted/60")}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.body}</ReactMarkdown>
+          {c.editedAt && <span title={format(parseISO(c.editedAt), "PPpp")}>· edited</span>}
+          {mine && !editing && (
+            <span className="ml-auto flex gap-0.5 opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+              <Button size="icon-xs" variant="ghost" aria-label={time ? "Edit time entry" : "Edit message"} onClick={() => setEditing(true)}><Pencil /></Button>
+              {confirm
+                ? <><Button size="xs" variant="destructive" onClick={() => void remove()}>Delete</Button><Button size="xs" variant="ghost" onClick={() => setConfirm(false)}>Keep</Button></>
+                : <Button size="icon-xs" variant="ghost" aria-label={time ? "Delete time entry" : "Delete message"} className="hover:text-destructive" onClick={() => setConfirm(true)}><Trash2 /></Button>}
+            </span>
+          )}
         </div>
+        {editing ? (
+          <form className="field-frame mt-1 rounded-xl border bg-card p-2" onSubmit={(e) => { e.preventDefault(); void save(); }}
+            onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setEditing(false); } }}>
+            {time ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Clock className="size-4 text-muted-foreground" aria-hidden />
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <input autoFocus inputMode="numeric" value={mins} onChange={(e) => setMins(e.target.value.replace(/\D/g, ""))} aria-label="Minutes"
+                    className="field-bare h-7 w-16 rounded-md bg-muted px-2 text-sm text-foreground tabular outline-none" />min
+                  {Number(mins) >= 60 && <span className="tabular">({fmtMinutes(Number(mins))})</span>}
+                </label>
+                <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What did you do?" aria-label="Note"
+                  className="field-bare h-7 min-w-0 flex-1 basis-32 rounded-md bg-muted px-2 text-sm outline-none" />
+              </div>
+            ) : (
+              <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} aria-label="Edit message"
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void save(); }}
+                className="field-bare block w-full resize-y bg-transparent p-1 text-sm outline-none" />
+            )}
+            <div className="mt-2 flex justify-end gap-1">
+              <Button type="button" size="xs" variant="ghost" onClick={() => { setEditing(false); setDraft(c.body); }}>Cancel</Button>
+              <Button type="submit" size="xs">Save</Button>
+            </div>
+          </form>
+        ) : time ? (
+          <p className="mt-1 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm">
+            <Clock className="size-3.5 text-primary" aria-hidden /><b className="tabular">{fmtMinutes(time.minutes)}</b>
+            {time.note && <span className="text-muted-foreground">{time.note}</span>}
+          </p>
+        ) : (
+          <div className={cn("prose-ticket mt-1 w-fit max-w-full rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm", system ? "bg-transparent px-0 py-0 text-muted-foreground" : "bg-muted/60")}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.body}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </li>
   );
@@ -420,7 +483,7 @@ function Message({ c }: { c: Comment }) {
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[6.5rem_1fr] items-center gap-2 py-0.5">
+    <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2 py-0.5">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
@@ -445,12 +508,16 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
             </Field>
           ))}
           <Field label="Tags">
-            <LabelPicker all={board.labels} value={t.labels.map((l) => l.name)} onChange={(ls) => void actions.setLabels(t, ls)}
-              trigger={
-                <button className="flex min-h-8 w-full flex-wrap items-center gap-1 rounded-md px-2 py-1 text-left hover:bg-muted" aria-label="Edit tags">
-                  {t.labels.length ? t.labels.map((l) => <LabelChip key={l.name} {...l} />) : <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><TagIcon className="size-3.5" />Add tags</span>}
-                </button>
-              } />
+            <div className="flex min-h-8 flex-wrap items-center gap-1 px-1 py-1">
+              {t.labels.map((l) => <LabelChip key={l.name} {...l} onRemove={() => void actions.setLabels(t, t.labels.map((x) => x.name).filter((n) => n !== l.name))} />)}
+              <LabelPicker all={board.labels} value={t.labels.map((l) => l.name)} onChange={(ls) => void actions.setLabels(t, ls)}
+                trigger={
+                  <button type="button" aria-label="Add or edit tags"
+                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground">
+                    <TagIcon className="size-3" />{t.labels.length ? "Edit" : "Add tags"}
+                  </button>
+                } />
+            </div>
           </Field>
           <Field label="Parent">
             <div className="flex items-center gap-1">
@@ -497,7 +564,7 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const spent = (t.fields as Record<string, unknown>)["Time spent (h)"] as number | undefined;
   const log = async () => {
     if (minutes <= 0) return;
-    if (await extras.logTime(board, t, minutes, note.trim())) { setH(""); setM(""); setNote(""); }
+    if ((await extras.logTime(board, t, minutes, note.trim())) !== null) { setH(""); setM(""); setNote(""); }
   };
   return (
     <div>
@@ -508,11 +575,28 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
           <span>{spent ? `${spent}h logged` : "No time logged on the board yet"}</span>
           <span className="ml-auto"><TimerButton board={board} ticket={t} withLabel /></span>
         </div>
-        <form className="flex items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); void log(); }}>
-          <input aria-label="Hours" inputMode="numeric" value={h} onChange={(e) => setH(e.target.value.replace(/\D/g, ""))} placeholder="h" className="h-8 w-11 rounded-md border bg-background px-2 text-sm tabular outline-none focus:border-ring" />
-          <input aria-label="Minutes" inputMode="numeric" value={m} onChange={(e) => setM(e.target.value.replace(/\D/g, ""))} placeholder="m" className="h-8 w-11 rounded-md border bg-background px-2 text-sm tabular outline-none focus:border-ring" />
-          <input aria-label="What did you do?" value={note} onChange={(e) => setNote(e.target.value)} placeholder="What did you do?" className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm outline-none focus:border-ring" />
-          <Button type="submit" size="sm" variant="secondary" disabled={minutes <= 0}>Log</Button>
+        <form className="grid gap-2 border-t pt-3" onSubmit={(e) => { e.preventDefault(); void log(); }}>
+          <div className="flex items-center gap-2">
+            {[["Hours", "h", h, setH], ["Minutes", "m", m, setM]].map(([label, unit, v, set]) => (
+              <label key={label as string} className="field-frame flex h-8 flex-1 items-center rounded-lg border bg-background pr-2.5">
+                <input aria-label={label as string} inputMode="numeric" value={v as string} placeholder="0"
+                  onChange={(e) => (set as (s: string) => void)(e.target.value.replace(/\D/g, ""))}
+                  className="field-bare h-full w-full min-w-0 bg-transparent px-2.5 text-sm tabular outline-none" />
+                <span className="text-xs text-muted-foreground">{unit as string}</span>
+              </label>
+            ))}
+            {[15, 30, 60].map((q) => (
+              <Button key={q} type="button" size="xs" variant="ghost" className="text-muted-foreground" onClick={() => { setH(String(Math.floor(q / 60) || "")); setM(String(q % 60 || "")); }}>
+                {q < 60 ? `${q}m` : "1h"}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input aria-label="What did you do?" value={note} onChange={(e) => setNote(e.target.value)} placeholder="What did you do? (optional)"
+              className="h-8 min-w-0 flex-1 rounded-lg border bg-background px-2.5 text-sm outline-none focus:border-ring" />
+            <Button type="submit" size="sm" disabled={minutes <= 0}>Log {minutes > 0 ? fmtMinutes(minutes) : "time"}</Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Entries appear under Activity → Time log, where you can edit or delete them.</p>
         </form>
       </div>
     </div>

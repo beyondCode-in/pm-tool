@@ -123,9 +123,9 @@ function TagManager({ board }: { board: Board }) {
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">Tags are GitHub labels on <b>{config.owner}/{config.repo}</b>. Changes here apply to every ticket that uses them. Tags starting with <code>priority:</code>, <code>area:</code>, <code>size:</code> or <code>severity:</code> are managed by the forms and automation.</p>
       <div className="flex flex-wrap gap-2">
-        <form className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border bg-background p-1.5 pl-2" onSubmit={(e) => { e.preventDefault(); void add(); }}>
+        <form className="field-frame flex min-w-0 flex-1 items-center gap-2 rounded-xl border bg-background p-1.5 pl-2" onSubmit={(e) => { e.preventDefault(); void add(); }}>
           <ColorPicker value={color} onChange={setColor} />
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New tag name" aria-label="New tag name" className="h-8 min-w-0 flex-1 bg-transparent text-sm outline-none" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New tag name" aria-label="New tag name" className="field-bare h-8 min-w-0 flex-1 bg-transparent text-sm outline-none" />
           <Button size="sm" type="submit" disabled={!name.trim()}><Plus />Add tag</Button>
         </form>
         <label className="relative">
