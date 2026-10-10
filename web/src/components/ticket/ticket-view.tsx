@@ -1,7 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
+import { isDoneStatus } from "@/lib/workspace";
 import { Skeleton } from "@/components/ui/skeleton";
 import { byUrl, childrenOf, hasField, isDone, options, parentOf, plain } from "@/lib/board";
 import { config } from "@/lib/config";
@@ -15,7 +18,7 @@ import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import {
-  Ban, CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
+  ArrowDown, ArrowRight, ArrowUp, Ban, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock, Flag, Layers, LayoutGrid, ListTodo, SlidersHorizontal, Timer, UserRound, Zap, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
   Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Trash2, Upload, X, XCircle,
 } from "@/components/icons";
 import Link from "next/link";
@@ -29,7 +32,7 @@ import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
 import { LabelPicker, TicketSearch } from "./search-pickers";
 import { Segmented } from "../ui-plus/segmented";
-import { StatusIcon } from "./status-icons";
+import { StatusIcon, statusMeta } from "./status-icons";
 
 // The full ticket: everything about one piece of work, editable in place.
 // Left: what it is and its conversation. Right: the facts, as pickers.
@@ -45,7 +48,8 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
     subtasks: <SubTasks board={board} ticket={t} />,
     dependencies: <Dependencies board={board} ticket={t} />,
     attachments: <Attachments ticket={t} />,
-    activity: <Activity ticket={t} />,
+    checklist: <Checklist ticket={t} />,
+    time: <TimeSection board={board} ticket={t} />,
   };
 
   return (
@@ -81,9 +85,10 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-x-hidden overflow-y-auto lg:grid-cols-[minmax(0,1fr)_25rem] lg:overflow-hidden">
         <main className="min-w-0 space-y-7 px-4 py-5 sm:px-6 sm:py-6 lg:overflow-y-auto">
           <TitleAndStatus board={board} ticket={t} />
+          <Details board={board} ticket={t} />
           <QuickActions board={board} ticket={t} />
           <LayoutCtx.Provider value={layout}>
             {layout.visible.map((id) => <Fragment key={id}>{blocks[id]}</Fragment>)}
@@ -97,8 +102,8 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
             </p>
           )}
         </main>
-        <aside className="min-w-0 border-t bg-muted/25 px-4 py-4 sm:px-5 sm:py-5 lg:overflow-y-auto lg:border-t-0 lg:border-l" aria-label="Details">
-          <Details board={board} ticket={t} />
+        <aside className="flex min-h-0 min-w-0 flex-col border-t bg-muted/25 lg:border-t-0 lg:border-l" aria-label="Activity">
+          <Activity ticket={t} />
         </aside>
       </div>
     </div>
@@ -117,7 +122,7 @@ function StarButton({ url }: { url: string }) {
 
 // ── Left column ─────────────────────────────────────────────────────────
 
-const MAIN_SECTIONS: Record<string, string> = { description: "Description", subtasks: "Sub-tasks", dependencies: "Dependencies", attachments: "Attachments", activity: "Activity" };
+const MAIN_SECTIONS: Record<string, string> = { description: "Description", checklist: "Checklist", subtasks: "Sub-tasks", dependencies: "Dependencies", attachments: "Attachments", time: "Time tracking" };
 const LayoutCtx = createContext<Layout | null>(null);
 
 // Every section of the ticket can be collapsed, hidden or dragged to a new
@@ -136,24 +141,53 @@ function TitleAndStatus({ board, ticket: t }: { board: Board; ticket: Ticket }) 
       <textarea value={title} onChange={(e) => setTitle(e.target.value)} onBlur={save} rows={1} aria-label="Title"
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } if (e.key === "Escape") setTitle(t.title); }}
         className="font-display field-sizing-content -mx-2 w-[calc(100%+1rem)] resize-none rounded-lg bg-transparent px-2 py-1 text-2xl leading-tight font-semibold outline-none hover:bg-muted/60 focus:bg-muted/60" />
-      <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status">
-        {options(board, "Status").map((s) => {
-          const on = t.fields.Status === s.name;
-          return (
-            <button key={s.id} role="radio" aria-checked={on} onClick={() => void actions.move(t, s.name)}
-              className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
-                on ? "border-primary/50 bg-accent text-foreground shadow-card ring-2 ring-primary/20" : "bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground")}>
-              <StatusIcon name={s.name} size={14} />{plain(s.name)}
-            </button>
-          );
-        })}
-      </div>
+      <StatusBar board={board} ticket={t} />
       {t.state === "CLOSED" && (
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
           {t.stateReason === "NOT_PLANNED" ? <Ban className="size-3.5" /> : <CheckCircle2 className="size-3.5 text-success" />}
           {t.stateReason === "NOT_PLANNED" ? "Closed as won't do" : "Closed as complete"}{t.closedAt ? ` · ${formatDistanceToNow(parseISO(t.closedAt))} ago` : ""}
         </p>
       )}
+    </div>
+  );
+}
+
+// ClickUp's status control: the current stage as a coloured pill that opens
+// every stage, a "next stage" arrow, and a one-click complete tick.
+function StatusBar({ board, ticket: t }: { board: Board; ticket: Ticket }) {
+  const actions = useActions();
+  const stages = options(board, "Status");
+  const i = stages.findIndex((o) => o.name === t.fields.Status);
+  const next = stages[i + 1];
+  const done = stages.find((o) => isDoneStatus(o.name));
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="inline-flex items-stretch overflow-hidden rounded-lg shadow-card">
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<button aria-label={`Status: ${plain(t.fields.Status) || "none"}. Change`} className="status-pill inline-flex items-center gap-1.5 rounded-none px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-[filter] hover:brightness-110"
+            style={{ ["--pill-h" as string]: statusMeta(t.fields.Status).hue, ["--pill-c" as string]: Math.max(statusMeta(t.fields.Status).chroma, 0.06) }} />}>
+            <StatusIcon name={t.fields.Status} size={14} className="!text-white" />{plain(t.fields.Status) || "No status"}<ChevronDown className="size-3 opacity-80" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-52">
+            <DropdownMenuRadioGroup value={t.fields.Status ?? ""} onValueChange={(v: string) => void actions.move(t, v)}>
+              {stages.map((o) => <DropdownMenuRadioItem key={o.id} value={o.name}><StatusIcon name={o.name} size={15} />{plain(o.name)}</DropdownMenuRadioItem>)}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {next && (
+          <button onClick={() => void actions.move(t, next.name)} title={`Move to ${plain(next.name)}`} aria-label={`Move to ${plain(next.name)}`}
+            className="status-pill grid place-items-center border-l border-white/25 px-2 transition-[filter] hover:brightness-110"
+            style={{ ["--pill-h" as string]: statusMeta(t.fields.Status).hue, ["--pill-c" as string]: Math.max(statusMeta(t.fields.Status).chroma, 0.06) }}>
+            <ChevronRight className="size-3.5" />
+          </button>
+        )}
+      </div>
+      {done && !isDone(t) && (
+        <Button size="sm" variant="outline" onClick={() => void actions.move(t, done.name)} title={`Mark complete (${plain(done.name)})`} className="gap-1.5 hover:border-success/50 hover:text-success">
+          <CheckCircle2 />Complete
+        </Button>
+      )}
+      {next && <span className="text-xs text-muted-foreground">Next: <span className="inline-flex items-center gap-1 align-middle"><StatusIcon name={next.name} size={12} />{plain(next.name)}</span></span>}
     </div>
   );
 }
@@ -176,7 +210,8 @@ function Description({ ticket: t }: { ticket: Ticket }) {
   const actions = useActions();
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"write" | "preview">("write");
-  const [body, setBody] = useState(t.body);
+  const parts = splitChecklist(t.body);
+  const [body, setBody] = useState(parts.text);
   const ref = useRef<HTMLTextAreaElement>(null);
   const wrap = (before: string, after = before) => {
     const el = ref.current; if (!el) return;
@@ -185,7 +220,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
     setBody(next);
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + before.length, b + before.length); });
   };
-  const save = () => { void actions.updateText(t, { body }); setEditing(false); };
+  const save = () => { void actions.updateText(t, { body: joinChecklist(body, splitChecklist(t.body).items) }); setEditing(false); };
   return (
     <Section id="description" icon={FileText} title="Description" action={!editing && <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><Pencil />Edit</Button>}>
       {editing ? (
@@ -206,26 +241,95 @@ function Description({ ticket: t }: { ticket: Ticket }) {
           </div>
           {tab === "write" ? (
             <textarea ref={ref} value={body} onChange={(e) => setBody(e.target.value)} autoFocus rows={12} aria-label="Description"
-              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(t.body); setEditing(false); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(parts.text); setEditing(false); } }}
               className="field-bare block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
           ) : (
             <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown remarkPlugins={[remarkGfm]}>{body || "_Nothing to preview._"}</ReactMarkdown></div>
           )}
           <div className="flex items-center gap-2 border-t px-3 py-2">
             <span className="text-xs text-muted-foreground">Ctrl+Enter to save · Esc to cancel</span>
-            <Button size="sm" variant="ghost" className="ml-auto" onClick={() => { setBody(t.body); setEditing(false); }}>Cancel</Button>
+            <Button size="sm" variant="ghost" className="ml-auto" onClick={() => { setBody(parts.text); setEditing(false); }}>Cancel</Button>
             <Button size="sm" onClick={save}>Save</Button>
           </div>
         </div>
-      ) : t.body.trim() ? (
-        <div className="prose-ticket cursor-text rounded-xl p-1 text-[15px] hover:bg-muted/40" onDoubleClick={() => setEditing(true)}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.body}</ReactMarkdown>
+      ) : parts.text.trim() ? (
+        <div className="prose-ticket cursor-text rounded-xl p-1 text-[15px] hover:bg-muted/40" onDoubleClick={() => { setBody(parts.text); setEditing(true); }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{parts.text}</ReactMarkdown>
         </div>
       ) : (
         <button onClick={() => setEditing(true)} className="w-full rounded-xl border border-dashed p-5 text-left text-sm text-muted-foreground hover:bg-muted/40">
           Add a description so the team knows what&apos;s needed…
         </button>
       )}
+    </Section>
+  );
+}
+
+// ClickUp-style checklist: tick, add, rename, reorder, delete. Stored in the
+// issue body as a task list, so it also shows and ticks on GitHub.
+// The newest body each checklist has sent, kept until the loaded board shows
+// it. Quick successive edits build on it instead of on a board reload that
+// started before the last save. Expires after 15s in case GitHub reformats it.
+const pendingBody = new Map<string, string>();
+const PENDING_MS = 15_000;
+
+function Checklist({ ticket: t }: { ticket: Ticket }) {
+  const actions = useActions();
+  const latest = () => {
+    return splitChecklist(pendingBody.get(t.url) ?? t.body);
+  };
+  // Show what was last saved, not a board reload that is older than it.
+  const { items } = latest();
+  useEffect(() => { if (pendingBody.get(t.url) === t.body) pendingBody.delete(t.url); }, [t.url, t.body]);
+  const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState<number | null>(null);
+  const [edit, setEdit] = useState("");
+  const write = (change: (items: CheckItem[]) => CheckItem[]) => {
+    const now = latest();
+    const body = joinChecklist(now.text, change(now.items));
+    pendingBody.set(t.url, body);
+    const forget = () => { if (pendingBody.get(t.url) === body) pendingBody.delete(t.url); };
+    setTimeout(forget, PENDING_MS);
+    void actions.updateText(t, { body }).then((ok) => { if (!ok) forget(); });
+  };
+  const doneCount = items.filter((i) => i.done).length;
+  const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+  const add = () => { const v = draft.trim(); if (!v) return; write((xs) => [...xs, { done: false, text: v }]); setDraft(""); };
+  const move = (i: number, by: number) => write((xs) => { const j = i + by; if (j < 0 || j >= xs.length) return xs; const n = [...xs]; [n[i], n[j]] = [n[j], n[i]]; return n; });
+  return (
+    <Section id="checklist" icon={ListTodo} title="Checklist" count={items.length ? `${doneCount}/${items.length}` : undefined}>
+      {items.length > 0 && (
+        <div className="mb-2 flex items-center gap-2">
+          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"><span className={cn("block h-full rounded-full transition-[width] duration-500", pct === 100 ? "bg-success" : "bg-primary")} style={{ width: `${pct}%` }} /></span>
+          <span className="text-xs tabular text-muted-foreground">{pct}%</span>
+        </div>
+      )}
+      <ul className="space-y-0.5">
+        {items.map((it, i) => (
+          <li key={`${i}-${it.text}`} className="group/ck flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-muted/50">
+            <Checkbox checked={it.done} aria-label={`${it.done ? "Untick" : "Tick"} "${it.text}"`} onCheckedChange={() => write((xs) => xs.map((x, k) => (k === i ? { ...x, done: !x.done } : x)))} />
+            {editing === i ? (
+              <input autoFocus value={edit} onChange={(e) => setEdit(e.target.value)} aria-label="Edit item"
+                onBlur={() => { const v = edit.trim(); if (v && v !== it.text) write((xs) => xs.map((x, k) => (k === i ? { ...x, text: v } : x))); setEditing(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditing(null); }}
+                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm outline-none focus:border-ring" />
+            ) : (
+              <button onClick={() => { setEditing(i); setEdit(it.text); }} className={cn("min-w-0 flex-1 truncate text-left text-sm", it.done && "text-muted-foreground line-through")} title="Click to rename">{it.text}</button>
+            )}
+            <span className="flex opacity-0 transition-opacity group-hover/ck:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+              <Button size="icon-xs" variant="ghost" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp /></Button>
+              <Button size="icon-xs" variant="ghost" aria-label="Move down" disabled={i === items.length - 1} onClick={() => move(i, 1)}><ArrowDown /></Button>
+              <Button size="icon-xs" variant="ghost" aria-label={`Delete "${it.text}"`} className="hover:text-destructive" onClick={() => write((xs) => xs.filter((_, k) => k !== i))}><Trash2 /></Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form className="field-frame mt-1.5 flex items-center gap-2 rounded-lg border border-dashed bg-transparent px-2" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <Plus className="size-3.5 text-muted-foreground" />
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add an item and press Enter" aria-label="New checklist item"
+          className="field-bare h-8 min-w-0 flex-1 bg-transparent text-sm outline-none" />
+        {draft.trim() && <Button type="submit" size="xs">Add</Button>}
+      </form>
     </Section>
   );
 }
@@ -392,18 +496,26 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
     setBusy(false);
   };
   return (
-    <Section id="activity" icon={MessageSquare} title="Activity" count={(comments?.length ?? 0) + (history?.length ?? 0)}
-      action={
+    <>
+      <header className="flex items-center gap-2 border-b px-4 py-3">
+        <MessageSquare className="size-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">Activity</h2>
+        <span className="rounded-md bg-muted px-1.5 text-xs tabular text-muted-foreground">{(comments?.length ?? 0) + (history?.length ?? 0)}</span>
+      </header>
+      <div className="border-b px-3 py-2">
         <Segmented size="xs" label="Show" value={filter} onChange={setFilter} options={[["all", "All"], ["comments", "Comments"], ["history", "History"], ["time", "Time log"]] as const} />
-      }>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
       {isLoading ? <Skeleton className="h-20 w-full" /> : (
         <ol className="space-y-4">
           {feed.map((x) => (x.c ? <Message key={x.c.id} c={x.c} ticket={t} /> : <Change key={x.e!.id} e={x.e!} />))}
-          {!feed.length && <li className="rounded-xl bg-muted/40 p-4 text-center text-sm text-muted-foreground">{filter === "history" ? "No changes recorded yet." : filter === "time" ? "No time logged yet. Use the timer or Time tracking on the right." : "No messages yet. Start the conversation below."}</li>}
+          {!feed.length && <li className="rounded-xl bg-muted/40 p-4 text-center text-sm text-muted-foreground">{filter === "history" ? "No changes recorded yet." : filter === "time" ? "No time logged yet. Use the timer or the Time tracking section." : "No messages yet. Start the conversation below."}</li>}
         </ol>
       )}
       <div ref={endRef} />
-      <div className="sticky bottom-0 mt-4 field-frame rounded-xl border bg-card p-2 shadow-pop">
+      </div>
+      <div className="border-t p-3">
+      <div className="field-frame rounded-xl border bg-card p-2 shadow-card">
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="Write a message… Use @name to mention someone. Ctrl+Enter sends." aria-label="New message"
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send(); }}
           className="field-bare block w-full resize-none bg-transparent p-1.5 text-sm outline-none" />
@@ -412,7 +524,8 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
           <Button size="sm" disabled={!text.trim() || busy} onClick={() => void send()}>{busy ? "Sending…" : "Send"}</Button>
         </div>
       </div>
-    </Section>
+      </div>
+    </>
   );
 }
 
@@ -534,14 +647,15 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
 
 // ── Right column ────────────────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, icon: Icon, wide, children }: { label: string; icon: typeof FileText; wide?: boolean; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2 py-0.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <div className={cn("grid min-h-9 grid-cols-[7.5rem_1fr] items-center gap-2 border-b border-dashed py-0.5 last:border-0", wide && "sm:col-span-2")}>
+      <span className="flex items-center gap-2 text-[13px] text-muted-foreground"><Icon className="size-4 shrink-0 opacity-70" />{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
+const FIELD_ICON: Record<string, typeof FileText> = { Priority: Flag, "Ticket Type": Layers, Size: SlidersHorizontal, Component: LayoutGrid };
 
 function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const actions = useActions();
@@ -550,62 +664,74 @@ function Details({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const parent = parentOf(board, t);
   const descendants = (p: Ticket): number[] => childrenOf(board, p).flatMap((c) => [c.number, ...descendants(c)]);
   return (
-    <div className="space-y-5">
-      <div>
-        <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Details</p>
-        <div className="rounded-xl border bg-card p-2 shadow-card">
-          <Field label="Assignees"><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></Field>
-          {(["Priority", "Ticket Type", "Size", "Component"] as const).filter((f) => hasField(board, f)).map((f) => (
-            <Field key={f} label={f === "Ticket Type" ? "Type" : f}>
-              <OptionPicker board={board} field={f} label={f} value={t.fields[f]} onChange={(v) => void actions.setField(t, f, v)} />
-            </Field>
-          ))}
-          <Field label="Tags">
-            <div className="flex min-h-8 flex-wrap items-center gap-1 px-1 py-1">
-              {t.labels.map((l) => <LabelChip key={l.name} {...l} onRemove={() => void actions.setLabels(t, t.labels.map((x) => x.name).filter((n) => n !== l.name))} />)}
-              <LabelPicker all={board.labels} value={t.labels.map((l) => l.name)} onChange={(ls) => void actions.setLabels(t, ls)}
-                trigger={
-                  <button type="button" aria-label="Add or edit tags"
-                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground">
-                    <TagIcon className="size-3" />{t.labels.length ? "Edit" : "Add tags"}
-                  </button>
-                } />
-            </div>
-          </Field>
-          <Field label="Parent">
+    <div>
+      <div className="grid gap-x-8 sm:grid-cols-2">
+        <Field label="Assignees" icon={UserRound}><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></Field>
+        {(hasField(board, "Start date") || hasField(board, "Target date")) && (
+          <Field label="Dates" icon={CalendarDays} wide>
             <div className="flex items-center gap-1">
-              <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
-                trigger={
-                  <Button variant="ghost" size="sm" className="h-8 min-w-0 flex-1 justify-start px-2 font-normal">
-                    {parent ? <span className="flex min-w-0 items-center gap-1.5"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></span> : <span className="text-muted-foreground">None</span>}
-                  </Button>
-                } />
-              {parent && <Button size="icon-xs" variant="ghost" aria-label="Open parent" onClick={() => void open(parent.number)}><ChevronRight /></Button>}
-              {parent && <Button size="icon-xs" variant="ghost" aria-label="Remove parent" onClick={() => void extras.setParent(t, null, parent)}><X /></Button>}
+              {hasField(board, "Start date") && <span className="min-w-0 flex-1"><DateInput label="Start date" value={t.fields["Start date"]} onChange={(v) => void actions.setField(t, "Start date", v)} /></span>}
+              {hasField(board, "Start date") && hasField(board, "Target date") && <ArrowRight className="size-3 shrink-0 text-muted-foreground" />}
+              {hasField(board, "Target date") && <span className="min-w-0 flex-1"><DateInput warnPast={!isDone(t)} label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></span>}
             </div>
           </Field>
-        </div>
+        )}
+        {(["Priority", "Ticket Type", "Size", "Component"] as const).filter((f) => hasField(board, f)).map((f) => (
+          <Field key={f} label={f === "Ticket Type" ? "Type" : f} icon={FIELD_ICON[f]}>
+            <OptionPicker board={board} field={f} label={f} value={t.fields[f]} onChange={(v) => void actions.setField(t, f, v)} />
+          </Field>
+        ))}
+        {hasField(board, "Sprint") && <Field label="Sprint" icon={Timer}><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></Field>}
+        {hasField(board, "Story Points") && <Field label="Points" icon={Zap}><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
+        <Field label="Time tracked" icon={Clock}><TimeSummary board={board} ticket={t} /></Field>
+        <Field label="Parent" icon={GitBranch}>
+          <div className="flex items-center gap-1">
+            <TicketSearch tickets={board.tickets} exclude={[t.number, ...descendants(t)]} placeholder="Move under which ticket?" onPick={(p) => void extras.setParent(t, p, parent)}
+              trigger={
+                <Button variant="ghost" size="sm" className="h-8 min-w-0 flex-1 justify-start px-2 font-normal">
+                  {parent ? <span className="flex min-w-0 items-center gap-1.5"><TypeIcon ticket={parent} /><span className="truncate">{cleanTitle(parent.title)}</span></span> : <span className="text-muted-foreground">None</span>}
+                </Button>
+              } />
+            {parent && <Button size="icon-xs" variant="ghost" aria-label="Open parent" onClick={() => void open(parent.number)}><ChevronRight /></Button>}
+            {parent && <Button size="icon-xs" variant="ghost" aria-label="Remove parent" onClick={() => void extras.setParent(t, null, parent)}><X /></Button>}
+          </div>
+        </Field>
+        <Field label="Tags" icon={TagIcon} wide>
+          <div className="flex min-h-8 flex-wrap items-center gap-1 px-1 py-1">
+            {t.labels.map((l) => <LabelChip key={l.name} {...l} onRemove={() => void actions.setLabels(t, t.labels.map((x) => x.name).filter((n) => n !== l.name))} />)}
+            <LabelPicker all={board.labels} value={t.labels.map((l) => l.name)} onChange={(ls) => void actions.setLabels(t, ls)}
+              trigger={
+                <button type="button" aria-label="Add or edit tags"
+                  className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground">
+                  <TagIcon className="size-3" />{t.labels.length ? "Edit" : "Add tags"}
+                </button>
+              } />
+          </div>
+        </Field>
       </div>
-
-      <div>
-        <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Planning</p>
-        <div className="rounded-xl border bg-card p-2 shadow-card">
-          {hasField(board, "Sprint") && <Field label="Sprint"><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></Field>}
-          {hasField(board, "Story Points") && <Field label="Points"><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></Field>}
-          {hasField(board, "Start date") && <Field label="Start"><DateInput label="Start date" value={t.fields["Start date"]} onChange={(v) => void actions.setField(t, "Start date", v)} /></Field>}
-          {hasField(board, "Target date") && <Field label="Due"><DateInput warnPast={!isDone(t)} label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></Field>}
-        </div>
-      </div>
-
-      <TimeTracking board={board} ticket={t} />
-
-      <dl className="space-y-1.5 px-1 text-xs text-muted-foreground">
-        {t.author && <div className="flex items-center gap-2"><dt className="w-[6.5rem]">Reported by</dt><dd className="flex items-center gap-1.5 text-foreground"><Avatar person={t.author} size={18} />{t.author.name || t.author.login}</dd></div>}
-        <div className="flex gap-2"><dt className="w-[6.5rem]">Created</dt><dd title={format(parseISO(t.createdAt), "PPpp")}>{formatDistanceToNow(parseISO(t.createdAt))} ago</dd></div>
-        <div className="flex gap-2"><dt className="w-[6.5rem]">Updated</dt><dd title={format(parseISO(t.updatedAt), "PPpp")}>{formatDistanceToNow(parseISO(t.updatedAt))} ago</dd></div>
-      </dl>
+      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {t.author && <span className="inline-flex items-center gap-1.5">Reported by <Avatar person={t.author} size={16} /><span className="text-foreground">{t.author.name || t.author.login}</span></span>}
+        <span title={format(parseISO(t.createdAt), "PPpp")}>Created {formatDistanceToNow(parseISO(t.createdAt))} ago</span>
+        <span title={format(parseISO(t.updatedAt), "PPpp")}>Updated {formatDistanceToNow(parseISO(t.updatedAt))} ago</span>
+      </p>
     </div>
   );
+}
+
+// Total logged time with a running timer, as one compact field.
+function TimeSummary({ board, ticket: t }: { board: Board; ticket: Ticket }) {
+  const { data: comments } = useComments(t);
+  const total = (comments ?? []).reduce((sum, c) => sum + (parseTime(c.body)?.minutes ?? 0), 0);
+  return (
+    <div className="flex items-center gap-2 px-2">
+      <span className={cn("text-sm tabular", !total && "text-muted-foreground")}>{total ? fmtMinutes(total) : "None yet"}</span>
+      <span className="ml-auto"><TimerButton board={board} ticket={t} /></span>
+    </div>
+  );
+}
+
+function TimeSection({ board, ticket: t }: { board: Board; ticket: Ticket }) {
+  return <Section id="time" icon={Clock} title="Time tracking"><TimeTracking board={board} ticket={t} /></Section>;
 }
 
 function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
@@ -623,7 +749,6 @@ function TimeTracking({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   };
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Time tracking</p>
       <div className="space-y-2 rounded-xl border bg-card p-3 shadow-card">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="size-4 text-muted-foreground" aria-hidden />
