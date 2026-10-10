@@ -43,8 +43,13 @@ export type Ticket = {
   parent?: number | null;
   parentUrl?: string | null;
   subIssues: { total: number; completed: number };
+  milestone?: { number: number; title: string } | null;
   fields: FieldValues;
 };
+
+/** A GitHub milestone, shown as a goal: a target date and the tickets that reach it. */
+export type Milestone = { number: number; title: string; description: string; dueOn: string | null; state: "OPEN" | "CLOSED"; url: string; open: number; closed: number };
+export type MilestoneInput = { number?: number; title: string; description: string; dueOn: string | null; state?: "OPEN" | "CLOSED" };
 
 // One change in a ticket's life: who did what, when.
 export type HistoryKind = "created" | "status" | "field" | "assigned" | "unassigned" | "labeled" | "unlabeled" | "renamed" | "closed" | "reopened" | "parent" | "linked" | "other";
@@ -105,6 +110,10 @@ export interface DataSource {
   createLabel(label: Label): Promise<void>;
   updateLabel(name: string, patch: Partial<Label>): Promise<void>;
   deleteLabel(name: string): Promise<void>;
+  // Goals: the repository's milestones.
+  milestones(): Promise<Milestone[]>;
+  saveMilestone(m: MilestoneInput): Promise<void>;
+  setMilestone(t: Ticket, milestone: number | null): Promise<void>;
 }
 
 export type Attachment = { name: string; url: string; isImage: boolean };

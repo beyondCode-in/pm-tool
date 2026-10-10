@@ -233,6 +233,23 @@ export function createGitHubSource(token: string): DataSource {
       });
     },
 
+    async milestones() {
+      type M = { number: number; title: string; description: string | null; due_on: string | null; state: "open" | "closed"; html_url: string; open_issues: number; closed_issues: number };
+      const list = await rest<M[]>(`${repoPath}/milestones?state=all&per_page=100&sort=due_on`);
+      return list.map((m) => ({ number: m.number, title: m.title, description: m.description ?? "", dueOn: m.due_on ? m.due_on.slice(0, 10) : null,
+        state: m.state === "open" ? "OPEN" as const : "CLOSED" as const, url: m.html_url, open: m.open_issues, closed: m.closed_issues }));
+    },
+
+    async saveMilestone(m) {
+      // GitHub stores due dates as a timestamp; noon UTC keeps the same day in every time zone.
+      const body = JSON.stringify({ title: m.title, description: m.description, due_on: m.dueOn ? `${m.dueOn}T12:00:00Z` : null, ...(m.state ? { state: m.state.toLowerCase() } : {}) });
+      await rest(m.number ? `${repoPath}/milestones/${m.number}` : `${repoPath}/milestones`, { method: m.number ? "PATCH" : "POST", body });
+    },
+
+    async setMilestone(t, milestone) {
+      await rest(`${at(t)}/issues/${t.number}`, { method: "PATCH", body: JSON.stringify({ milestone }) });
+    },
+
     async deleteLabel(name) {
       await rest(`${repoPath}/labels/${encodeURIComponent(name)}`, { method: "DELETE" });
     },
@@ -278,7 +295,7 @@ const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV
   items(first:100,after:$after){ pageInfo{hasNextPage endCursor} nodes{ id
     content{ __typename ... on Issue{ id number title body url state stateReason createdAt updatedAt closedAt
       author{login avatarUrl} assignees(first:10){nodes{login avatarUrl name}} labels(first:30){nodes{name color}}
-      comments{totalCount} parent{number url} repository{nameWithOwner} subIssuesSummary{total completed} } }
+      comments{totalCount} parent{number url} repository{nameWithOwner} subIssuesSummary{total completed} milestone{number title} } }
     fieldValues(first:30){ nodes{ __typename
       ... on ProjectV2ItemFieldSingleSelectValue{name field{... on ProjectV2FieldCommon{name}}}
       ... on ProjectV2ItemFieldDateValue{date field{... on ProjectV2FieldCommon{name}}}
@@ -303,6 +320,7 @@ type RawItem = {
     stateReason: string | null; createdAt: string; updatedAt: string; closedAt: string | null; author: Person | null;
     assignees: { nodes: Person[] }; labels: { nodes: Label[] }; comments: { totalCount: number };
     parent: { number: number; url: string } | null; repository: { nameWithOwner: string }; subIssuesSummary: { total: number; completed: number } | null;
+    milestone: { number: number; title: string } | null;
   };
   fieldValues: { nodes: { __typename: string; name?: string; date?: string; number?: number; iterationId?: string; field?: { name: string } }[] };
 };
@@ -332,7 +350,7 @@ function toTicket(n: RawItem): Ticket {
     stateReason: c.stateReason, createdAt: c.createdAt, updatedAt: c.updatedAt, closedAt: c.closedAt, author: c.author,
     assignees: c.assignees.nodes, labels: c.labels.nodes, commentCount: c.comments.totalCount, parent: c.parent?.number ?? null,
     parentUrl: c.parent?.url ?? null, repo: c.repository.nameWithOwner,
-    subIssues: c.subIssuesSummary ?? { total: 0, completed: 0 }, fields: fields as FieldValues,
+    subIssues: c.subIssuesSummary ?? { total: 0, completed: 0 }, milestone: c.milestone ?? null, fields: fields as FieldValues,
   };
 }
 
