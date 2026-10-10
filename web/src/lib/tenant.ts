@@ -57,4 +57,4 @@ export function forgetTenant() {
 }
 
 /** A link to this board that anyone with access can open. */
-export const shareLink = (origin: string, basePath: string, t: Tenant) => `${origin}${basePath}/my-work/?board=${encodeTenant(t)}`;
+export const shareLink = (origin: string, basePath: string, t: Tenant) => `${origin}${basePath}/home/?board=${encodeTenant(t)}`;

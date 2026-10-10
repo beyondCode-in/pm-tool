@@ -19,7 +19,7 @@ import { NAV } from "./nav";
 // remembered per browser.
 
 type Item = (typeof NAV)[number];
-const HOME = ["/my-work/", "/inbox/"];
+const HOME = ["/home/", "/my-work/", "/inbox/"];
 const FOOT = ["/settings/"];
 
 const OPEN_KEY = "beyondpm.sidebar-open";
