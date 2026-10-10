@@ -146,15 +146,22 @@ The workflow **owns** the `priority:`, `area:`, `size:` and `severity:` labels. 
    - Without it, labels still work, but nothing writes to the board.
 5. **Set grouping and sorting on each view** (the API can't). Open each view and use the view menu ▾:
 
-   | View | Layout | Group by / columns | Sort |
+   | View | Layout · filter (set by API) | Set by hand: group / columns | Sort |
    |---|---|---|---|
-   | Kanban | Board | Columns: Status | Priority |
-   | Priority Matrix | Board | Columns: Priority | Updated |
-   | Sprint board | Board | Columns: Status, group: Assignees | Priority |
-   | Backlog & triage | Table | Group: Ticket Type | Priority, then Created |
-   | Bugs | Table | Group: Priority | Created |
-   | Component breakdown | Table | Group: Component | Status |
-   | Roadmap | Roadmap | Group: Ticket Type; dates: Start date → Target date | — |
+   | 📋 Kanban | Board · `is:issue` | Columns: Status | Priority |
+   | 🏃 Current sprint | Board · `sprint:@current` | Columns: Status; swimlanes: Assignees | Priority |
+   | 👤 My work | Board · `assignee:@me is:open` | Columns: Status | Target date |
+   | 🔥 Priority matrix | Board · `is:open` | Columns: Priority | Updated |
+   | 📚 Backlog | Table · Backlog + Todo | Group: Ticket Type | Priority, then Created |
+   | 📥 Triage inbox | Table · `label:triage` | — | Created (oldest first) |
+   | 🐛 Bugs & incidents | Table · `label:bug,incident` | Group: Priority | Created |
+   | 🎧 Customer requests | Table · `label:request,support` | Group: Status | Created |
+   | 🗓️ Sprint planning | Table · not Done | Group: Sprint; sum Story Points | Priority |
+   | 🧩 By component | Table · `is:open` | Group: Component | Status |
+   | 🌳 Hierarchy | Table | Group: Parent issue | — |
+   | ✅ Recently done | Table · Done in last 14 days | Group: Ticket Type | Updated |
+   | 🗺️ Roadmap | Roadmap · epics and tasks | Dates: Start date → Target date; group: Ticket Type | — |
+   | 📆 Timeline | Roadmap · all issues | Dates: Start date → Target date; zoom: Month | — |
 
 6. **Check it:** create a test ticket with each form and confirm the labels, board fields and welcome comment appear. Then delete the test tickets.
 
