@@ -7,6 +7,7 @@ import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
 import { signOut } from "@/lib/auth";
 import { markDone } from "@/lib/onboarding";
 import { toggleSidebar, useSidebarCollapsed } from "@/lib/ui-prefs";
+import { useLayout } from "@/lib/layout";
 import { config } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
 import { TICKET_TYPES } from "@/lib/ticket-types";
@@ -79,6 +80,8 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
   const { theme, setTheme } = useTheme();
   const accent = useAccent();
   const collapsed = useSidebarCollapsed();
+  const nav = useLayout("sidebar-nav", NAV.map((n) => n.href));
+  const navItems = nav.visible.map((h) => NAV.find((n) => n.href === h)!).filter(Boolean);
   const inbox = board?.tickets.filter((t) => t.state === "OPEN" && t.labels.some((l) => l.name === "triage")).length ?? 0;
   const mine = board?.tickets.filter((t) => t.state === "OPEN" && t.assignees.some((a) => a.login === board.viewer.login)).length ?? 0;
 
@@ -101,7 +104,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
         </Tip>
       </div>
       <nav data-tour="nav" className={cn("mt-4 flex-1 space-y-0.5 overflow-y-auto", collapsed ? "px-2" : "px-3")} aria-label="Views">
-        {NAV.map((n) => {
+        {navItems.map((n) => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
           return (

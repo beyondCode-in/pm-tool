@@ -85,3 +85,18 @@ export const fmtElapsed = (ms: number) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   return `${h ? `${h}:` : ""}${String(m).padStart(h ? 2 : 1, "0")}:${String(sec).padStart(2, "0")}`;
 };
+
+// ── Tags (labels) ───────────────────────────────────────────────────────
+export function useLabelActions() {
+  const source = useSource();
+  const qc = useQueryClient();
+  const run = async (work: () => Promise<void>, done: string) => {
+    try { await work(); toast.success(done); await qc.invalidateQueries({ queryKey: ["board"] }); return true; }
+    catch (e) { toast.error(message(e), { duration: 10000 }); return false; }
+  };
+  return {
+    create: (l: { name: string; color: string; description?: string }) => run(() => source!.createLabel(l), `Created tag "${l.name}"`),
+    update: (name: string, p: { name?: string; color?: string; description?: string }) => run(() => source!.updateLabel(name, p), `Saved tag "${p.name ?? name}"`),
+    remove: (name: string) => run(() => source!.deleteLabel(name), `Deleted tag "${name}"`),
+  };
+}

@@ -8,7 +8,10 @@ import type { Board, Option, Ticket } from "@/lib/types";
 import { useGroupBy, useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { LayoutGroup } from "motion/react";
-import { ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHorizontal, Plus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useLayout, type Layout } from "@/lib/layout";
+import { CustomiseMenu } from "../layout/custom-section";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "../ticket/bits";
@@ -71,7 +74,10 @@ function QuickAdd({ board, status, onDone }: { board: Board; status: string; onD
 export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
   const actions = useActions();
   const [group, setGroup] = useGroupBy("none");
-  const statuses = options(board, "Status");
+  const allStatuses = options(board, "Status");
+  // Columns can be hidden, collapsed and reordered per person.
+  const cols = useLayout("board-columns", allStatuses.map((o) => o.name));
+  const statuses = cols.visible.map((n) => allStatuses.find((o) => o.name === n)!).filter(Boolean);
   const lanes = useMemo(() => lanesFor(board, tickets, group).filter((l) => l.key === "all" || l.tickets.length), [board, tickets, group]);
   // One monitor for the whole board: a card dropped on a column changes its Status.
   const onDrop = useEffectEvent((number: unknown, data: Record<string, unknown>) => {
@@ -106,10 +112,11 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
         {[["none", "None"], ["priority", "Priority"], ["assignee", "People"], ["type", "Type"]].map(([k, l]) => (
           <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>
         ))}
+        <span className="ml-auto shrink-0"><CustomiseMenu layout={cols} label="Columns" heading="Show columns" labels={Object.fromEntries(allStatuses.map((o) => [o.name, o.name]))} /></span>
       </div>
       <LayoutGroup>
         <div className="min-h-0 flex-1 overflow-auto pb-4">
-          {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} showTitle={lane.key !== "all"} />)}
+          {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} allStatuses={allStatuses} cols={cols} showTitle={lane.key !== "all"} />)}
         </div>
       </LayoutGroup>
       <DragDock board={board} />
@@ -117,9 +124,9 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
   );
 }
 
-function LaneRow({ board, lane, statuses, showTitle }: { board: Board; lane: Lane; statuses: Option[]; showTitle: boolean }) {
+function LaneRow({ board, lane, statuses, allStatuses, cols, showTitle }: { board: Board; lane: Lane; statuses: Option[]; allStatuses: Option[]; cols: Layout; showTitle: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
-  const noStatus = lane.tickets.filter((t) => !t.fields.Status || !statuses.some((s) => s.name === t.fields.Status));
+  const noStatus = lane.tickets.filter((t) => !t.fields.Status || !allStatuses.some((s) => s.name === t.fields.Status));
   return (
     <section className="mb-4" aria-label={typeof lane.title === "string" ? lane.title : undefined}>
       {showTitle && (
@@ -131,14 +138,14 @@ function LaneRow({ board, lane, statuses, showTitle }: { board: Board; lane: Lan
       {!collapsed && (
         <div className="flex snap-x snap-mandatory gap-3 sm:snap-none">
           {noStatus.length > 0 && <Column board={board} status={null} tickets={noStatus} scope={lane.key} />}
-          {statuses.map((s) => <Column key={s.id} board={board} status={s} scope={lane.key} tickets={lane.tickets.filter((t) => t.fields.Status === s.name)} />)}
+          {statuses.map((s) => <Column key={s.id} board={board} status={s} scope={lane.key} cols={cols} tickets={lane.tickets.filter((t) => t.fields.Status === s.name)} />)}
         </div>
       )}
     </section>
   );
 }
 
-function Column({ board, status, tickets, scope }: { board: Board; status: Option | null; tickets: Ticket[]; scope: string }) {
+function Column({ board, status, tickets, scope, cols }: { board: Board; status: Option | null; tickets: Ticket[]; scope: string; cols?: Layout }) {
   const ref = useRef<HTMLDivElement>(null);
   const [over, setOver] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -146,6 +153,8 @@ function Column({ board, status, tickets, scope }: { board: Board; status: Optio
   const limit = status ? wipFor(status.name) : undefined;
   const sorted = useMemo(() => [...tickets].sort(byPriorityThenNumber), [tickets]);
   const points = tickets.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
+  const folded = !!status && !!cols?.isCollapsed(status.name);
+  const pos = status && cols ? cols.order.indexOf(status.name) : -1;
 
   useEffect(() => {
     const el = ref.current;
@@ -153,8 +162,21 @@ function Column({ board, status, tickets, scope }: { board: Board; status: Optio
     return dropTargetForElements({ element: el, getData: () => ({ status: status.name }), onDragEnter: () => setOver(true), onDragLeave: () => setOver(false), onDrop: () => setOver(false) });
   }, [status]);
 
+  if (folded && status && cols) {
+    return (
+      <div ref={ref} className={cn("flex w-11 shrink-0 snap-start flex-col items-center gap-2 rounded-2xl bg-muted/50 py-3 transition-colors", over && "bg-accent ring-2 ring-primary/40")}
+        aria-label={`${status.name}, ${tickets.length} tickets, collapsed`}>
+        <button onClick={() => cols.toggleCollapsed(status.name)} aria-label={`Expand ${status.name}`} className="flex flex-col items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
+          <span className={cn("size-2 rounded-full", dotClass(status.color))} aria-hidden />
+          <span className="text-xs tabular text-muted-foreground">{tickets.length}</span>
+          <span className="text-sm font-semibold [writing-mode:vertical-rl]">{status.name}</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div ref={ref} className={cn("flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
+    <div ref={ref} className={cn("group/col flex w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-2xl bg-muted/50 p-2 transition-colors sm:w-72", over && "bg-accent ring-2 ring-primary/40")}
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
         <span className={cn("size-2 rounded-full", dotClass(status?.color))} aria-hidden />
@@ -166,6 +188,19 @@ function Column({ board, status, tickets, scope }: { board: Board; status: Optio
         {points > 0 && <span className="text-xs text-muted-foreground" title="Story points">· {points} pts</span>}
         <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label={`Add a ticket to ${status?.name ?? "this column"}`}
           onClick={() => (status ? setAdding(true) : void newTicket("pick"))}><Plus /></Button>
+        {status && cols && (
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={`${status.name} column options`} />}><MoreHorizontal /></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem onClick={() => setAdding(true)}><Plus />Add ticket</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => cols.toggleCollapsed(status.name)}><ChevronsLeftRight />Collapse column</DropdownMenuItem>
+              <DropdownMenuItem disabled={pos <= 0} onClick={() => cols.moveBy(status.name, -1)}><ArrowLeft />Move left</DropdownMenuItem>
+              <DropdownMenuItem disabled={pos >= cols.order.length - 1} onClick={() => cols.moveBy(status.name, 1)}><ArrowRight />Move right</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => cols.toggleHidden(status.name)}><EyeOff />Hide column</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       <div className="flex min-h-16 flex-col gap-2">
         {adding && status && <QuickAdd board={board} status={status.name} onDone={() => setAdding(false)} />}

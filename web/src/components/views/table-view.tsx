@@ -12,7 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TicketPreview } from "../ticket/ticket-preview";
 import { BulkBar } from "./bulk-bar";
 import { CardMenu } from "./card-menu";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { useLayout } from "@/lib/layout";
+import { CustomiseMenu } from "../layout/custom-section";
 import { cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ticket/bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "../ticket/pickers";
 
@@ -31,6 +33,23 @@ function groupKey(board: Board, t: Ticket, by: string): string[] {
   }
 }
 
+const COLUMNS: Record<string, string> = { status: "Status", priority: "Priority", assignees: "Assignees", sprint: "Sprint", points: "Points", due: "Due" };
+
+function Cell({ id, board, t }: { id: string; board: Board; t: Ticket }) {
+  const actions = useActions();
+  switch (id) {
+    case "status": return <OptionPicker board={board} field="Status" label="Status" value={t.fields.Status} onChange={(v) => v && void actions.move(t, v)} />;
+    case "priority": return <OptionPicker board={board} field="Priority" label="Priority" value={t.fields.Priority} onChange={(v) => void actions.setField(t, "Priority", v)} />;
+    case "assignees": return <PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} />;
+    case "sprint": return <SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} />;
+    case "points": return <NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} />;
+    case "due": return <DateInput warnPast={!isDone(t)} label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} />;
+    default: return null;
+  }
+}
+const WIDTH: Record<string, string> = { status: "w-40", priority: "w-36", assignees: "w-44", sprint: "w-40", points: "w-20", due: "w-40" };
+const SORTS: Partial<Record<string, SortKey>> = { status: "status", priority: "priority", points: "points", due: "due" };
+
 export function TableView({ board, tickets, defaultGroup = "none" }: { board: Board; tickets: Ticket[]; defaultGroup?: string }) {
   const [group, setGroup] = useGroupBy(defaultGroup);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "priority", dir: 1 });
@@ -38,6 +57,9 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
   // Selection for bulk edit, keyed by board item; shift-click selects a range.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<string | null>(null);
+  const available = Object.keys(COLUMNS).filter((c) => (c === "sprint" ? hasField(board, "Sprint") : c === "points" ? hasField(board, "Story Points") : true));
+  const cols = useLayout("table-columns", available);
+  const span = cols.visible.length + 3;
 
   const sorted = useMemo(() => {
     const v = (t: Ticket): string | number => ({
@@ -88,6 +110,7 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
       <div className="flex flex-wrap items-center gap-1 text-sm">
         <span className="mr-1 text-muted-foreground">Group by</span>
         {GROUPS.map(([k, l]) => <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>)}
+        <span className="ml-auto hidden md:inline"><CustomiseMenu layout={cols} label="Columns" heading="Show columns" labels={COLUMNS} /></span>
       </div>
       <MobileList board={board} groups={groups} selected={selected} onPick={pick} />
       <div className="hidden min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-card md:block">
@@ -98,18 +121,16 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
                 <Checkbox aria-label="Select all shown" checked={flat.length > 0 && flat.every((t) => selected.has(t.itemId))}
                   indeterminate={selected.size > 0 && !flat.every((t) => selected.has(t.itemId))} onCheckedChange={() => toggleAll(flat)} />
               </th>
-              {head("number", "#", "w-16")}{head("title", "Title")}{head("status", "Status", "w-40")}{head("priority", "Priority", "w-36")}
-              <th scope="col" className="w-44 px-2 text-left text-xs font-medium text-muted-foreground">Assignees</th>
-              {hasField(board, "Sprint") && <th scope="col" className="w-40 px-2 text-left text-xs font-medium text-muted-foreground">Sprint</th>}
-              {hasField(board, "Story Points") && head("points", "Points", "w-20")}
-              {head("due", "Due", "w-36")}
+              {head("number", "#", "w-16")}{head("title", "Title")}
+              {cols.visible.map((c) => SORTS[c] ? <Fragment key={c}>{head(SORTS[c]!, COLUMNS[c], WIDTH[c])}</Fragment>
+                : <th key={c} scope="col" className={cn("px-2 text-left text-xs font-medium text-muted-foreground", WIDTH[c])}>{COLUMNS[c]}</th>)}
             </tr>
           </thead>
           {groups.map(([name, rows]) => (
             <tbody key={name}>
               {group !== "none" && (
                 <tr className="border-b bg-muted/40">
-                  <th colSpan={9} scope="rowgroup" className="px-3 py-1.5 text-left">
+                  <th colSpan={span} scope="rowgroup" className="px-3 py-1.5 text-left">
                     {rows.length > 0 && <span className="mr-2 inline-flex align-middle"><Checkbox aria-label={`Select all in ${name}`} checked={rows.every((r) => selected.has(r.itemId))} onCheckedChange={() => toggleAll(rows)} /></span>}
                     <button className="inline-flex items-center gap-1.5 text-xs font-semibold" aria-expanded={!collapsed.has(name)}
                       onClick={() => setCollapsed((s) => { const n = new Set(s); if (n.has(name)) n.delete(name); else n.add(name); return n; })}>
@@ -119,8 +140,8 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
                   </th>
                 </tr>
               )}
-              {!collapsed.has(name) && rows.map((t) => <Row key={`${name}-${t.itemId}`} board={board} t={t} checked={selected.has(t.itemId)} onCheck={(range) => pick(t, range)} />)}
-              {!collapsed.has(name) && !rows.length && <tr><td colSpan={9} className="px-4 py-3 text-xs text-muted-foreground">Nothing here yet.</td></tr>}
+              {!collapsed.has(name) && rows.map((t) => <Row key={`${name}-${t.itemId}`} board={board} t={t} columns={cols.visible} checked={selected.has(t.itemId)} onCheck={(range) => pick(t, range)} />)}
+              {!collapsed.has(name) && !rows.length && <tr><td colSpan={span} className="px-4 py-3 text-xs text-muted-foreground">Nothing here yet.</td></tr>}
             </tbody>
           ))}
         </table>
@@ -131,8 +152,7 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
   );
 }
 
-function Row({ board, t, checked, onCheck }: { board: Board; t: Ticket; checked: boolean; onCheck: (range: boolean) => void }) {
-  const actions = useActions();
+function Row({ board, t, columns, checked, onCheck }: { board: Board; t: Ticket; columns: string[]; checked: boolean; onCheck: (range: boolean) => void }) {
   const [, open] = useOpenTicket();
   return (
     <tr className={cn("group border-b last:border-0 hover:bg-muted/40", checked && "bg-accent/50 hover:bg-accent/60", isDone(t) && "text-muted-foreground")}>
@@ -152,12 +172,7 @@ function Row({ board, t, checked, onCheck }: { board: Board; t: Ticket; checked:
           </div>
         </CardMenu>
       </td>
-      <td className="px-1"><OptionPicker board={board} field="Status" label="Status" value={t.fields.Status} onChange={(v) => v && void actions.move(t, v)} /></td>
-      <td className="px-1"><OptionPicker board={board} field="Priority" label="Priority" value={t.fields.Priority} onChange={(v) => void actions.setField(t, "Priority", v)} /></td>
-      <td className="px-1"><PeoplePicker people={board.people} value={t.assignees} onChange={(l) => void actions.setAssignees(t, l)} /></td>
-      {hasField(board, "Sprint") && <td className="px-1"><SprintPicker board={board} value={t.fields.Sprint} onChange={(v) => void actions.setField(t, "Sprint", v)} /></td>}
-      {hasField(board, "Story Points") && <td className="px-1"><NumberInput key={t.fields["Story Points"] ?? "x"} label="Story points" value={t.fields["Story Points"]} onChange={(v) => void actions.setField(t, "Story Points", v)} /></td>}
-      <td className="px-1"><DateInput warnPast={!isDone(t)} label="Due date" value={t.fields["Target date"]} onChange={(v) => void actions.setField(t, "Target date", v)} /></td>
+      {columns.map((c) => <td key={c} className="px-1"><Cell id={c} board={board} t={t} /></td>)}
     </tr>
   );
 }

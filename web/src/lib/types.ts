@@ -1,5 +1,5 @@
 export type Person = { login: string; avatarUrl: string; name?: string | null };
-export type Label = { name: string; color: string };
+export type Label = { name: string; color: string; description?: string | null };
 
 export type Option = { id: string; name: string; color?: string; description?: string };
 export type Iteration = { id: string; title: string; startDate: string; duration: number };
@@ -93,6 +93,10 @@ export interface DataSource {
   // Files are stored in the repository under .attachments/<ticket>/ and linked in a comment.
   attach(t: Ticket, file: File): Promise<Attachment>;
   logTime(board: Board, t: Ticket, minutes: number, note: string): Promise<void>;
+  // Tags of the configured repository (GitHub labels).
+  createLabel(label: Label): Promise<void>;
+  updateLabel(name: string, patch: Partial<Label>): Promise<void>;
+  deleteLabel(name: string): Promise<void>;
 }
 
 export type Attachment = { name: string; url: string; isImage: boolean };

@@ -6,6 +6,9 @@ import { useOpenTicket } from "@/lib/url-state";
 import { format, parseISO } from "date-fns";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Avatar, cleanTitle, TypeIcon } from "../ticket/bits";
+import { useLayout, type Layout } from "@/lib/layout";
+import { createContext, Fragment, useContext } from "react";
+import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 
 const pts = (ts: Ticket[]) => ts.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
 
@@ -19,13 +22,18 @@ function Tile({ label, value, sub, tone }: { label: string; value: React.ReactNo
   );
 }
 
-function Panel({ title, sub, children, className = "" }: { title: string; sub: string; children: React.ReactNode; className?: string }) {
+export const WIDGETS: Record<string, string> = { summary: "Summary", burndown: "Sprint burndown", stages: "Open work by stage", workload: "Workload", attention: "Needs attention" };
+const DashLayout = createContext<Layout | null>(null);
+
+// Each widget can be collapsed, hidden, or dragged to a new place.
+function Panel({ id, title, sub, children, wide }: { id: string; title: string; sub: string; children: React.ReactNode; wide?: boolean }) {
+  const layout = useContext(DashLayout)!;
   return (
-    <section className={`rounded-2xl border bg-card p-4 ${className}`} aria-label={title}>
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <p className="mb-3 text-xs text-muted-foreground">{sub}</p>
+    <CustomSection id={id} scope="dashboard" layout={layout} title={title}
+      className={`rounded-2xl border bg-card p-4 shadow-card ${wide ? "lg:col-span-2" : ""}`}>
+      <p className="-mt-1 mb-3 text-xs text-muted-foreground">{sub}</p>
       {children}
-    </section>
+    </CustomSection>
   );
 }
 
@@ -34,6 +42,8 @@ const tooltipStyle = { background: "var(--popover)", border: "1px solid var(--bo
 
 export function DashboardView({ board, tickets }: { board: Board; tickets: Ticket[] }) {
   const [, open] = useOpenTicket();
+  const layout = useLayout("dashboard", Object.keys(WIDGETS));
+  useSectionDrops("dashboard", layout);
   const sprint = currentSprint(board);
   const open_ = tickets.filter((t) => !isDone(t));
   const weekAgo = addDays(today(), -7);
@@ -67,8 +77,9 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
   const maxPts = Math.max(1, ...load.map((l) => Math.max(l.pts, l.n)));
   const unassigned = open_.filter((t) => !t.assignees.length).length;
 
-  return (
-    <div className="space-y-4 overflow-auto pb-8">
+  const widgets: Record<string, React.ReactNode> = {
+    summary: (
+      <Panel id="summary" wide title="Summary" sub="The numbers that matter this week.">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Open tickets" value={open_.length} sub={`${unassigned} unassigned`} />
         <Tile label="Finished this week" value={doneWeek.length} tone="success" sub="closed in the last 7 days" />
@@ -76,9 +87,10 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
         <Tile label={sprint ? sprint.title : "No current sprint"} value={sprint ? `${inSprint.length ? Math.round((sprintDone.length / inSprint.length) * 100) : 0}%` : "–"}
           sub={sprint ? `${sprintDone.length} of ${inSprint.length} done · ${pts(sprintDone)}/${pts(inSprint)} pts · ends ${format(parseISO(sprintEnd(sprint)), "d MMM")}` : "Add a Sprint field to plan sprints"} />
       </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Sprint burndown" sub="How much work is left in this sprint. The dashed line is the even pace.">
+      </Panel>
+    ),
+    burndown: (
+        <Panel id="burndown" title="Sprint burndown" sub="How much work is left in this sprint. The dashed line is the even pace.">
           {sprint && inSprint.length ? (
             <div className="h-56" role="img" aria-label={`Burndown for ${sprint.title}: ${burndown.filter((d) => d.remaining !== null).at(-1)?.remaining ?? 0} points left`}>
               <ResponsiveContainer>
@@ -99,8 +111,9 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
             <span className="inline-flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-muted-foreground" />Even pace</span>
           </p>
         </Panel>
-
-        <Panel title="Open work by stage" sub="Where tickets are sitting right now.">
+    ),
+    stages: (
+        <Panel id="stages" title="Open work by stage" sub="Where tickets are sitting right now.">
           <div className="h-56" role="img" aria-label={byStatus.map((s) => `${s.name}: ${s.tickets}`).join(", ")}>
             <ResponsiveContainer>
               <BarChart data={byStatus} margin={{ top: 6, right: 12, left: -18, bottom: 0 }}>
@@ -113,8 +126,9 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
             </ResponsiveContainer>
           </div>
         </Panel>
-
-        <Panel title="Workload" sub="Open tickets and story points per person.">
+    ),
+    workload: (
+        <Panel id="workload" title="Workload" sub="Open tickets and story points per person.">
           {load.length ? (
             <ul className="space-y-2.5">
               {load.map(({ p, n, pts: points }) => (
@@ -130,8 +144,9 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
             </ul>
           ) : <p className="py-6 text-center text-sm text-muted-foreground">Nobody has open work assigned.</p>}
         </Panel>
-
-        <Panel title="Needs attention" sub="Critical and overdue tickets.">
+    ),
+    attention: (
+        <Panel id="attention" title="Needs attention" sub="Critical and overdue tickets.">
           {[...new Set([...critical, ...overdue])].length ? (
             <ul className="divide-y">
               {[...new Set([...critical, ...overdue])].slice(0, 8).map((t) => (
@@ -146,7 +161,18 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
             </ul>
           ) : <p className="py-6 text-center text-sm text-muted-foreground">Nothing critical or overdue. 🎉</p>}
         </Panel>
+    ),
+  };
+
+  return (
+    <DashLayout.Provider value={layout}>
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex justify-end"><CustomiseMenu layout={layout} labels={WIDGETS} label="Customise" /></div>
+        <div className="grid min-h-0 content-start gap-4 overflow-auto pb-8 lg:grid-cols-2">
+          {layout.visible.map((id) => <Fragment key={id}>{widgets[id]}</Fragment>)}
+          {!layout.visible.length && <p className="text-sm text-muted-foreground">All widgets are hidden. Use Customise to show them again.</p>}
+        </div>
       </div>
-    </div>
+    </DashLayout.Provider>
   );
 }

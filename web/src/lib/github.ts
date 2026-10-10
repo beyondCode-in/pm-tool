@@ -186,6 +186,21 @@ export function createGitHubSource(token: string): DataSource {
       }
     },
 
+    async createLabel(l) {
+      await rest(`${repoPath}/labels`, { method: "POST", body: JSON.stringify({ name: l.name, color: l.color.replace("#", ""), description: l.description ?? "" }) });
+    },
+
+    async updateLabel(name, patch) {
+      await rest(`${repoPath}/labels/${encodeURIComponent(name)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ new_name: patch.name, color: patch.color?.replace("#", ""), description: patch.description ?? undefined }),
+      });
+    },
+
+    async deleteLabel(name) {
+      await rest(`${repoPath}/labels/${encodeURIComponent(name)}`, { method: "DELETE" });
+    },
+
     async create(board, input: NewTicket) {
       const issue = await rest<{ number: number; node_id: string; id: number }>(`${repoPath}/issues`, {
         method: "POST",
@@ -214,7 +229,7 @@ export function createGitHubSource(token: string): DataSource {
 const HEAD_QUERY = `query($owner:String!,$repo:String!,$number:Int!){
   viewer{login avatarUrl name}
   repository(owner:$owner,name:$repo){ id
-    labels(first:100){nodes{name color}}
+    labels(first:100){nodes{name color description}}
     assignableUsers(first:100){nodes{login avatarUrl name}} }
   organization(login:$owner){ projectV2(number:$number){ id title
     fields(first:50){nodes{ __typename

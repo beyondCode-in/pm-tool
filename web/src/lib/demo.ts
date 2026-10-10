@@ -154,6 +154,24 @@ export function createDemoSource(): DataSource {
       comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
     },
+    async createLabel(l) {
+      await wait();
+      if (board.labels.some((x) => x.name.toLowerCase() === l.name.toLowerCase())) throw new Error(`A tag called "${l.name}" already exists.`);
+      board = { ...board, labels: [...board.labels, { ...l, color: l.color.replace("#", "") }] };
+    },
+    async updateLabel(name, p) {
+      await wait();
+      const next = { name: p.name ?? name, color: (p.color ?? "").replace("#", ""), description: p.description };
+      board = {
+        ...board,
+        labels: board.labels.map((l) => (l.name === name ? { ...l, ...next, color: next.color || l.color } : l)),
+        tickets: board.tickets.map((t) => ({ ...t, labels: t.labels.map((l) => (l.name === name ? { ...l, name: next.name, color: next.color || l.color } : l)) })),
+      };
+    },
+    async deleteLabel(name) {
+      await wait();
+      board = { ...board, labels: board.labels.filter((l) => l.name !== name), tickets: board.tickets.map((t) => ({ ...t, labels: t.labels.filter((l) => l.name !== name) })) };
+    },
     async create(_b, input) {
       await wait();
       const number = Math.max(...board.tickets.map((t) => t.number)) + 1;

@@ -16,7 +16,9 @@ import {
   Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Upload, X, XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useLayout, type Layout } from "@/lib/layout";
+import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -31,6 +33,15 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
   const source = useSource();
   const [, open] = useOpenTicket();
   const parent = parentOf(board, t);
+  const layout = useLayout("ticket-main", Object.keys(MAIN_SECTIONS));
+  useSectionDrops("ticket", layout);
+  const blocks: Record<string, ReactNode> = {
+    description: <Description ticket={t} />,
+    subtasks: <SubTasks board={board} ticket={t} />,
+    dependencies: <Dependencies board={board} ticket={t} />,
+    attachments: <Attachments ticket={t} />,
+    activity: <Activity ticket={t} />,
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -43,6 +54,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
           <span className="flex items-center gap-1 font-medium text-foreground"><TypeIcon ticket={t} /><span className="font-mono">#{t.number}</span></span>
         </nav>
         <div className="ml-auto flex items-center gap-1">
+          <span className="hidden sm:inline"><CustomiseMenu layout={layout} labels={MAIN_SECTIONS} label="Layout" /></span>
           <TimerButton ticket={t} board={board} />
           <Button variant="ghost" size="icon-sm" aria-label="Copy link" title="Copy link"
             onClick={() => { void navigator.clipboard?.writeText(`${window.location.origin}${config.basePath}/ticket/?n=${t.number}`); toast.success("Link copied"); }}><Link2 /></Button>
@@ -67,11 +79,17 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         <main className="min-w-0 space-y-7 px-4 py-5 sm:px-6 sm:py-6 lg:overflow-y-auto">
           <TitleAndStatus board={board} ticket={t} />
           <QuickActions board={board} ticket={t} />
-          <Description ticket={t} />
-          <SubTasks board={board} ticket={t} />
-          <Dependencies board={board} ticket={t} />
-          <Attachments ticket={t} />
-          <Activity ticket={t} />
+          <LayoutCtx.Provider value={layout}>
+            {layout.visible.map((id) => <Fragment key={id}>{blocks[id]}</Fragment>)}
+          </LayoutCtx.Provider>
+          {layout.order.length > layout.visible.length && (
+            <p className="text-xs text-muted-foreground">
+              {layout.order.length - layout.visible.length} hidden section{layout.order.length - layout.visible.length === 1 ? "" : "s"} ·{" "}
+              {layout.order.filter(layout.isHidden).map((id, i) => (
+                <span key={id}>{i > 0 && ", "}<button className="underline-offset-2 hover:text-foreground hover:underline" onClick={() => layout.toggleHidden(id)}>show {MAIN_SECTIONS[id]}</button></span>
+              ))}
+            </p>
+          )}
         </main>
         <aside className="min-w-0 border-t bg-muted/25 px-4 py-4 sm:px-5 sm:py-5 lg:overflow-y-auto lg:border-t-0 lg:border-l" aria-label="Details">
           <Details board={board} ticket={t} />
@@ -83,18 +101,14 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
 
 // ── Left column ─────────────────────────────────────────────────────────
 
-function Section({ icon: Icon, title, count, action, children }: { icon: typeof FileText; title: string; count?: ReactNode; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section aria-label={title}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <Icon className="size-4 text-muted-foreground" aria-hidden />
-        <h3 className="text-sm font-semibold">{title}</h3>
-        {count !== undefined && <span className="rounded-md bg-muted px-1.5 text-xs tabular text-muted-foreground">{count}</span>}
-        <div className="ml-auto">{action}</div>
-      </div>
-      {children}
-    </section>
-  );
+const MAIN_SECTIONS: Record<string, string> = { description: "Description", subtasks: "Sub-tasks", dependencies: "Dependencies", attachments: "Attachments", activity: "Activity" };
+const LayoutCtx = createContext<Layout | null>(null);
+
+// Every section of the ticket can be collapsed, hidden or dragged to a new
+// place; the arrangement is remembered for all tickets in this browser.
+function Section({ id, icon, title, count, action, children }: { id: string; icon: typeof FileText; title: string; count?: ReactNode; action?: ReactNode; children: ReactNode }) {
+  const layout = useContext(LayoutCtx)!;
+  return <CustomSection id={id} scope="ticket" layout={layout} title={title} icon={icon} count={count} actions={action}>{children}</CustomSection>;
 }
 
 function TitleAndStatus({ board, ticket: t }: { board: Board; ticket: Ticket }) {
@@ -157,7 +171,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
   };
   const save = () => { void actions.updateText(t, { body }); setEditing(false); };
   return (
-    <Section icon={FileText} title="Description" action={!editing && <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><Pencil />Edit</Button>}>
+    <Section id="description" icon={FileText} title="Description" action={!editing && <Button size="xs" variant="ghost" onClick={() => setEditing(true)}><Pencil />Edit</Button>}>
       {editing ? (
         <div className="overflow-hidden rounded-xl border bg-card focus-within:border-ring">
           <div className="flex items-center gap-1 border-b bg-muted/40 px-2 py-1">
@@ -217,7 +231,7 @@ function SubTasks({ board, ticket: t }: { board: Board; ticket: Ticket }) {
     if (n) { setTitle(""); toast.success(`Sub-task #${n} added`); }
   };
   return (
-    <Section icon={GitBranch} title="Sub-tasks" count={kids.length ? `${done}/${kids.length}` : undefined}>
+    <Section id="subtasks" icon={GitBranch} title="Sub-tasks" count={kids.length ? `${done}/${kids.length}` : undefined}>
       {kids.length > 0 && (
         <>
           <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-success transition-[width] duration-500" style={{ width: `${(done / kids.length) * 100}%` }} /></div>
@@ -271,7 +285,7 @@ function Dependencies({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const linked = [...(data?.blockedBy ?? []), ...(data?.blocking ?? [])].map((u) => byUrl(board, u)?.number).filter((x): x is number => !!x);
   const exclude = [t.number, ...linked];
   return (
-    <Section icon={ShieldAlert} title="Dependencies" count={data ? data.blockedBy.length + data.blocking.length : undefined}
+    <Section id="dependencies" icon={ShieldAlert} title="Dependencies" count={data ? data.blockedBy.length + data.blocking.length : undefined}
       action={
         <div className="flex gap-1">
           <TicketSearch tickets={board.tickets} exclude={exclude} placeholder="Which ticket blocks this one?" onPick={(o) => void extras.addBlocker(t, o)}
@@ -305,7 +319,7 @@ function Attachments({ ticket: t }: { ticket: Ticket }) {
     await Promise.all(arr.map((f) => extras.attach(t, f).finally(() => setUploading((u) => u - 1))));
   };
   return (
-    <Section icon={Paperclip} title="Attachments" count={files.length || undefined}>
+    <Section id="attachments" icon={Paperclip} title="Attachments" count={files.length || undefined}>
       <div onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); if (e.dataTransfer.files.length) void upload(e.dataTransfer.files); }}
         onPaste={(e) => { if (e.clipboardData.files.length) void upload(e.clipboardData.files); }} tabIndex={0}
@@ -358,7 +372,7 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
     setBusy(false);
   };
   return (
-    <Section icon={MessageSquare} title="Activity" count={comments?.length}
+    <Section id="activity" icon={MessageSquare} title="Activity" count={comments?.length}
       action={
         <div className="flex rounded-lg border p-0.5 text-xs">
           {(["all", "comments", "time"] as const).map((k) => (
