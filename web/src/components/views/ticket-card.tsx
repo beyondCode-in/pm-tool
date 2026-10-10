@@ -57,7 +57,6 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
         className={cn("spotlight group relative cursor-grab rounded-xl border bg-card p-3 shadow-card transition-[box-shadow,opacity,border-color,transform] hover:-translate-y-px hover:border-primary/30 hover:shadow-pop active:cursor-grabbing",
           dragging && "scale-[0.98] border-dashed border-primary/50 opacity-40", isDone(t) && "opacity-70")}>
         <div className="flex items-start gap-2">
-          <TypeIcon ticket={t} />
           <p className={cn("min-w-0 flex-1 text-sm leading-snug font-medium", isDone(t) && "line-through decoration-muted-foreground/50")}>{cleanTitle(t.title)}</p>
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 [@media(hover:none)]:opacity-100" aria-label={`Move #${t.number}`} onClick={(e: React.MouseEvent) => e.stopPropagation()} />}>
@@ -75,9 +74,13 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
           <div className="mt-2 flex flex-wrap gap-1">{t.labels.filter((l) => SHOWN_LABELS.test(l.name)).slice(0, 3).map((l) => <LabelChip key={l.name} {...l} />)}</div>
         )}
         <div className="mt-2.5 flex items-center gap-2">
-          <span className="font-mono text-[11px] text-muted-foreground">#{t.number}</span>
+          {/* Jira-style key row: type tile + key, then size bubble and priority. */}
+          <span className="inline-flex items-center gap-1.5">
+            <TypeIcon ticket={t} />
+            <span className={cn("font-mono text-[11px] font-medium text-muted-foreground", isDone(t) && "line-through")}>#{t.number}</span>
+          </span>
+          {t.fields.Size && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground" title="Size">{t.fields.Size}</span>}
           <PriorityMark value={t.fields.Priority} />
-          {t.fields.Size && <span className="rounded border px-1 text-[10px] font-semibold text-muted-foreground" title="Size">{t.fields.Size}</span>}
           <TicketMeta ticket={t} />
           <span className="ml-auto"><AvatarStack people={t.assignees} size={20} /></span>
         </div>
