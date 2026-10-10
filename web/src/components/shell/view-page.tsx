@@ -8,6 +8,7 @@ import type { Board, Ticket } from "@/lib/types";
 import { useFilters, useNewTicket } from "@/lib/url-state";
 import { AlertCircle, Plus } from "lucide-react";
 import type { ReactNode } from "react";
+import { BrandLoader } from "../brand/logo";
 import { FilterBar } from "../filters/filter-bar";
 
 // Every view: a header, the shared filter bar, and loading / error states.
@@ -42,7 +43,10 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
           </div>
         </div>
       ) : isLoading || !board ? (
-        <div className="space-y-3"><Skeleton className="h-8 w-full max-w-2xl" /><div className="flex gap-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-72 w-72" />)}</div></div>
+        <div className="flex flex-1 flex-col gap-4" aria-busy>
+          <div className="flex gap-2">{[44, 16, 18, 16, 14].map((w, i) => <Skeleton key={i} className="h-8 rounded-lg" style={{ width: `${w * 4}px` }} />)}</div>
+          <BrandLoader />
+        </div>
       ) : (
         <>
           <FilterBar board={board} hideDoneToggle={hideDoneToggle} />

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
 import { signOut } from "@/lib/auth";
 import { config } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
@@ -15,6 +16,7 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { Logo } from "../brand/logo";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
@@ -66,18 +68,13 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
   const source = useSource();
   const [, newTicket] = useNewTicket();
   const { theme, setTheme } = useTheme();
+  const accent = useAccent();
   const inbox = board?.tickets.filter((t) => t.state === "OPEN" && t.labels.some((l) => l.name === "triage")).length ?? 0;
   const mine = board?.tickets.filter((t) => t.state === "OPEN" && t.assignees.some((a) => a.login === board.viewer.login)).length ?? 0;
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
-      <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-        <span className="grid size-7 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">B</span>
-        <span className="min-w-0">
-          <span className="block text-sm leading-tight font-semibold">BeyondPM</span>
-          <span className="block truncate text-xs text-muted-foreground">{board?.projectTitle ?? "Loading…"}</span>
-        </span>
-      </div>
+      <div className="px-4 pt-4 pb-3"><Logo subtitle={board?.projectTitle ?? "Loading…"} /></div>
       <div className="space-y-1.5 px-3">
         <Button className="w-full justify-start" onClick={() => void newTicket("pick")}><Plus />New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></Button>
         <Button variant="outline" className="w-full justify-start text-muted-foreground" onClick={onSearch}><Search />Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></Button>
@@ -114,6 +111,15 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
                   <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="system">Match my device</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Accent colour</DropdownMenuLabel>
+                <div className="flex flex-wrap gap-1.5 px-2 pb-2" role="radiogroup" aria-label="Accent colour">
+                  {ACCENTS.map((a) => (
+                    <button key={a.id} role="radio" aria-checked={accent === a.id} aria-label={a.label} title={a.label} onClick={() => setAccent(a.id)}
+                      className="size-6 rounded-full ring-offset-2 ring-offset-popover transition-transform hover:scale-110 aria-checked:ring-2 aria-checked:ring-foreground"
+                      style={{ background: a.swatch }} />
+                  ))}
+                </div>
                 <DropdownMenuSeparator />
                 {source?.mode === "github" && <DropdownMenuItem render={<a href={`https://github.com/orgs/${config.owner}/projects/${config.projectNumber}`} target="_blank" rel="noreferrer" />}>Open the board on GitHub</DropdownMenuItem>}
                 <DropdownMenuItem onClick={onHelp}><HelpCircle />Keyboard shortcuts</DropdownMenuItem>
