@@ -28,6 +28,8 @@ import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
+import { openReminder } from "@/lib/reminders";
+import { ReminderDialog, ReminderRunner } from "../reminders/reminders";
 import { RunningTimer } from "./running-timer";
 import { toast } from "sonner";
 import { currentTenant, shareLink } from "@/lib/tenant";
@@ -52,6 +54,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLElement && (e.target.closest("input, textarea, select, [contenteditable=true], [role=dialog]") !== null);
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); markDone("palette"); setPaletteOpen((o) => !o); return; }
+      // R: a reminder, from anywhere (inside an open ticket it links to that ticket).
+      const inField = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable=true]") !== null;
+      if (e.key === "r" && !inField && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const n = Number(new URLSearchParams(window.location.search).get("ticket") || new URLSearchParams(window.location.search).get("n"));
+        openReminder(n ? { ticket: n } : {});
+        return;
+      }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (g) { g = false; const item = NAV.find((n) => n.key === e.key.toLowerCase()); if (item) { e.preventDefault(); router.push(item.href); } return; }
       if (e.key === "g") { g = true; setTimeout(() => (g = false), 1200); }
@@ -77,6 +87,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Palette open={paletteOpen} setOpen={setPaletteOpen} />
       <Shortcuts open={helpOpen} setOpen={setHelpOpen} />
       <Guide />
+      <ReminderDialog />
+      <ReminderRunner />
     </div>
   );
 }
