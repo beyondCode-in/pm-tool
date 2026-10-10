@@ -28,6 +28,7 @@ import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
+import { SidebarSections } from "./sidebar-sections";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const source = useSource();
@@ -107,7 +108,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
         </Tip>
       </div>
       <nav data-tour="nav" className={cn("mt-4 flex-1 space-y-0.5 overflow-y-auto", collapsed ? "px-2" : "px-3")} aria-label="Views">
-        {navItems.map((n) => {
+        {!collapsed ? <SidebarSections items={navItems} pathname={pathname} counts={{ "/inbox/": inbox, "/my-work/": mine }} /> : navItems.map((n) => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
           return (

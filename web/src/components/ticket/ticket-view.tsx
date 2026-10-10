@@ -9,6 +9,8 @@ import { useActions, useAddComment, useBoard, useComments, useHistory, useSource
 import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
 import type { Board, Comment, HistoryEvent, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
+import { toggleFavorite, useFavorites } from "@/lib/favorites";
+import { Star as PStar } from "@phosphor-icons/react";
 import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
@@ -58,6 +60,7 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <span className="hidden sm:inline"><CustomiseMenu layout={layout} labels={MAIN_SECTIONS} label="Layout" /></span>
+          <StarButton url={t.url} />
           <TimerButton ticket={t} board={board} />
           <Button variant="ghost" size="icon-sm" aria-label="Copy link" title="Copy link"
             onClick={() => { void navigator.clipboard?.writeText(`${window.location.origin}${config.basePath}/ticket/?n=${t.number}`); toast.success("Link copied"); }}><Link2 /></Button>
@@ -99,6 +102,16 @@ export function TicketView({ board, ticket: t, mode, onClose }: { board: Board; 
         </aside>
       </div>
     </div>
+  );
+}
+
+function StarButton({ url }: { url: string }) {
+  const on = useFavorites().includes(url);
+  return (
+    <Button variant="ghost" size="icon-sm" aria-pressed={on} aria-label={on ? "Remove from favorites" : "Add to favorites"} title={on ? "Remove from favorites" : "Add to favorites"}
+      onClick={() => { toggleFavorite(url); toast.success(on ? "Removed from favorites" : "Added to favorites", { description: on ? undefined : "Find it in the sidebar under Favorites." }); }}>
+      <PStar weight={on ? "fill" : "regular"} className={cn("ico", on && "text-amber-500")} />
+    </Button>
   );
 }
 
