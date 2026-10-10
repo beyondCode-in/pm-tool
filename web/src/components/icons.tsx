@@ -129,3 +129,4 @@ export const Repeat = bold(P.ArrowsClockwise);
 export const Target = duo(P.Target);
 export const BookOpen = duo(P.BookOpenText);
 export const Chats = duo(P.ChatsCircle);
+export const Scribble = duo(P.Scribble);
