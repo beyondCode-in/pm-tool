@@ -1,5 +1,6 @@
 import { config } from "./config";
 import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent } from "./types";
+import { workspace } from "./workspace";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
 
@@ -216,10 +217,11 @@ export function createGitHubSource(token: string): DataSource {
         method: "POST",
         body: JSON.stringify({ body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}` }),
       });
-      // Adds to the board's "Time spent (h)" field when the board has one.
-      if (board.fields.some((f) => f.name === "Time spent (h)" && f.kind === "number")) {
-        const current = Number((t.fields as Record<string, unknown>)["Time spent (h)"] ?? 0);
-        await setField(board, t, "Time spent (h)" as FieldName, Math.round((current + minutes / 60) * 100) / 100);
+      // Adds to the board's time field (Settings → Workflow) when it has one.
+      const timeField = workspace().timeField;
+      if (timeField) {
+        const current = Number((t.fields as Record<string, unknown>)[timeField] ?? 0);
+        await setField(board, t, timeField as FieldName, Math.round((current + minutes / 60) * 100) / 100);
       }
     },
 

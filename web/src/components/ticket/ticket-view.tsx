@@ -9,6 +9,7 @@ import { useActions, useAddComment, useBoard, useComments, useHistory, useSource
 import { fmtElapsed, fmtMinutes, parseTime, startTimer, stopTimer, useDependencies, useTicketExtras, useTimer } from "@/lib/ticket-extras";
 import type { Board, Comment, HistoryEvent, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
+import { quickTicket } from "@/lib/quick-ticket";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import {
@@ -226,9 +227,8 @@ function SubTasks({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   const add = async () => {
     if (!title.trim()) return;
     setBusy(true);
-    const status = options(board, "Status").find((o) => /todo|backlog/i.test(o.name))?.name;
-    const type = options(board, "Ticket Type").find((o) => /task/i.test(o.name))?.name;
-    const n = await actions.create({ title: `[Task] ${title.trim()}`, body: `### Parent issue\n\n#${t.number}`, labels: ["task"], assignees: [], fields: { Status: status, "Ticket Type": type }, parent: t.number });
+    const base = quickTicket(title);
+    const n = await actions.create({ ...base, body: `### Parent issue\n\n#${t.number}`, parent: t.number });
     setBusy(false);
     if (n) { setTitle(""); toast.success(`Sub-task #${n} added`); }
   };

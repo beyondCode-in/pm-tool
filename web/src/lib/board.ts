@@ -1,5 +1,6 @@
 import type React from "react";
 import type { Board, Field, FieldName, Iteration, Option, Ticket } from "./types";
+import { isDoneStatus, priorityIndex } from "./workspace";
 
 export const singleField = (b: Board, name: string) => b.fields.find((f): f is Extract<Field, { kind: "single" }> => f.name === name && f.kind === "single");
 export const iterationField = (b: Board, name = "Sprint") => b.fields.find((f): f is Extract<Field, { kind: "iteration" }> => f.name === name && f.kind === "iteration");
@@ -13,15 +14,15 @@ export const parentOf = (b: Board, t: Ticket) => b.tickets.find((p) => isChildOf
 export const childrenOf = (b: Board, t: Ticket) => b.tickets.filter((c) => isChildOf(c, t));
 export const byUrl = (b: Board, url: string) => b.tickets.find((x) => x.url === url) ?? null;
 
-export const isDone = (t: Ticket) => t.state === "CLOSED" || /done/i.test(t.fields.Status ?? "");
-export const isDoneStatus = (s?: string) => /done/i.test(s ?? "");
+// "Done" and priority order come from the board's own options (lib/workspace.ts).
+export { isDoneStatus } from "./workspace";
+export const isDone = (t: Ticket) => t.state === "CLOSED" || isDoneStatus(t.fields.Status);
 
 // Strip a leading emoji: "🟠 High" → "High".
 export const plain = (s?: string | null) => (s ?? "").replace(/^[^\p{L}\p{N}]+/u, "").trim();
 export const emojiOf = (s?: string | null) => (s ?? "").match(/^[^\p{L}\p{N}\s]+/u)?.[0] ?? "";
 
-const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-export const priorityRank = (t: Ticket) => PRIORITY_RANK[plain(t.fields.Priority).toLowerCase()] ?? 4;
+export const priorityRank = (t: Ticket) => priorityIndex(t.fields.Priority);
 
 // GitHub project option colours → token classes (dot + soft background).
 const COLOR: Record<string, string> = {

@@ -2,6 +2,7 @@
 
 import { CustomiseMenu, CustomSection, useSectionDrops } from "@/components/layout/custom-section";
 import { NAV } from "@/components/shell/nav";
+import { WorkflowSettings } from "@/components/settings/workflow-settings";
 import { BrandLoader } from "@/components/brand/logo";
 import { Tag as TagView } from "@/components/ticket/bits";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,12 @@ import { useLayout } from "@/lib/layout";
 import { useLabelActions } from "@/lib/ticket-extras";
 import type { Board, Label } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, LayoutGrid, Monitor, Moon, Palette, Plus, RotateCcw, Search, Sun, Tags, Trash2, Wrench } from "@/components/icons";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, LayoutGrid, Monitor, Moon, Palette, Plus, RotateCcw, Search, Sun, Tags, Trash2, Workflow, Wrench } from "@/components/icons";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const SECTIONS: Record<string, string> = { tags: "Tags", sidebar: "Sidebar", fields: "Board fields", appearance: "Appearance", layouts: "Layouts" };
+const SECTIONS: Record<string, string> = { workflow: "Workflow", tags: "Tags", sidebar: "Sidebar", fields: "Board fields", appearance: "Appearance", layouts: "Layouts" };
 const SWATCHES = ["d73a4a", "e99695", "f9d0c4", "fbca04", "fef2c0", "0e8a16", "c2e0c6", "1d76db", "bfdadc", "5319e7", "d4c5f9", "8b5cf6", "c8613d", "6b4f3f", "0075ca", "cfd3d7"];
 
 export default function SettingsPage() {
@@ -29,19 +30,20 @@ export default function SettingsPage() {
   useSectionDrops("settings", layout);
   if (!board) return <BrandLoader label="Loading settings…" />;
   const blocks: Record<string, React.ReactNode> = {
+    workflow: <WorkflowSettings board={board} />,
     tags: <TagManager board={board} />,
     sidebar: <SidebarEditor />,
     fields: <BoardFields board={board} />,
     appearance: <Appearance />,
     layouts: <Layouts />,
   };
-  const icons: Record<string, typeof Tags> = { tags: Tags, sidebar: LayoutGrid, fields: Wrench, appearance: Palette, layouts: RotateCcw };
+  const icons: Record<string, typeof Tags> = { workflow: Workflow, tags: Tags, sidebar: LayoutGrid, fields: Wrench, appearance: Palette, layouts: RotateCcw };
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6">
       <header className="flex flex-wrap items-end gap-3">
         <div>
           <h1 className="text-2xl font-semibold sm:text-[1.75rem]">Settings</h1>
-          <p className="hidden text-sm text-muted-foreground sm:block">Tags, sidebar, appearance and layouts. Board fields are shown for reference.</p>
+          <p className="hidden text-sm text-muted-foreground sm:block">Workflow rules, tags, sidebar, appearance and layouts. Board fields are shown for reference.</p>
         </div>
         <span className="ml-auto"><CustomiseMenu layout={layout} labels={SECTIONS} /></span>
       </header>

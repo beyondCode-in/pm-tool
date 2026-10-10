@@ -4,6 +4,8 @@ import { dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-d
 import { Button } from "@/components/ui/button";
 import { byPriorityThenNumber, dotClass, options, plain } from "@/lib/board";
 import { useActions } from "@/lib/data";
+import { quickTicket } from "@/lib/quick-ticket";
+import { wipLimit } from "@/lib/workspace";
 import type { Board, Option, Ticket } from "@/lib/types";
 import { useGroupBy, useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -20,9 +22,6 @@ import { Avatar } from "../ticket/bits";
 import { DragDock, type DockAction } from "./drag-dock";
 import { TicketCard } from "./ticket-card";
 
-// Work-in-progress limits, matching .github/workflows/board-health.yml.
-const WIP: Record<string, number> = { "In Progress": 5, "Code Review": 3, QA: 4 };
-const wipFor = (status: string) => Object.entries(WIP).find(([k]) => status.includes(k))?.[1];
 
 type Lane = { key: string; title: React.ReactNode; tickets: Ticket[] };
 
@@ -46,7 +45,7 @@ function lanesFor(board: Board, tickets: Ticket[], by: string): Lane[] {
 
 // Type a title straight into a column, like Trello: Enter creates it there,
 // Esc cancels, and the full form is one click away for more detail.
-function QuickAdd({ board, status, onDone }: { board: Board; status: string; onDone: () => void }) {
+function QuickAdd({ status, onDone }: { status: string; onDone: () => void }) {
   const actions = useActions();
   const [, newTicket] = useNewTicket();
   const [title, setTitle] = useState("");
@@ -54,8 +53,7 @@ function QuickAdd({ board, status, onDone }: { board: Board; status: string; onD
   const submit = async () => {
     if (!title.trim()) return onDone();
     setBusy(true);
-    const type = options(board, "Ticket Type").find((o) => /task/i.test(o.name))?.name;
-    const n = await actions.create({ title: `[Task] ${title.trim()}`, body: "", labels: ["task"], assignees: [], fields: { Status: status, "Ticket Type": type } });
+    const n = await actions.create(quickTicket(title, { Status: status }));
     setBusy(false);
     if (n) { setTitle(""); toast.success(`#${n} added to ${plain(status)}`); }
   };
@@ -97,7 +95,7 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
     if (!status || t.fields.Status === status) return;
     void actions.move(t, status);
     const n = tickets.filter((x) => x.fields.Status === status).length + 1;
-    const limit = wipFor(status);
+    const limit = wipLimit(status);
     if (limit && n > limit) toast.warning(`${plain(status)} now has ${n} tickets (limit ${limit}). Finish something before starting more.`);
   });
   useEffect(() => monitorForElements({
@@ -150,7 +148,7 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
   const [over, setOver] = useState(false);
   const [adding, setAdding] = useState(false);
   const [, newTicket] = useNewTicket();
-  const limit = status ? wipFor(status.name) : undefined;
+  const limit = wipLimit(status?.name);
   const sorted = useMemo(() => [...tickets].sort(byPriorityThenNumber), [tickets]);
   const points = tickets.reduce((s, t) => s + (t.fields["Story Points"] ?? 0), 0);
   const folded = !!status && !!cols?.isCollapsed(status.name);
@@ -205,7 +203,7 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
         )}
       </div>
       <div className="flex min-h-16 flex-col gap-2">
-        {adding && status && <QuickAdd board={board} status={status.name} onDone={() => setAdding(false)} />}
+        {adding && status && <QuickAdd status={status.name} onDone={() => setAdding(false)} />}
         {sorted.map((t) => <TicketCard key={t.number} board={board} ticket={t} layoutScope={scope} />)}
         {!tickets.length && <p className="rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">Drop tickets here</p>}
       </div>

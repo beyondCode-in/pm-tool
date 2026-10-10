@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { options, plain } from "@/lib/board";
+import { workspace } from "@/lib/workspace";
 import { useActions, useBoard } from "@/lib/data";
 import {
   defaultAnswers, issueBody, labelsFor, missingAnswers, parentNumber, priorityWord, sizeWord, titleQuestion,
@@ -96,7 +97,7 @@ function Wizard({ board, draft, setDraft, onDone }: { board: Board; draft: Draft
     setBusy(true);
     const a = draft.answers;
     const fields: FieldValues = {
-      Status: options(board, "Status").find((o) => /backlog/i.test(o.name))?.name ?? options(board, "Status")[0]?.name,
+      Status: workspace().start ?? options(board, "Status")[0]?.name,
       Priority: optionByWord(board, "Priority", priorityWord(a)),
       "Ticket Type": optionByWord(board, "Ticket Type", type.boardType),
       Size: optionByWord(board, "Size", sizeWord(a)),

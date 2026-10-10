@@ -14,10 +14,10 @@ import { MoreHorizontal } from "@/components/icons";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CardMenu } from "./card-menu";
+import { useWorkspace } from "@/lib/workspace";
 import { StatusIcon } from "../ticket/status-icons";
 import { AvatarStack, cleanTitle, LabelChip, PriorityMark, TicketMeta, TypeIcon } from "../ticket/bits";
 
-const SHOWN_LABELS = /^(area|severity): /;
 
 // layoutScope keeps animation ids unique when a ticket appears in several swimlanes.
 export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Board; ticket: Ticket; layoutScope?: string }) {
@@ -25,6 +25,8 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
   const [dragging, setDragging] = useState(false);
   const [, open] = useOpenTicket();
   const actions = useActions();
+  const { cardTags } = useWorkspace();
+  const shown = t.labels.filter((l) => cardTags.some((p) => l.name.startsWith(`${p}: `)));
 
   useEffect(() => {
     const el = ref.current;
@@ -70,8 +72,8 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {t.labels.some((l) => SHOWN_LABELS.test(l.name)) && (
-          <div className="mt-2 flex flex-wrap gap-1">{t.labels.filter((l) => SHOWN_LABELS.test(l.name)).slice(0, 3).map((l) => <LabelChip key={l.name} {...l} />)}</div>
+        {shown.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">{shown.slice(0, 3).map((l) => <LabelChip key={l.name} {...l} />)}</div>
         )}
         <div className="mt-2.5 flex items-center gap-2">
           {/* Jira-style key row: type tile + key, then size bubble and priority. */}

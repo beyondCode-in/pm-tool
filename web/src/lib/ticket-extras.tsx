@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { useSource } from "./data";
 import type { Board, Comment, FieldName, Ticket } from "./types";
+import { workspace } from "./workspace";
 
 // Time entries are comments shaped "⏱️ Logged **1h 30m** — note".
 export const timeBody = (minutes: number, note: string) => {
@@ -38,9 +39,10 @@ export function useTicketExtras() {
   const refreshComments = (t: Ticket) => qc.invalidateQueries({ queryKey: ["comments", t.url] });
 
   async function adjustSpent(b: Board, t: Ticket, deltaMinutes: number) {
-    if (!deltaMinutes || !b.fields.some((f) => f.name === "Time spent (h)" && f.kind === "number")) return;
-    const current = Number((t.fields as Record<string, unknown>)["Time spent (h)"] ?? 0);
-    await source!.setField(b, t, "Time spent (h)" as FieldName, Math.max(0, Math.round((current + deltaMinutes / 60) * 100) / 100));
+    const field = workspace().timeField;
+    if (!deltaMinutes || !field) return;
+    const current = Number((t.fields as Record<string, unknown>)[field] ?? 0);
+    await source!.setField(b, t, field as FieldName, Math.max(0, Math.round((current + deltaMinutes / 60) * 100) / 100));
   }
 
   async function attempt<T>(work: () => Promise<T>, done: string, after: () => unknown): Promise<T | null> {

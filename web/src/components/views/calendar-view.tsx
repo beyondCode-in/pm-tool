@@ -3,8 +3,9 @@
 import { draggable, dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { byPriorityThenNumber, isDone, options, plain, today } from "@/lib/board";
+import { byPriorityThenNumber, isDone, plain, today } from "@/lib/board";
 import { useActions, useBoard } from "@/lib/data";
+import { quickTicket } from "@/lib/quick-ticket";
 import type { Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -132,9 +133,7 @@ function AddOnDay({ date }: { date: Date }) {
   if (!board) return null;
   const add = async () => {
     if (!title.trim()) return;
-    const type = options(board, "Ticket Type").find((o) => /task/i.test(o.name))?.name;
-    const status = options(board, "Status")[0]?.name;
-    const n = await actions.create({ title: `[Task] ${title.trim()}`, body: "", labels: ["task"], assignees: [], fields: { Status: status, "Ticket Type": type, "Target date": iso(date) } });
+    const n = await actions.create(quickTicket(title, { "Target date": iso(date) }));
     if (n) { toast.success(`#${n} due ${format(date, "d MMM")}`); setTitle(""); setOpen(false); }
   };
   return (

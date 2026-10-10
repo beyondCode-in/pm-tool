@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useActions } from "@/lib/data";
 import { MoreHorizontal, UserRoundPlus } from "@/components/icons";
 import { CardMenu } from "./card-menu";
+import { isUrgent, useWorkspace } from "@/lib/workspace";
 import { DateInput } from "../ticket/pickers";
 import { PriorityIcon } from "../ticket/status-icons";
 import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
@@ -85,7 +86,8 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
   const weekAgo = addDays(today(), -7);
   const doneWeek = tickets.filter((t) => t.closedAt && t.closedAt.slice(0, 10) > weekAgo && t.stateReason !== "NOT_PLANNED");
   const overdue = open_.filter(isOverdue);
-  const critical = open_.filter((t) => /critical/i.test(t.fields.Priority ?? ""));
+  const ws = useWorkspace();
+  const critical = open_.filter((t) => isUrgent(t.fields.Priority));
 
   const inSprint = sprint ? tickets.filter((t) => t.fields.Sprint === sprint.id) : [];
   const sprintDone = inSprint.filter(isDone);
@@ -185,13 +187,13 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
         </Panel>
     ),
     attention: (
-        <Panel id="attention" title="Needs attention" sub="Critical and overdue tickets.">
+        <Panel id="attention" title="Needs attention" sub={`${ws.urgent.map(plain).join(", ") || "Urgent"} and overdue tickets.`}>
           {[...new Set([...critical, ...overdue])].length ? (
             <ul className="-mx-1.5">
               {[...new Set([...critical, ...overdue])].slice(0, 8).map((t) => (
                 <Row key={t.number} board={board} ticket={t}>
                   {isOverdue(t) && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Overdue</span>}
-                  {/critical/i.test(t.fields.Priority ?? "") && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">Critical</span>}
+                  {isUrgent(t.fields.Priority) && <span className="rounded bg-destructive/10 px-1.5 text-xs font-medium text-destructive">{plain(t.fields.Priority)}</span>}
                 </Row>
               ))}
             </ul>
@@ -217,10 +219,10 @@ export function DashboardView({ board, tickets }: { board: Board; tickets: Ticke
         </Panel>
     ),
     dueSoon: (() => {
-      const soon = open_.filter((t) => { const d = t.fields["Target date"]; return !!d && d >= today() && d <= addDays(today(), 7); })
+      const soon = open_.filter((t) => { const d = t.fields["Target date"]; return !!d && d >= today() && d <= addDays(today(), ws.dueSoonDays); })
         .sort((a, b) => (a.fields["Target date"] ?? "").localeCompare(b.fields["Target date"] ?? ""));
       return (
-        <Panel id="dueSoon" title="Due in the next 7 days" sub="Change a date right here, or right-click a row for more.">
+        <Panel id="dueSoon" title={`Due in the next ${ws.dueSoonDays} days`} sub="Change a date right here, or right-click a row for more.">
           {soon.length ? (
             <ul className="-mx-1.5">
               {soon.slice(0, 10).map((t) => (

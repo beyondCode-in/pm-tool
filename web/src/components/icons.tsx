@@ -122,3 +122,4 @@ export const Siren = duo(P.Siren);
 export const Headset = duo(P.Headset);
 export const FlaskConical = duo(P.Flask);
 export const SquareCheckBig = duo(P.CheckSquare);
+export const Workflow = duo(P.FlowArrow);

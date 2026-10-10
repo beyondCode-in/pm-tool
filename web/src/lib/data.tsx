@@ -10,6 +10,7 @@ import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
 import { plain } from "./board";
 import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
+import { bindBoard, isDoneStatus, priorityIndex, workspace } from "./workspace";
 
 const BOARD_KEY = ["board"] as const;
 // undefined = not known yet (pre-render), null = signed out.
@@ -46,7 +47,7 @@ export function useBoard() {
   return useQuery({
     queryKey: BOARD_KEY,
     enabled: !!source,
-    queryFn: () => source!.load(),
+    queryFn: async () => { const b = await source!.load(); bindBoard(b); return b; },
   });
 }
 
@@ -84,10 +85,12 @@ export function useActions() {
     // GitHub forms and the triage workflow work from tags. Keep the two in step,
     // otherwise the workflow would later "correct" the board back to the old tag.
     const syncTag = async (id: string, field: FieldName, value: FieldValue) => {
-      const prefix = field === "Priority" ? "priority: " : field === "Size" ? "size: " : null;
-      if (!prefix) return;
+      const tagName = workspace().tagSync[field];
+      if (!tagName) return;
+      const prefix = `${tagName}: `;
       const word = plain(typeof value === "string" ? value : "").toLowerCase();
-      const tag = !word ? null : field === "Priority" ? ({ critical: "p0", high: "p1", medium: "p2", low: "p3" } as Record<string, string>)[word] : word;
+      // Priority tags are p0, p1, … by the option's position on the board.
+      const tag = !word ? null : field === "Priority" ? `p${priorityIndex(value as string)}` : word;
       const t = board().tickets.find((x) => x.itemId === id);
       if (!t) return;
       const names = t.labels.map((l) => l.name).filter((l) => !l.startsWith(prefix));
@@ -129,9 +132,10 @@ export function useActions() {
       async move(t: Ticket, status: string, opts: { silent?: boolean } = {}) {
         const ok = await setField(t, "Status", status, opts);
         if (ok) markDone("move");
-        if (ok && /done/i.test(status) && !/done/i.test(t.fields.Status ?? "") && !opts.silent) void celebrate();
-        if (ok && /done/i.test(status) && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
-        if (ok && !/done/i.test(status) && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});
+        const toDone = isDoneStatus(status);
+        if (ok && toDone && !isDoneStatus(t.fields.Status) && !opts.silent && workspace().celebrate) void celebrate();
+        if (ok && toDone && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
+        if (ok && !toDone && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});
         return ok;
       },
       setAssignees: (t: Ticket, logins: string[]) =>
