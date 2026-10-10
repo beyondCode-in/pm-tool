@@ -29,11 +29,11 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
   const tickets = board ? applyFilters(scope ? board.tickets.filter((t) => scope(t, board)) : board.tickets, filters) : [];
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4 sm:gap-4 md:p-6">
-      <header className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold sm:text-[1.75rem]">{title}</h1>
-          <p className="hidden text-sm text-muted-foreground sm:block">{description}</p>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 px-4 pt-3 pb-4 md:px-6 md:pt-4">
+      <header className="flex min-h-9 items-center gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h1 className="shrink-0 text-xl leading-tight font-semibold">{title}</h1>
+          <p className="hidden truncate text-sm text-muted-foreground lg:block" title={description}>{description}</p>
         </div>
         <div className="ml-auto flex items-center gap-1 md:hidden">
           <NotificationBell compact />

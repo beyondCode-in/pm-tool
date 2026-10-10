@@ -39,17 +39,17 @@ export default function SettingsPage() {
   };
   const icons: Record<string, typeof Tags> = { workflow: Workflow, tags: Tags, sidebar: LayoutGrid, fields: Wrench, appearance: Palette, layouts: RotateCcw };
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:p-6">
-      <header className="flex flex-wrap items-end gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold sm:text-[1.75rem]">Settings</h1>
-          <p className="hidden text-sm text-muted-foreground sm:block">Workflow rules, tags, sidebar, appearance and layouts. Board fields are shown for reference.</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-3 pb-6 md:px-6 md:pt-4">
+      <header className="flex min-h-9 flex-wrap items-center gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h1 className="shrink-0 text-xl leading-tight font-semibold">Settings</h1>
+          <p className="hidden truncate text-sm text-muted-foreground lg:block">Workflow rules, tags, sidebar, appearance and layouts. Board fields are shown for reference.</p>
         </div>
         <span className="ml-auto"><CustomiseMenu layout={layout} labels={SECTIONS} /></span>
       </header>
       <div className="mx-auto w-full max-w-4xl space-y-5 pb-20">
         {layout.visible.map((id) => (
-          <CustomSection key={id} id={id} scope="settings" layout={layout} title={SECTIONS[id]} icon={icons[id]} className="spotlight rounded-2xl border bg-card p-4 shadow-card sm:p-5">
+          <CustomSection key={id} id={id} scope="settings" layout={layout} title={SECTIONS[id]} icon={icons[id]} className="rounded-2xl border bg-card p-4 shadow-card sm:p-5">
             {blocks[id]}
           </CustomSection>
         ))}
