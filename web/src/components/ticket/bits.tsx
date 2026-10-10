@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { isOverdue, plain, tint } from "@/lib/board";
+import { dueInfo, isDone, plain, tint, type DueTone } from "@/lib/board";
 import { TypeGlyph, typeKey } from "./type-badge";
 import { PriorityIcon, StatusIcon } from "./status-icons";
 import type { Board, Person, Ticket } from "@/lib/types";
@@ -91,12 +91,7 @@ export function TicketMeta({ ticket }: { ticket: Ticket }) {
   const due = ticket.fields["Target date"];
   return (
     <span className="flex items-center gap-2.5 text-xs text-muted-foreground">
-      {due && (
-        <span className={cn("inline-flex items-center gap-1", isOverdue(ticket) && "font-semibold text-destructive")}>
-          <Calendar className="size-3" aria-hidden />
-          <span>{isOverdue(ticket) ? "Overdue · " : ""}{shortDate(due)}</span>
-        </span>
-      )}
+      {due && <DueChip due={due} done={isDone(ticket)} />}
       {ticket.subIssues.total > 0 && (
         <span className="inline-flex items-center gap-1" title="Sub-tasks done">
           <GitBranch className="size-3" aria-hidden />{ticket.subIssues.completed}/{ticket.subIssues.total}
@@ -121,3 +116,25 @@ export function PriorityChip({ value }: { value?: string }) {
     </span>
   );
 }
+
+const DUE_TONE: Record<DueTone, string> = {
+  overdue: "font-semibold text-destructive",
+  today: "font-semibold text-amber-600 dark:text-amber-400",
+  soon: "text-amber-600/90 dark:text-amber-400/90",
+  later: "",
+  done: "line-through opacity-70",
+};
+
+// ClickUp-style deadline: "Today", "Tomorrow", "in 3 days", "2 days ago" near
+// the date, the plain date further out; colour rises as it gets close.
+export function DueChip({ due, done }: { due: string; done: boolean }) {
+  const d = dueInfo(due, done);
+  const text = d.tone === "overdue" ? `Overdue · ${d.label || shortDate(due)}` : d.label || shortDate(due);
+  return (
+    <span className={cn("inline-flex items-center gap-1", DUE_TONE[d.tone])} title={`Due ${format(parseISO(due), "EEEE d MMMM yyyy")}`}>
+      {d.tone === "overdue" || d.tone === "today" ? <AlarmIcon /> : <Calendar className="size-3" aria-hidden />}
+      <span>{text}</span>
+    </span>
+  );
+}
+const AlarmIcon = () => <svg viewBox="0 0 256 256" className="size-3" fill="currentColor" aria-hidden><path d="M128 40a96 96 0 1 0 96 96 96.11 96.11 0 0 0-96-96Zm0 176a80 80 0 1 1 80-80 80.09 80.09 0 0 1-80 80Zm45.66-125.66a8 8 0 0 1 0 11.32l-40 40a8 8 0 0 1-11.32-11.32l40-40a8 8 0 0 1 11.32 0ZM56 24a8 8 0 0 1-2.34 5.66l-24 24a8 8 0 0 1-11.32-11.32l24-24A8 8 0 0 1 56 24Zm181.66 29.66a8 8 0 0 1-11.32 0l-24-24a8 8 0 0 1 11.32-11.32l24 24a8 8 0 0 1 0 11.32Z"/></svg>;

@@ -251,3 +251,9 @@ table tbody tr { transition: background-color .12s ease; }
 /* ── View tabs: a small coloured tile per view (ClickUp-style) ── */
 .view-tab-icon { color: white; background: oklch(0.62 0.17 var(--vh)); box-shadow: inset 0 -1px 0 oklch(0 0 0 / .15); }
 table thead th button { text-transform: inherit; letter-spacing: inherit; font-weight: inherit; }
+
+/* ── Global running timer (ClickUp): pulsing red dot, warm tinted bar ── */
+.timer-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--destructive); box-shadow: 0 0 0 0 color-mix(in oklch, var(--destructive) 60%, transparent); animation: timer-pulse 1.6s ease-out infinite; }
+@keyframes timer-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--destructive) 55%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
+.timer-bar { background: color-mix(in oklch, var(--destructive) 7%, var(--card)); border-color: color-mix(in oklch, var(--destructive) 30%, var(--border)); }
+@media (prefers-reduced-motion: reduce) { .timer-dot { animation: none; } }
