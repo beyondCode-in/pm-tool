@@ -71,7 +71,7 @@ export default function Login() {
             {oauthEnabled && (
               <Button size="lg" className="glow h-12 w-full rounded-xl text-base" onClick={startLogin}><GitHubMark />Continue with GitHub</Button>
             )}
-            <Button size="lg" variant="outline" className="group h-12 w-full rounded-xl text-base" onClick={() => { startDemo(); go("/my-work/"); }}>
+            <Button size="lg" variant="outline" className="group h-12 w-full rounded-xl text-base" onClick={() => { startDemo(); go("/home/"); }}>
               <Sparkles className="text-primary transition-transform group-hover:rotate-12" />Explore the demo board
             </Button>
             <p className="text-center text-xs text-muted-foreground">No account needed for the demo. Nothing you do there is saved.</p>
@@ -84,7 +84,7 @@ export default function Login() {
               </button>
             ) : (
               <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2.5 overflow-hidden border-t pt-5"
-                onSubmit={(e) => { e.preventDefault(); if (token.trim()) { setToken(token.trim()); go("/my-work/"); } }}>
+                onSubmit={(e) => { e.preventDefault(); if (token.trim()) { setToken(token.trim()); go("/home/"); } }}>
                 <label htmlFor="token" className="flex items-center gap-1.5 text-sm font-medium"><KeyRound className="size-4" />GitHub access token</label>
                 <input id="token" type="password" autoComplete="off" value={token} onChange={(e) => setTokenValue(e.target.value)} placeholder="github_pat_…"
                   className="h-11 w-full rounded-xl border bg-background/70 px-3 font-mono text-sm outline-none transition-shadow focus:border-ring focus:ring-4 focus:ring-ring/15" />

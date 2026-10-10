@@ -11,7 +11,7 @@ export default function NotFound() {
         <p className="text-gradient text-7xl font-semibold tracking-tight">404</p>
         <h1 className="mt-3 text-xl font-semibold">This page wandered off the board</h1>
         <p className="mt-2 text-muted-foreground">The link may be old, or the page has moved.</p>
-        <Link href="/my-work/" className="mt-6 inline-flex h-10 items-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">Back to my work</Link>
+        <Link href="/home/" className="mt-6 inline-flex h-10 items-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground hover:opacity-90">Back to Home</Link>
       </div>
     </main>
   );

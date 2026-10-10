@@ -123,7 +123,7 @@ function TagManager({ board }: { board: Board }) {
   const add = async () => { const v = name.trim(); if (v && (await act.create({ name: v, color }))) setName(""); };
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Tags are GitHub labels on <b>{config.owner}/{config.repo}</b>. Changes here apply to every ticket that uses them. Tags starting with <code>priority:</code>, <code>area:</code>, <code>size:</code> or <code>severity:</code> are managed by the forms and automation.</p>
+      <p className="text-sm text-muted-foreground">Tags are GitHub labels on {config.owner ? <b>{config.owner}/{config.repo}</b> : "the board's repository"}. Changes here apply to every ticket that uses them. Tags starting with <code>priority:</code>, <code>area:</code>, <code>size:</code> or <code>severity:</code> are managed by the forms and automation.</p>
       <div className="flex flex-wrap gap-2">
         <form className="field-frame flex min-w-0 flex-1 items-center gap-2 rounded-xl border bg-background p-1.5 pl-2" onSubmit={(e) => { e.preventDefault(); void add(); }}>
           <ColorPicker value={color} onChange={setColor} />

@@ -42,7 +42,9 @@ export const tint = (color?: string) => {
 };
 export const optionColor = (b: Board, field: string, name?: string) => options(b, field).find((o) => o.name === name)?.color;
 
-export const today = () => new Date().toISOString().slice(0, 10);
+// The local calendar date (not UTC: in India UTC is still "yesterday" until 5:30 am).
+const pad = (n: number) => String(n).padStart(2, "0");
+export const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 export const addDays = (iso: string, n: number) => new Date(Date.parse(iso) + n * 864e5).toISOString().slice(0, 10);
 export const sprintEnd = (it: Iteration) => addDays(it.startDate, it.duration - 1);
 
@@ -53,6 +55,16 @@ export const sprintById = (b: Board, id?: string) => iterationField(b)?.iteratio
 
 export const typeOf = (t: Ticket) => plain(t.fields["Ticket Type"]) || (t.labels.some((l) => l.name === "epic") ? "Epic" : "");
 export const isEpic = (t: Ticket) => typeOf(t) === "Epic";
+// Due-date wording and urgency, recomputed on every render so it rolls over by itself.
+export type DueTone = "overdue" | "today" | "soon" | "later" | "done";
+export function dueInfo(due: string, done: boolean): { label: string; tone: DueTone; days: number } {
+  const days = Math.round((Date.parse(due) - Date.parse(today())) / 864e5);
+  const label = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday"
+    : days > 1 && days < 7 ? `in ${days} days` : days < -1 && days > -7 ? `${-days} days ago` : "";
+  const tone: DueTone = done ? "done" : days < 0 ? "overdue" : days === 0 ? "today" : days <= 2 ? "soon" : "later";
+  return { label, tone, days };
+}
+
 export const isOverdue = (t: Ticket) => !isDone(t) && !!t.fields["Target date"] && t.fields["Target date"]! < today();
 
 // ── Filtering (shared by every view, stored in the URL) ────────────────────

@@ -28,6 +28,7 @@ import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
+import { RunningTimer } from "./running-timer";
 import { toast } from "sonner";
 import { currentTenant, shareLink } from "@/lib/tenant";
 import { SidebarSections } from "./sidebar-sections";
@@ -107,6 +108,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
             <Plus />{!collapsed && <>New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></>}
           </Button>
         </Tip>
+        <RunningTimer compact={collapsed} />
         <Tip label="Search" kbd="Ctrl K" show={collapsed}>
           <Button data-tour="search" variant="outline" size={collapsed ? "icon" : "default"} className={cn("text-muted-foreground", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={onSearch} aria-label="Search">
             <Search />{!collapsed && <>Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></>}

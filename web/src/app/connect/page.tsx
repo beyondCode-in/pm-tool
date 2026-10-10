@@ -31,7 +31,7 @@ export default function ConnectPage() {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   useEffect(() => {
     if (!mounted || allowed) return;
-    go(config.pinned ? "/my-work/" : "/login/");
+    go(config.pinned ? "/home/" : "/login/");
   }, [mounted, allowed]);
   return allowed ? <Connect /> : null;
 }
@@ -88,7 +88,7 @@ function Connect() {
         <footer className="mt-6 flex items-center gap-2 border-t pt-4 text-sm">
           {step > 0 && <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}><ArrowLeft />Back</Button>}
           <span className="ml-auto flex items-center gap-2">
-            {start && <Button variant="ghost" size="sm" onClick={() => go("/my-work/")}>Keep {start.owner}/{start.repo} #{start.project}</Button>}
+            {start && <Button variant="ghost" size="sm" onClick={() => go("/home/")}>Keep {start.owner}/{start.repo} #{start.project}</Button>}
             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { signOut(); go("/login/"); }}>Sign out</Button>
           </span>
         </footer>
@@ -222,7 +222,7 @@ function Ready({ tenant }: { tenant: Tenant }) {
     catch (e) { toast.error((e as Error).message); }
     finally { setRunning(false); }
   };
-  const open = () => { saveTenant(tenant); go("/my-work/"); };
+  const open = () => { saveTenant(tenant); go("/home/"); };
 
   if (check.isLoading) return <ListSkeleton />;
   if (check.error) return <Problem message={(check.error as Error).message} retry={() => void check.refetch()} />;

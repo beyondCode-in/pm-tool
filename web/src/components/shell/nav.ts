@@ -1,7 +1,8 @@
-import { CalendarDays, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
+import { CalendarDays, House, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
 
 // The same seven views as the GitHub project, plus a calendar and a dashboard.
 export const NAV = [
+  { href: "/home/", label: "Home", icon: House, hint: "Your LineUp, to-dos and week", key: "h" },
   { href: "/my-work/", label: "My work", icon: ListTodo, hint: "Everything assigned to you", key: "m" },
   { href: "/inbox/", label: "Inbox", icon: Inbox, hint: "New tickets waiting for triage", key: "i" },
   { href: "/board/", label: "Board", icon: KanbanSquare, hint: "All work by stage", key: "b" },

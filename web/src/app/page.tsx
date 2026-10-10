@@ -6,6 +6,6 @@ import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
-  useEffect(() => { router.replace(getToken() || isDemo() ? "/my-work/" : "/login/"); }, [router]);
+  useEffect(() => { router.replace(getToken() || isDemo() ? "/home/" : "/login/"); }, [router]);
   return null;
 }

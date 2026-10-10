@@ -13,6 +13,7 @@ import { BrandLoader } from "../brand/logo";
 import { FilterBar } from "../filters/filter-bar";
 import { NotificationBell } from "../notifications/bell";
 import { ViewTabs } from "./view-tabs";
+import { RunningTimer } from "./running-timer";
 
 // Every view: a header, the shared filter bar, and loading / error states.
 export function ViewPage({ title, description, scope, children, hideDoneToggle }: {
@@ -39,6 +40,7 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
           <Button size="sm" onClick={() => void newTicket("pick")}><Plus />New</Button>
         </div>
       </header>
+      <div className="md:hidden"><RunningTimer /></div>
       {error ? (
         <ErrorState title="We couldn't load the board" message={(error as Error).message} onRetry={() => void refetch()} />
       ) : isLoading || !board ? (
