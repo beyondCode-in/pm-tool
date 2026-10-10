@@ -1,51 +1,100 @@
-name: 🤖 No-Code Zero-Effort Auto-Triage & Request Bot
+name: Issue triage
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
+
+permissions:
+  issues: write
 
 jobs:
-  auto-triage:
-    name: Auto-Triage, Project Sync & Friendly Welcome Bot
+  label-from-form:
+    name: Label from form answers
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Post Friendly Welcome & Guidance Comment
+      - name: Turn form answers into labels
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue = context.payload.issue;
-            const isNonTechRequest = issue.labels.some(l => l.name === 'non-technical' || l.name === 'request');
+            const body = issue.body || '';
 
-            const friendlyComment = `
-            ### 👋 Welcome to beyondCode-in PM Tool!
+            // Issue forms render each answer as "### <field label>\n\n<answer>".
+            const answers = {};
+            for (const part of body.split(/^### /m).slice(1)) {
+              const [heading, ...rest] = part.split('\n');
+              answers[heading.trim()] = rest.join('\n').trim();
+            }
+            const pick = (label) => {
+              const v = answers[label];
+              return v && v !== '_No response_' ? v : '';
+            };
+            const slug = (s) => s.replace(/[^\p{L}\p{N}&/ -]/gu, '').trim().split(/\s*[/&]\s*|\s+—/)[0]
+              .trim().toLowerCase().replace(/\s+/g, '-');
 
-            Thank you for submitting this request! **No further action is required from you.**
+            const labels = new Set();
 
-            #### 🤖 What happens automatically next:
-            1. 📌 **Auto-Project Board Sync**: Your ticket has been automatically added to **[pm-tool Project Board #34](https://github.com/orgs/beyondCode-in/projects/34)** under **Backlog & Triage**.
-            2. 🏷️ **Auto-Triage & Labeling**: Our automated engine has categorized your request based on your selections.
-            3. 👤 **Team Assignment**: An engineering lead or design lead will be automatically assigned within **2 hours**.
-            4. 🔔 **Progress Notifications**: You will receive automatic updates in this thread as work progresses through **In Progress** ➔ **Code Review** ➔ **QA** ➔ **Released**.
+            const priority = pick('Priority').match(/P[0-3]/);
+            if (priority) labels.add(`priority: ${priority[0].toLowerCase()}`);
 
-            *Sit back and relax — our automated system will handle everything from here!* 🚀
-            `;
+            for (const area of pick('Areas affected').split(',').map(s => s.trim()).filter(Boolean)) {
+              if (!/not sure/i.test(area)) labels.add(`area: ${slug(area)}`);
+            }
 
+            const size = pick('Size estimate').match(/^(XS|S|M|L|XL)\b/);
+            if (size) labels.add(`size: ${size[1].toLowerCase()}`);
+
+            const severity = pick('Severity').match(/^(SEV[1-3]|Blocker|Major|Minor|Cosmetic)/i);
+            if (severity) labels.add(`severity: ${severity[1].toLowerCase()}`);
+
+            const type = pick('What kind of request is this?');
+            const typeLabels = { 'new idea': 'enhancement', 'looks or reads': 'design', 'broken': 'bug', 'customer': 'support', 'question': 'question' };
+            for (const [needle, label] of Object.entries(typeLabels)) {
+              if (type.toLowerCase().includes(needle)) labels.add(label);
+            }
+
+            // Replace labels this workflow owns; leave everything else alone.
+            const owned = /^(priority|area|size|severity): /;
+            const current = issue.labels.map(l => l.name);
+            const stale = current.filter(n => owned.test(n) && !labels.has(n));
+            for (const name of stale) {
+              await github.rest.issues.removeLabel({ ...context.repo, issue_number: issue.number, name });
+            }
+            const add = [...labels].filter(n => !current.includes(n));
+            if (add.length) {
+              await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
+            }
+            core.info(`Added: ${add.join(', ') || 'none'} · Removed: ${stale.join(', ') || 'none'}`);
+
+  welcome:
+    name: Welcome comment
+    if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'request')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
             await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: friendlyComment
+              ...context.repo,
+              issue_number: context.payload.issue.number,
+              body: [
+                '👋 Thanks! Your request is on the [project board](https://github.com/orgs/beyondCode-in/projects/34).',
+                '',
+                "There's nothing else you need to do. The team will review it and you'll get updates here as it moves along.",
+              ].join('\n'),
             });
 
-      - name: Add Issue to Project #34 Board
+  add-to-project:
+    name: Add to project board
+    if: github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+    steps:
+      # Issue forms add the issue to the project when the author has access.
+      # This catches everyone else. Needs a PROJECT_TOKEN secret with project scope.
+      - if: env.PROJECT_TOKEN != ''
         uses: actions/add-to-project@v1.0.2
         with:
           project-url: https://github.com/orgs/beyondCode-in/projects/34
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.PROJECT_TOKEN }}

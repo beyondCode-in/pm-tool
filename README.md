@@ -4,22 +4,30 @@ Anyone can raise a ticket, and nobody needs to know Git to do it.
 
 ## ✨ Create a ticket (for everyone)
 
-Open **[Ticket Studio](https://beyondcode-in.github.io/pm-tool/portal.html)**, or go to **Issues → New issue** and pick it from the list.
+Go to **[Issues → New issue](https://github.com/beyondCode-in/pm-tool/issues/new/choose)** and pick a form. Most fields are pick-lists, so there's very little typing.
 
-1. **Pick a card**: new idea, look & feel, something broken, customer help or question. Click it, or drag it onto the ticket preview.
-2. **Write a short title.** Tap a suggestion to get started.
-3. **Choose the urgency and the area.** You can drop in screenshots too.
-4. Press **Create ticket**. GitHub opens with everything filled in. Press **Create** there and the ticket lands on the [project board](https://github.com/orgs/beyondCode-in/projects/34).
+| Form | Use it for |
+|---|---|
+| 💡 Ask for something | Anyone who isn't technical: ideas, changes, problems, questions |
+| ✨ Feature / user story | New work, with acceptance criteria and a size estimate |
+| 🐛 Bug report | Something broken: severity, frequency, environment, browser or device |
+| 🚨 Incident | Production down right now |
+| 🗺️ Epic | A large piece of work split into features |
+| 🧩 Task | A concrete piece of work under a feature or epic |
+| 🔬 Spike / research | A time-boxed investigation |
+| 🎧 Customer support | A customer needs help |
 
-Your draft is saved in your browser as you type.
+Security problems are reported privately through the **Report a security vulnerability** link on the same page.
+
+Every form adds the issue to the [project board](https://github.com/orgs/beyondCode-in/projects/34). Your answers become labels automatically: `priority: p0`–`p3`, `area: …`, `size: xs`–`xl` and `severity: …`. That makes the board easy to filter and group.
 
 ## 🗂️ What's in the repository
 
 | Path | What it is |
 |---|---|
-| `app/` | Ticket Studio (`portal.html`) and the board dashboard (`index.html`) |
-| `.github/ISSUE_TEMPLATE/` | Issue forms: simple request, feature, bug, incident, security, epic, subtask, spike, support |
-| `.github/workflows/` | Auto-triage, PR-to-board moves, SLA reminders, CI checks, Pages deploy |
+| `.github/ISSUE_TEMPLATE/` | The issue forms above |
+| `.github/workflows/` | Form-to-label triage, PR-to-board moves, SLA reminders, CI checks |
+| `app/` | Prototype board dashboard |
 | `.github/PROJECT_TEMPLATES/`, `templates/` | Board and hierarchy presets (Kanban, Scrum, ClickUp spaces) |
 | `lib/` | Jira/ClickUp field adapter |
 | `scripts/` | Project field and view setup, dependency and WIP linters, local server |
@@ -29,11 +37,11 @@ Your draft is saved in your browser as you type.
 ## 🛠️ For maintainers
 
 ```bash
-npm run serve   # http://localhost:3333 (dashboard) and /portal.html (Ticket Studio)
+npm run serve   # dashboard prototype at http://localhost:3333
 npm test
 ```
 
-To host Ticket Studio publicly, turn on **Settings → Pages → Source: GitHub Actions**. `.github/workflows/pages.yml` then publishes `app/` on every push to `main`. To point the studio at another repository, edit `CONFIG` at the top of the script in `app/portal.html`.
+To add issues to the board for people who don't have access to the project, add a `PROJECT_TOKEN` repository secret: a token with the `project` scope. To change the pick-list options, edit the YAML in `.github/ISSUE_TEMPLATE/`. Keep the **Priority**, **Areas affected**, **Size estimate** and **Severity** field labels as they are, because the triage workflow reads them.
 
 ---
 
