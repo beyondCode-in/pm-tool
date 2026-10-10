@@ -1,4 +1,4 @@
-import { CalendarDays, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "lucide-react";
+import { CalendarDays, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
 
 // The same seven views as the GitHub project, plus a calendar and a dashboard.
 export const NAV = [

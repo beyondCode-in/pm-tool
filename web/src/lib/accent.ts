@@ -2,6 +2,14 @@
 
 import { useSyncExternalStore } from "react";
 
+// Two independent, per-browser appearance choices, applied to <html> before
+// first paint: the palette (neutrals and brand) and the accent colour.
+export const PALETTES = [
+  { id: "clay", label: "Clay", hint: "Warm paper and terracotta", swatch: "linear-gradient(135deg, #f6efe4 0 50%, #c8613d 50% 100%)" },
+  { id: "bright", label: "Bright", hint: "Crisp white with vivid colour", swatch: "linear-gradient(135deg, #ffffff 0 50%, #7c3aed 50% 100%)" },
+] as const;
+export type PaletteId = (typeof PALETTES)[number]["id"];
+
 export const ACCENTS = [
   { id: "clay", label: "Clay", swatch: "oklch(0.6 0.14 42)" },
   { id: "cocoa", label: "Cocoa", swatch: "oklch(0.47 0.075 48)" },
@@ -15,21 +23,27 @@ export const ACCENTS = [
 ] as const;
 export type AccentId = (typeof ACCENTS)[number]["id"];
 
-const KEY = "beyondpm.accent";
+const KEYS = { accent: "beyondpm.accent", palette: "beyondpm.palette" };
+const DEFAULTS = { accent: "clay", palette: "clay" };
 const listeners = new Set<() => void>();
-const read = (): AccentId => {
-  try { return (localStorage.getItem(KEY) as AccentId) || "clay"; } catch { return "clay"; }
+const read = (k: keyof typeof KEYS) => () => {
+  try { return localStorage.getItem(KEYS[k]) || DEFAULTS[k]; } catch { return DEFAULTS[k]; }
 };
 
-export function setAccent(id: AccentId) {
-  try { localStorage.setItem(KEY, id); } catch { /* per-browser preference only */ }
-  if (id === "clay") document.documentElement.removeAttribute("data-accent");
-  else document.documentElement.dataset.accent = id;
+function apply(k: keyof typeof KEYS, id: string) {
+  try { localStorage.setItem(KEYS[k], id); } catch { /* per-browser preference only */ }
+  const attr = k === "accent" ? "accent" : "palette";
+  if (id === DEFAULTS[k]) document.documentElement.removeAttribute(`data-${attr}`);
+  else document.documentElement.dataset[attr] = id;
   listeners.forEach((l) => l());
 }
 
-export const useAccent = () =>
-  useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, read, () => "clay" as AccentId);
+export const setAccent = (id: AccentId) => apply("accent", id);
+export const setPalette = (id: PaletteId) => apply("palette", id);
 
-// Runs before first paint (inlined in <head>) so the saved accent never flashes.
-export const accentBootScript = `try{var a=localStorage.getItem("${KEY}");if(a&&a!=="clay")document.documentElement.dataset.accent=a}catch(e){}`;
+const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
+export const useAccent = () => useSyncExternalStore(subscribe, read("accent"), () => DEFAULTS.accent) as AccentId;
+export const usePalette = () => useSyncExternalStore(subscribe, read("palette"), () => DEFAULTS.palette) as PaletteId;
+
+// Runs before first paint (inlined in <head>) so saved choices never flash.
+export const accentBootScript = `try{var d=document.documentElement,a=localStorage.getItem("${KEYS.accent}"),p=localStorage.getItem("${KEYS.palette}");if(a&&a!=="clay")d.dataset.accent=a;if(p&&p!=="clay")d.dataset.palette=p}catch(e){}`;

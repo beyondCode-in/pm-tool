@@ -2,7 +2,7 @@
 import { ViewPage } from "@/components/shell/view-page";
 import { ListView } from "@/components/views/table-view";
 import { EmptyState } from "@/components/brand/states";
-import { PartyPopper } from "lucide-react";
+import { PartyPopper } from "@/components/icons";
 
 export default function Page() {
   return (

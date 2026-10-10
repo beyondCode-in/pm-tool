@@ -5,6 +5,7 @@ import { createContext, useContext, useMemo, useState, useSyncExternalStore, typ
 import { toast } from "sonner";
 import { getToken, isDemo } from "./auth";
 import { markDone } from "./onboarding";
+import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
 import { plain } from "./board";
@@ -128,6 +129,7 @@ export function useActions() {
       async move(t: Ticket, status: string, opts: { silent?: boolean } = {}) {
         const ok = await setField(t, "Status", status, opts);
         if (ok) markDone("move");
+        if (ok && /done/i.test(status) && !/done/i.test(t.fields.Status ?? "") && !opts.silent) void celebrate();
         if (ok && /done/i.test(status) && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
         if (ok && !/done/i.test(status) && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});
         return ok;

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { isOverdue, plain, tint } from "@/lib/board";
 import { TypeGlyph, typeKey } from "./type-badge";
 import type { Board, Person, Ticket } from "@/lib/types";
-import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "lucide-react";
+import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "@/components/icons";
 import { format, parseISO } from "date-fns";
 
 export function Avatar({ person, size = 24, className }: { person: Person; size?: number; className?: string }) {

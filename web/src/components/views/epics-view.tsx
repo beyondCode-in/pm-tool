@@ -4,7 +4,7 @@ import { isChildOf, isDone, isEpic } from "@/lib/board";
 import type { Board, Ticket } from "@/lib/types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Network } from "lucide-react";
+import { ChevronRight, Network } from "@/components/icons";
 import { EmptyState } from "../brand/states";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";

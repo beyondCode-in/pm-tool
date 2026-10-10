@@ -14,7 +14,7 @@ import { format, formatDistanceToNow, parseISO } from "date-fns";
 import {
   Ban, CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, GitBranch, Link2, Maximize2, MessageSquare, MoreHorizontal,
   Paperclip, Pause, Pencil, Play, Plus, RotateCcw, ShieldAlert, Tag as TagIcon, Upload, X, XCircle,
-} from "lucide-react";
+} from "@/components/icons";
 import Link from "next/link";
 import { createContext, Fragment, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLayout, type Layout } from "@/lib/layout";
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
 import { LabelPicker, TicketSearch } from "./search-pickers";
+import { Segmented } from "../ui-plus/segmented";
 
 // The full ticket: everything about one piece of work, editable in place.
 // Left: what it is and its conversation. Right: the facts, as pickers.
@@ -374,11 +375,7 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
   return (
     <Section id="activity" icon={MessageSquare} title="Activity" count={comments?.length}
       action={
-        <div className="flex rounded-lg border p-0.5 text-xs">
-          {(["all", "comments", "time"] as const).map((k) => (
-            <button key={k} onClick={() => setFilter(k)} className={cn("rounded-md px-2 py-0.5 capitalize", filter === k ? "bg-muted font-medium" : "text-muted-foreground")}>{k === "time" ? "Time log" : k}</button>
-          ))}
-        </div>
+        <Segmented size="xs" label="Show" value={filter} onChange={setFilter} options={[["all", "All"], ["comments", "Comments"], ["time", "Time log"]] as const} />
       }>
       {isLoading ? <Skeleton className="h-20 w-full" /> : (
         <ol className="space-y-4">

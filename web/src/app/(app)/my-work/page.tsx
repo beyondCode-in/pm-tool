@@ -4,7 +4,7 @@ import { ListView } from "@/components/views/table-view";
 import { addDays, byPriorityThenNumber, isDone, today } from "@/lib/board";
 import { EmptyState } from "@/components/brand/states";
 import { Button } from "@/components/ui/button";
-import { Sun } from "lucide-react";
+import { Sun } from "@/components/icons";
 import Link from "next/link";
 
 export default function Page() {

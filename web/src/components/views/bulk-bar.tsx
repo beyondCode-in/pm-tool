@@ -7,7 +7,7 @@ import {
 import { iterationField, options, plain } from "@/lib/board";
 import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
-import { CheckCircle2, ChevronDown, UserRoundPlus, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, UserRoundPlus, X } from "@/components/icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";

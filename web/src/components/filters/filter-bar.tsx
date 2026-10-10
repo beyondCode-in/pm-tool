@@ -7,7 +7,7 @@ import {
 import { options, plain } from "@/lib/board";
 import type { Board } from "@/lib/types";
 import { useFilters } from "@/lib/url-state";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "@/components/icons";
 import type { ReactNode } from "react";
 import { Avatar, Tag } from "../ticket/bits";
 import { TypeGlyph } from "../ticket/type-badge";

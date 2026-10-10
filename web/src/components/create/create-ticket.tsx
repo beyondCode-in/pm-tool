@@ -10,9 +10,10 @@ import {
 } from "@/lib/ticket-types";
 import type { Board, FieldValues } from "@/lib/types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
+import { celebrate } from "@/lib/celebrate";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2 } from "@/components/icons";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, LabelChip } from "../ticket/bits";
 import { TypeGlyph } from "../ticket/type-badge";
@@ -110,7 +111,7 @@ function Wizard({ board, draft, setDraft, onDone }: { board: Board; draft: Draft
       parent: parentNumber(a),
     });
     setBusy(false);
-    if (n) setCreated(n);
+    if (n) { setCreated(n); void celebrate({ x: 0.5, y: 0.4 }); }
   }
 
   if (created) {
@@ -221,7 +222,7 @@ function TypeStep({ onPick, selected }: { onPick: (t: TicketType) => void; selec
           <button key={t.id} role="radio" aria-checked={selected === t.id} draggable
             onDragStart={(e) => e.dataTransfer.setData("text/x-ticket-type", t.id)} onClick={() => onPick(t)}
             style={{ animationDelay: `${Math.min(i, 8) * 25}ms` }}
-            className={cn("animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-both flex h-full flex-col transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 active:scale-[0.98] items-start gap-2 rounded-2xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-foreground/20 hover:shadow-md",
+            className={cn("spotlight lift animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-both flex h-full flex-col transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 active:scale-[0.98] items-start gap-2 rounded-2xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-foreground/20 hover:shadow-md",
               selected === t.id && "border-primary bg-accent")}>
             <TypeGlyph kind={t.id} size={40} />
             <span className="font-semibold">{t.name}</span>

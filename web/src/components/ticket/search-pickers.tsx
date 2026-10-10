@@ -3,7 +3,7 @@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Label, Ticket } from "@/lib/types";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus } from "@/components/icons";
 import { useState, type ReactElement } from "react";
 import { cleanTitle, TypeIcon } from "./bits";
 

@@ -9,7 +9,7 @@ import { config } from "@/lib/config";
 import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
-import { ArrowRightLeft, CheckCircle2, Flag, Link2, PanelRightOpen, RotateCcw, UserRoundPlus, XCircle } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Flag, Link2, PanelRightOpen, RotateCcw, UserRoundPlus, XCircle } from "@/components/icons";
 import type { ReactElement } from "react";
 import { toast } from "sonner";
 import { Tag } from "../ticket/bits";

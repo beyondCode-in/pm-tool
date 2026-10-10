@@ -4,7 +4,7 @@ import { dropTargetForElements, monitorForElements } from "@atlaskit/pragmatic-d
 import { dotClass, options, plain } from "@/lib/board";
 import type { Board } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Ban, UserRound } from "lucide-react";
+import { Ban, UserRound } from "@/components/icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "../ticket/bits";

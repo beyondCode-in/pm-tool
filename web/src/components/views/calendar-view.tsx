@@ -9,7 +9,7 @@ import type { Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isWeekend, startOfMonth, startOfWeek } from "date-fns";
-import { CalendarX2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarX2, ChevronLeft, ChevronRight } from "@/components/icons";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { cleanTitle, TypeIcon } from "../ticket/bits";
 

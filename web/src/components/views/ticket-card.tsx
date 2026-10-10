@@ -10,7 +10,7 @@ import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "@/components/icons";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { CardMenu } from "./card-menu";
@@ -53,7 +53,7 @@ export function TicketCard({ board, ticket: t, layoutScope = "" }: { board: Boar
       <CardMenu board={board} ticket={t}>
       <div ref={ref} role="button" tabIndex={0} aria-label={`#${t.number} ${cleanTitle(t.title)}`}
         onClick={() => void open(t.number)} onKeyDown={(e) => { if (e.key === "Enter") void open(t.number); }}
-        className={cn("group relative cursor-grab rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,opacity,border-color] hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
+        className={cn("spotlight group relative cursor-grab rounded-xl border bg-card p-3 shadow-card transition-[box-shadow,opacity,border-color,transform] hover:-translate-y-px hover:border-primary/30 hover:shadow-pop active:cursor-grabbing",
           dragging && "scale-[0.98] border-dashed border-primary/50 opacity-40", isDone(t) && "opacity-70")}>
         <div className="flex items-start gap-2">
           <TypeIcon ticket={t} />

@@ -3,7 +3,7 @@ import type { Ticket } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   Bug, CircleHelp, FileText, FlaskConical, Headset, Layers, Lightbulb, type LucideIcon, Siren, Sparkles, SquareCheckBig,
-} from "lucide-react";
+} from "@/components/icons";
 
 // One icon language for ticket types: a tinted tile (hue per type) with a
 // line icon. Same shapes everywhere — cards, tables, drawer, wizard, palette.

@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useBoard } from "@/lib/data";
 import { useOpenTicket } from "@/lib/url-state";
-import { SearchX } from "lucide-react";
+import { SearchX } from "@/components/icons";
 import { BrandLoader } from "../brand/logo";
 import { EmptyState } from "../brand/states";
 import { TicketView } from "./ticket-view";

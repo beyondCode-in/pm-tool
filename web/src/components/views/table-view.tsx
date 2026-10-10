@@ -6,7 +6,7 @@ import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useGroupBy, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ChevronRight, SearchX } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, SearchX } from "@/components/icons";
 import { EmptyState } from "../brand/states";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TicketPreview } from "../ticket/ticket-preview";
@@ -15,6 +15,7 @@ import { CardMenu } from "./card-menu";
 import { Fragment, useMemo, useState } from "react";
 import { useLayout } from "@/lib/layout";
 import { CustomiseMenu } from "../layout/custom-section";
+import { Segmented } from "../ui-plus/segmented";
 import { cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ticket/bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "../ticket/pickers";
 
@@ -108,8 +109,8 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-1 text-sm">
-        <span className="mr-1 text-muted-foreground">Group by</span>
-        {GROUPS.map(([k, l]) => <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>)}
+        <span className="mr-1 text-xs font-medium text-muted-foreground">Group by</span>
+        <div className="max-w-full overflow-x-auto [scrollbar-width:none]"><Segmented label="Group by" value={group} onChange={(v) => void setGroup(v)} options={GROUPS} /></div>
         <span className="ml-auto hidden md:inline"><CustomiseMenu layout={cols} label="Columns" heading="Show columns" labels={COLUMNS} /></span>
       </div>
       <MobileList board={board} groups={groups} selected={selected} onPick={pick} />

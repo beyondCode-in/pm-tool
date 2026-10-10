@@ -4,11 +4,12 @@ import { Providers } from "@/components/providers";
 import { accentBootScript } from "@/lib/accent";
 import "./globals.css";
 import "./aurora.css";
+import "./polish.css";
 
 // Inter for interface text (legible at small sizes, tabular numbers),
 // Fraunces, a soft warm serif, for headings (calm and human, Claude-like),
 // JetBrains Mono for ticket numbers and keys.
-const sans = Inter({ variable: "--font-ui", subsets: ["latin"], display: "swap" });
+const sans = Inter({ variable: "--font-ui", subsets: ["latin"], axes: ["opsz"], display: "swap" });
 const display = Fraunces({ variable: "--font-display", subsets: ["latin"], axes: ["SOFT", "opsz"], display: "swap" });
 const mono = JetBrains_Mono({ variable: "--font-code", subsets: ["latin"], weight: ["400", "500"], display: "swap" });
 

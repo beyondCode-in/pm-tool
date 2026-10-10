@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { addDays, format, parseISO } from "date-fns";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, ChevronDown } from "@/components/icons";
 import { useState, type ReactNode } from "react";
 import { Avatar, shortDate, Tag } from "./bits";
 import { TypeGlyph } from "./type-badge";

@@ -5,7 +5,7 @@ import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { setToken, startDemo, startLogin } from "@/lib/auth";
 import { config, oauthEnabled } from "@/lib/config";
-import { ArrowRight, KanbanSquare, KeyRound, MousePointerClick, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, KanbanSquare, KeyRound, MousePointerClick, Sparkles, Zap } from "@/components/icons";
 import { motion } from "motion/react";
 import { useState } from "react";
 

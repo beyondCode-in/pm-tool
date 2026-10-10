@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Layout } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronsDownUp, ChevronsUpDown, EyeOff, GripVertical, MoreHorizontal, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsDownUp, ChevronsUpDown, EyeOff, GripVertical, MoreHorizontal, RotateCcw, SlidersHorizontal } from "@/components/icons";
 import { motion } from "motion/react";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 

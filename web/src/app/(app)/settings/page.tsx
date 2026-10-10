@@ -7,7 +7,7 @@ import { Tag as TagView } from "@/components/ticket/bits";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
+import { ACCENTS, PALETTES, setAccent, setPalette, useAccent, usePalette } from "@/lib/accent";
 import { plain } from "@/lib/board";
 import { config } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
@@ -15,7 +15,7 @@ import { useLayout } from "@/lib/layout";
 import { useLabelActions } from "@/lib/ticket-extras";
 import type { Board, Label } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, LayoutGrid, Monitor, Moon, Palette, Plus, RotateCcw, Search, Sun, Tags, Trash2, Wrench } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, LayoutGrid, Monitor, Moon, Palette, Plus, RotateCcw, Search, Sun, Tags, Trash2, Wrench } from "@/components/icons";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -47,7 +47,7 @@ export default function SettingsPage() {
       </header>
       <div className="mx-auto w-full max-w-4xl space-y-5 pb-20">
         {layout.visible.map((id) => (
-          <CustomSection key={id} id={id} scope="settings" layout={layout} title={SECTIONS[id]} icon={icons[id]} className="rounded-2xl border bg-card p-4 shadow-card sm:p-5">
+          <CustomSection key={id} id={id} scope="settings" layout={layout} title={SECTIONS[id]} icon={icons[id]} className="spotlight rounded-2xl border bg-card p-4 shadow-card sm:p-5">
             {blocks[id]}
           </CustomSection>
         ))}
@@ -203,6 +203,7 @@ function BoardFields({ board }: { board: Board }) {
 function Appearance() {
   const { theme, setTheme } = useTheme();
   const accent = useAccent();
+  const palette = usePalette();
   const modes: [string, string, typeof Sun][] = [["light", "Light", Sun], ["dark", "Dark", Moon], ["system", "Match device", Monitor]];
   return (
     <div className="space-y-4">
@@ -213,6 +214,18 @@ function Appearance() {
             <Icon className="size-5" />{l}
           </button>
         ))}
+      </div>
+      <div>
+        <p className="mb-2 text-sm font-medium">Palette</p>
+        <div role="radiogroup" aria-label="Palette" className="grid gap-2 sm:max-w-md sm:grid-cols-2">
+          {PALETTES.map((p) => (
+            <button key={p.id} role="radio" aria-checked={palette === p.id} onClick={() => setPalette(p.id)}
+              className="spotlight lift flex items-center gap-3 rounded-xl border p-3 text-left aria-checked:border-primary aria-checked:bg-accent">
+              <span className="size-9 shrink-0 rounded-lg ring-1 ring-border" style={{ background: p.swatch }} />
+              <span><span className="block text-sm font-semibold">{p.label}</span><span className="text-xs text-muted-foreground">{p.hint}</span></span>
+            </button>
+          ))}
+        </div>
       </div>
       <div>
         <p className="mb-2 text-sm font-medium">Accent colour</p>

@@ -6,7 +6,7 @@ import { applyFilters } from "@/lib/board";
 import { useBoard } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useFilters, useNewTicket } from "@/lib/url-state";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import { ErrorState } from "../brand/states";
 import type { ReactNode } from "react";
 import { BrandLoader } from "../brand/logo";

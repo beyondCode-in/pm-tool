@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { finishLogin } from "@/lib/auth";
 import { config } from "@/lib/config";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { useEffect, useRef, useState } from "react";
 
 export default function Callback() {

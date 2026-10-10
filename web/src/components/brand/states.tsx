@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import type { LucideIcon } from "@/components/icons";
+import { AlertTriangle, RotateCcw } from "@/components/icons";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
 

@@ -4,7 +4,7 @@ import { BoardView } from "@/components/views/board-view";
 import { currentSprint, sprintEnd } from "@/lib/board";
 import { format, parseISO } from "date-fns";
 import { EmptyState } from "@/components/brand/states";
-import { Timer } from "lucide-react";
+import { Timer } from "@/components/icons";
 
 export default function Page() {
   return (

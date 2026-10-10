@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/brand/states";
 import { TicketView } from "@/components/ticket/ticket-view";
 import { Button } from "@/components/ui/button";
 import { useBoard } from "@/lib/data";
-import { ArrowLeft, SearchX } from "lucide-react";
+import { ArrowLeft, SearchX } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Full-page ticket at /ticket/?n=123 (a query string, because the site is static).

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
+import { ACCENTS, PALETTES, setAccent, setPalette, useAccent, usePalette, type PaletteId } from "@/lib/accent";
 import { signOut } from "@/lib/auth";
 import { markDone } from "@/lib/onboarding";
 import { toggleSidebar, useSidebarCollapsed } from "@/lib/ui-prefs";
@@ -14,7 +14,7 @@ import { TICKET_TYPES } from "@/lib/ticket-types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun } from "lucide-react";
+import { HelpCircle, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Search, Sun } from "@/components/icons";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -79,6 +79,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
   const [, newTicket] = useNewTicket();
   const { theme, setTheme } = useTheme();
   const accent = useAccent();
+  const palette = usePalette();
   const collapsed = useSidebarCollapsed();
   const nav = useLayout("sidebar-nav", NAV.map((n) => n.href));
   const navItems = nav.visible.map((h) => NAV.find((n) => n.href === h)!).filter(Boolean);
@@ -93,7 +94,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
       </div>
       <div className={cn("space-y-1.5", collapsed ? "px-2" : "px-3")}>
         <Tip label="New ticket" kbd="C" show={collapsed}>
-          <Button data-tour="new" size={collapsed ? "icon" : "default"} className={cn("glow-soft", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={() => void newTicket("pick")} aria-label="New ticket">
+          <Button data-tour="new" size={collapsed ? "icon" : "default"} className={cn("glow-pulse", collapsed ? "mx-auto flex size-10" : "w-full justify-start")} onClick={() => void newTicket("pick")} aria-label="New ticket">
             <Plus />{!collapsed && <>New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></>}
           </Button>
         </Tip>
@@ -148,6 +149,11 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
                   <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="system">Match my device</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Palette</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={palette} onValueChange={(v: string) => { markDone("theme"); setPalette(v as PaletteId); }}>
+                  {PALETTES.map((p) => <DropdownMenuRadioItem key={p.id} value={p.id}><span className="size-3.5 rounded ring-1 ring-border" style={{ background: p.swatch }} />{p.label}</DropdownMenuRadioItem>)}
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Accent colour</DropdownMenuLabel>

@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CHECKLIST, markDone, useOnboarding } from "@/lib/onboarding";
 import { useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { Check, Compass, Keyboard, Lightbulb, Sparkles } from "lucide-react";
+import { Check, Compass, Keyboard, Lightbulb, Sparkles } from "@/components/icons";
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";

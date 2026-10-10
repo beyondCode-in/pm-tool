@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { differenceInCalendarDays, eachMonthOfInterval, format, parseISO } from "date-fns";
 import { useMemo, useState } from "react";
 import { AvatarStack, cleanTitle, TypeIcon } from "../ticket/bits";
+import { Segmented } from "../ui-plus/segmented";
 
 const DAY_PX = { week: 28, month: 10, quarter: 4 } as const;
 type Zoom = keyof typeof DAY_PX;
@@ -55,8 +56,8 @@ export function RoadmapView({ board, tickets }: { board: Board; tickets: Ticket[
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-center gap-1 text-sm">
-        <span className="mr-1 text-muted-foreground">Zoom</span>
-        {(Object.keys(DAY_PX) as Zoom[]).map((z) => <Button key={z} size="xs" variant={zoom === z ? "secondary" : "ghost"} aria-pressed={zoom === z} onClick={() => setZoom(z)}>{z[0].toUpperCase() + z.slice(1)}</Button>)}
+        <span className="mr-1 text-xs font-medium text-muted-foreground">Zoom</span>
+        <Segmented label="Zoom" value={zoom} onChange={setZoom} options={[["week", "Week"], ["month", "Month"], ["quarter", "Quarter"]] as const} />
         {undated > 0 && <span className="ml-auto text-xs text-muted-foreground">{undated} open tickets have no dates or sprint yet</span>}
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card">

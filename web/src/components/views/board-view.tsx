@@ -8,10 +8,11 @@ import type { Board, Option, Ticket } from "@/lib/types";
 import { useGroupBy, useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { LayoutGroup } from "motion/react";
-import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHorizontal, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, ChevronsLeftRight, EyeOff, MoreHorizontal, Plus } from "@/components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu } from "../layout/custom-section";
+import { Segmented } from "../ui-plus/segmented";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "../ticket/bits";
@@ -108,10 +109,8 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-center gap-2 overflow-x-auto text-sm [scrollbar-width:none]">
-        <span className="shrink-0 text-muted-foreground">Swimlanes</span>
-        {[["none", "None"], ["priority", "Priority"], ["assignee", "People"], ["type", "Type"]].map(([k, l]) => (
-          <Button key={k} size="xs" variant={group === k ? "secondary" : "ghost"} aria-pressed={group === k} onClick={() => void setGroup(k)}>{l}</Button>
-        ))}
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">Swimlanes</span>
+        <Segmented label="Swimlanes" value={group} onChange={(v) => void setGroup(v)} options={[["none", "None"], ["priority", "Priority"], ["assignee", "People"], ["type", "Type"]] as const} />
         <span className="ml-auto shrink-0"><CustomiseMenu layout={cols} label="Columns" heading="Show columns" labels={Object.fromEntries(allStatuses.map((o) => [o.name, o.name]))} /></span>
       </div>
       <LayoutGroup>
@@ -180,12 +179,11 @@ function Column({ board, status, tickets, scope, cols }: { board: Board; status:
       aria-label={`${status?.name ?? "No status"}, ${tickets.length} tickets`}>
       <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
         <span className={cn("size-2 rounded-full", dotClass(status?.color))} aria-hidden />
-        <h3 className="text-sm font-semibold">{status?.name ?? "No status"}</h3>
-        <span className={cn("rounded-md px-1.5 text-xs tabular-nums text-muted-foreground", limit && tickets.length > limit && "bg-destructive/15 font-semibold text-destructive")}
-          title={limit ? `Limit ${limit}` : undefined}>
+        <h3 className="min-w-0 truncate text-sm font-semibold" title={status?.name}>{status?.name ?? "No status"}</h3>
+        <span className={cn("shrink-0 rounded-md bg-background/70 px-1.5 text-xs tabular-nums text-muted-foreground", limit && tickets.length > limit && "bg-destructive/15 font-semibold text-destructive")}
+          title={[limit ? `Limit ${limit}` : "", points ? `${points} story points` : ""].filter(Boolean).join(" · ") || undefined}>
           {tickets.length}{limit ? `/${limit}` : ""}
         </span>
-        {points > 0 && <span className="text-xs text-muted-foreground" title="Story points">· {points} pts</span>}
         <Button variant="ghost" size="icon-xs" className="ml-auto" aria-label={`Add a ticket to ${status?.name ?? "this column"}`}
           onClick={() => (status ? setAdding(true) : void newTicket("pick"))}><Plus /></Button>
         {status && cols && (
