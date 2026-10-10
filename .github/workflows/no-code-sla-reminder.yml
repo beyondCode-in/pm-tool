@@ -1,55 +1,44 @@
-name: ⏰ Zero-Effort SLA Monitor & Automated Reminder Bot
+name: SLA reminders
+
+# Daily. Posts at most one reminder per issue per rule, so nothing is spammed:
+#  - P0 or incident open longer than 4 hours
+#  - any issue with no assignee after 2 days
 
 on:
   schedule:
-    - cron: '0 9 * * *' # Daily at 09:00 UTC
+    - cron: '0 9 * * 1-5' # 09:00 UTC, weekdays
   workflow_dispatch:
 
+permissions:
+  issues: write
+
 jobs:
-  sla-audit:
-    name: Audit Overdue Tickets & Post Auto-Reminders
+  remind:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Audit Open Issues & Send SLA Reminders
-        uses: actions/github-script@v7
+      - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const openIssues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open'
-            });
+            const RULES = [
+              { id: 'sla-p0', hours: 4,
+                applies: (i) => i.labels.some(l => ['priority: p0', 'incident'].includes(l.name)),
+                text: (h) => `🚨 This is a P0 / incident and has been open for **${h} hours**. Please post an update or reassess the priority.` },
+              { id: 'sla-unassigned', hours: 48,
+                applies: (i) => !i.assignees.length,
+                text: (h) => `⏰ This has had no assignee for **${h} hours**. Could someone pick it up, or move it back to the backlog?` },
+            ];
 
-            const now = Date.now();
+            const issues = await github.paginate(github.rest.issues.listForRepo, { ...context.repo, state: 'open', per_page: 100 });
+            for (const issue of issues.filter(i => !i.pull_request)) {
+              const ageHours = Math.round((Date.now() - new Date(issue.created_at)) / 36e5);
+              const due = RULES.filter(r => r.applies(issue) && ageHours > r.hours);
+              if (!due.length) continue;
 
-            for (const issue of openIssues.data) {
-              if (issue.pull_request) continue; // Skip PRs
-
-              const createdTime = new Date(issue.created_at).getTime();
-              const ageHours = (now - createdTime) / (1000 * 60 * 60);
-
-              const isCritical = issue.labels.some(l => l.name.includes('critical') || l.name.includes('incident'));
-              const isUnassigned = !issue.assignees || issue.assignees.length === 0;
-
-              if (isCritical && ageHours > 2) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: `🚨 **Zero-Effort SLA Alert**: This Critical Incident has been open for **${Math.round(ageHours)} hours** without resolution. Escalating to @beyondCode-in/incident-commanders!`
-                });
-              } else if (isUnassigned && ageHours > 24) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: `⏰ **Zero-Effort Reminder**: This request has been unassigned for **${Math.round(ageHours)} hours**. Auto-assigning lead for triage.`
-                });
+              const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: issue.number, per_page: 100 });
+              for (const rule of due) {
+                const marker = `<!-- ${rule.id} -->`;
+                if (comments.some(c => c.body?.includes(marker))) continue;
+                await github.rest.issues.createComment({ ...context.repo, issue_number: issue.number, body: `${marker}\n${rule.text(ageHours)}` });
+                core.info(`#${issue.number}: ${rule.id}`);
               }
             }

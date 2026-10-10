@@ -1,48 +1,61 @@
-name: "🔬 Technical Spike / Research"
-description: "Timeboxed investigation or architectural research ticket"
-title: "[SPIKE]: "
-labels: ["spike", "research", "triage"]
+name: "🔬 Spike / research"
+description: "A time-boxed investigation to answer a question before building."
+title: "[Spike] "
+labels: ["spike"]
+projects: ["beyondCode-in/34"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ### Technical Spike / Research 🔬
-        Use this template for timeboxed investigations, proof-of-concept benchmarks, or design reviews.
-
   - type: input
-    id: goal
+    id: question
     attributes:
-      label: "Research Goal / Core Question"
-      placeholder: "e.g., Evaluate Redis vs Memcached for session token cache under 50k RPS"
+      label: "The question to answer"
+      placeholder: "Can we move report generation to a background job without changing the API?"
     validations:
       required: true
 
   - type: dropdown
     id: timebox
     attributes:
-      label: "Timebox Limit"
+      label: "Time box"
       options:
-        - "⏱️ 4 Hours (Quick Investigation)"
-        - "⏱️ 1 Day (Standard Spike)"
-        - "⏱️ 2 Days (In-depth Architectural Spike)"
+        - "Half a day"
+        - "1 day"
+        - "2 days"
+        - "1 week"
+      default: 1
     validations:
       required: true
 
   - type: textarea
-    id: questions
+    id: options
     attributes:
-      label: "Key Questions to Answer"
-      placeholder: |
-        1. What is the P99 latency impact under max load?
-        2. How does memory failover behave during node restart?
-        3. What are the operational setup costs?
+      label: "Options to compare"
+      value: |
+        1.
+        2.
+
+  - type: dropdown
+    id: deliverable
+    attributes:
+      label: "Deliverable"
+      multiple: true
+      options:
+        - "Written recommendation"
+        - "Architecture decision record (ADR)"
+        - "Prototype / proof of concept"
+        - "Follow-up issues created"
+      default: 0
     validations:
       required: true
 
-  - type: textarea
-    id: expected_deliverable
+  - type: dropdown
+    id: priority
     attributes:
-      label: "Expected Deliverable"
-      placeholder: "e.g., Architecture Decision Record (ADR) file in docs/adr/ and benchmarking script"
+      label: "Priority"
+      options:
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
     validations:
       required: true

@@ -1,51 +1,76 @@
-name: 🤖 No-Code Zero-Effort Auto-Triage & Request Bot
+name: Issue triage
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, labeled, unlabeled]
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-  auto-triage:
-    name: Auto-Triage, Project Sync & Friendly Welcome Bot
+  triage:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
+    env:
+      PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
 
-      - name: Post Friendly Welcome & Guidance Comment
+      - name: Turn form answers into labels
+        # Label events only need the board sync below.
+        if: github.event.action == 'opened' || github.event.action == 'edited'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { parseForm, labelsFromAnswers, OWNED } = require('./.github/scripts/project-sync.cjs');
             const issue = context.payload.issue;
-            const isNonTechRequest = issue.labels.some(l => l.name === 'non-technical' || l.name === 'request');
+            const wanted = labelsFromAnswers(parseForm(issue.body));
+            if (!wanted.size) return core.info('No form answers found; leaving labels alone.');
 
-            const friendlyComment = `
-            ### 👋 Welcome to beyondCode-in PM Tool!
+            const current = issue.labels.map(l => l.name);
+            const stale = current.filter(n => OWNED.test(n) && !wanted.has(n));
+            for (const name of stale) {
+              await github.rest.issues.removeLabel({ ...context.repo, issue_number: issue.number, name });
+            }
+            const add = [...wanted].filter(n => !current.includes(n));
+            if (add.length) await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: add });
+            core.info(`Added: ${add.join(', ') || 'none'} · Removed: ${stale.join(', ') || 'none'}`);
 
-            Thank you for submitting this request! **No further action is required from you.**
-
-            #### 🤖 What happens automatically next:
-            1. 📌 **Auto-Project Board Sync**: Your ticket has been automatically added to **[pm-tool Project Board #34](https://github.com/orgs/beyondCode-in/projects/34)** under **Backlog & Triage**.
-            2. 🏷️ **Auto-Triage & Labeling**: Our automated engine has categorized your request based on your selections.
-            3. 👤 **Team Assignment**: An engineering lead or design lead will be automatically assigned within **2 hours**.
-            4. 🔔 **Progress Notifications**: You will receive automatic updates in this thread as work progresses through **In Progress** ➔ **Code Review** ➔ **QA** ➔ **Released**.
-
-            *Sit back and relax — our automated system will handle everything from here!* 🚀
-            `;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: friendlyComment
-            });
-
-      - name: Add Issue to Project #34 Board
-        uses: actions/add-to-project@v1.0.2
+      - name: Sync to project board
+        # The default token can't write to organisation projects; a PROJECT_TOKEN secret can.
+        if: env.PROJECT_TOKEN != ''
+        uses: actions/github-script@v7
         with:
-          project-url: https://github.com/orgs/beyondCode-in/projects/34
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.PROJECT_TOKEN }}
+          script: |
+            const { loadProject, addItem, setFields, boardValues } = require('./.github/scripts/project-sync.cjs');
+            // Re-read the issue so labels added by the previous step are included.
+            const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
+            const project = await loadProject(github.graphql);
+            const itemId = await addItem(github.graphql, project.id, issue.node_id);
+            const values = boardValues(issue.labels.map(l => l.name));
+            if (context.payload.action === 'opened') values['Status'] = 'Backlog';
+            await setFields(github.graphql, project, itemId, values, core.info);
+
+  welcome:
+    if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'request')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.payload.issue.number,
+              body: [
+                '👋 Thanks! Your request is on the [project board](https://github.com/orgs/beyondCode-in/projects/34).',
+                '',
+                "There's nothing else you need to do. The team will review it and you'll get updates here as it moves along.",
+              ].join('\n'),
+            });

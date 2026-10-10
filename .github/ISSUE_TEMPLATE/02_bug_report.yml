@@ -1,60 +1,134 @@
-name: "🐛 Easy Bug Report"
-description: "Report a problem or something that isn't working as expected"
-title: "[BUG]: "
+name: "🐛 Bug report"
+description: "Something worked before, or should work, and doesn't."
+title: "[Bug] "
 labels: ["bug", "triage"]
+projects: ["beyondCode-in/34"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ### Report a Problem 🐛
-        Thank you for reporting an issue! Fill out this form so our team can investigate and fix it quickly.
-
   - type: input
     id: summary
     attributes:
-      label: "What went wrong?"
-      description: "A short description of the problem."
-      placeholder: "e.g., Save button does not respond when clicked on profile page"
+      label: "What's broken?"
+      placeholder: "Save button does nothing on the profile page"
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: "Steps to reproduce the problem"
-      description: "What did you click or do right before the issue happened?"
-      placeholder: |
-        1. Go to Settings > Profile
-        2. Change user display name
-        3. Click 'Save Changes'
-        4. See that nothing happens and no confirmation appears
+      label: "Steps to reproduce"
+      value: |
+        1. Go to …
+        2. Click …
+        3. See …
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: "What did you expect to happen?"
-      placeholder: "e.g., A green banner saying 'Profile updated successfully' should appear."
+      label: "What should happen instead?"
     validations:
       required: true
 
   - type: dropdown
-    id: impact
+    id: priority
     attributes:
-      label: "How severe is this problem?"
+      label: "Priority"
       options:
-        - "🔴 Critical — System completely unusable or data loss"
-        - "🟠 High — Workaround exists but major inconvenience"
-        - "🟡 Medium — Minor glitch, standard feature affected"
-        - "🔵 Low — Visual cosmetic flaw or typo"
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
     validations:
       required: true
 
-  - type: input
-    id: browser_device
+  - type: dropdown
+    id: severity
     attributes:
-      label: "What device or browser were you using?"
-      placeholder: "e.g., Chrome on Windows 11 / Safari on iPhone 15"
+      label: "Severity"
+      options:
+        - "Blocker — no workaround, people can't do their job"
+        - "Major — there's a painful workaround"
+        - "Minor — annoying but easy to live with"
+        - "Cosmetic — looks wrong, works fine"
+      default: 2
     validations:
-      required: false
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: "How often does it happen?"
+      options:
+        - "Every time"
+        - "Often"
+        - "Sometimes"
+        - "Happened once"
+      default: 0
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: "Areas affected"
+      multiple: true
+      options:
+        - "🌐 Web app"
+        - "📱 Mobile app"
+        - "⚙️ API / backend"
+        - "🗄️ Database / data"
+        - "🔐 Login & accounts"
+        - "💳 Billing & payments"
+        - "📊 Reports & analytics"
+        - "📧 Emails & notifications"
+        - "🎨 Design system / UI"
+        - "🏗️ Infrastructure / DevOps"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: "Where did you see it?"
+      multiple: true
+      options:
+        - "Production"
+        - "Staging"
+        - "Local / development"
+      default: 0
+
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: "Browser or device"
+      multiple: true
+      options:
+        - "Chrome"
+        - "Safari"
+        - "Firefox"
+        - "Edge"
+        - "iPhone / iPad"
+        - "Android"
+        - "Desktop app"
+        - "Don't know"
+
+  - type: input
+    id: version
+    attributes:
+      label: "App version or URL (optional)"
+      placeholder: "v2.4.0 or https://app.example.com/settings"
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Screenshots, recordings or logs"
+      description: "Drag files in. Paste error text as-is."
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: "Before you submit"
+      options:
+        - label: "I searched open issues and this isn't a duplicate"
+          required: true
+        - label: "It is a regression (it used to work)"

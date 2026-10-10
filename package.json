@@ -5,7 +5,7 @@
   "main": "lib/jira-clickup-adapter.js",
   "type": "module",
   "scripts": {
-    "test": "node tests/jira-clickup-adapter.test.js && node scripts/validate-circular-dependencies.js && node scripts/audit-wip-limits.js",
+    "test": "node tests/project-sync.test.js && node tests/jira-clickup-adapter.test.js && node scripts/validate-circular-dependencies.js && node scripts/audit-wip-limits.js && node tests/phase1-design-system.test.js",
     "serve": "node scripts/serve-app.js",
     "setup:fields": "node scripts/setup-jira-project-fields.js",
     "setup:views": "node scripts/setup-project-views.js",

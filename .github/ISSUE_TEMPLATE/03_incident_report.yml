@@ -1,24 +1,85 @@
-name: Production Incident Report
-description: Report a critical operational disruption or service degradation
-title: "[INCIDENT]: "
-labels: ["incident", "urgent", "sla-critical"]
-assignees: []
+name: "🚨 Incident"
+description: "Production is down or degraded right now."
+title: "[Incident] "
+labels: ["incident", "priority: p0"]
+projects: ["beyondCode-in/34"]
 body:
-  - type: textarea
-    id: incident_impact
+  - type: markdown
     attributes:
-      label: Operational Impact & Affected System
-      description: Describe the customer impact and affected microservices.
-      placeholder: "Database connection pool exhausted on backend auth API..."
+      value: |
+        **Production down right now?** File this, then post the issue link in the team's incident channel. Don't wait for triage.
+
+  - type: input
+    id: summary
+    attributes:
+      label: "What's happening?"
+      placeholder: "Checkout returns 500 for all users"
     validations:
       required: true
+
   - type: dropdown
-    id: sla_response
+    id: sev
     attributes:
-      label: Target Response SLA
+      label: "Severity"
       options:
-        - 15 Minutes (P0 Critical)
-        - 1 Hour (P1 High)
-        - 4 Hours (P2 Medium)
+        - "SEV1 — full outage or data loss"
+        - "SEV2 — major feature down for many users"
+        - "SEV3 — degraded, a workaround exists"
+      default: 1
     validations:
       required: true
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: "Areas affected"
+      multiple: true
+      options:
+        - "🌐 Web app"
+        - "📱 Mobile app"
+        - "⚙️ API / backend"
+        - "🗄️ Database / data"
+        - "🔐 Login & accounts"
+        - "💳 Billing & payments"
+        - "📧 Emails & notifications"
+        - "🏗️ Infrastructure / DevOps"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: customer_impact
+    attributes:
+      label: "Customer impact"
+      options:
+        - "All customers"
+        - "Some customers"
+        - "Internal only"
+        - "Unknown yet"
+      default: 3
+    validations:
+      required: true
+
+  - type: input
+    id: started
+    attributes:
+      label: "Started at (with time zone)"
+      placeholder: "2026-10-10 14:05 IST"
+    validations:
+      required: true
+
+  - type: textarea
+    id: signals
+    attributes:
+      label: "What are you seeing?"
+      description: "Errors, dashboards, alerts, recent deploys."
+      render: text
+
+  - type: checkboxes
+    id: actions
+    attributes:
+      label: "Actions taken so far"
+      options:
+        - label: "Incident channel opened"
+        - label: "Recent deploy rolled back"
+        - label: "Status page updated"
+        - label: "Customer support informed"

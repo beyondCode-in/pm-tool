@@ -1,52 +1,82 @@
-name: "🧩 Subtask / Component Item"
-description: "Create an atomic sub-task linked to a parent Epic or Feature"
-title: "[SUBTASK]: "
-labels: ["subtask", "triage"]
+name: "🧩 Task"
+description: "A concrete piece of work, usually part of a feature or epic."
+title: "[Task] "
+labels: ["task"]
+projects: ["beyondCode-in/34"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ### Subtask Information 🧩
-        Use this template for focused work items linked to a parent Epic or Feature.
-
   - type: input
-    id: parent_issue
+    id: parent
     attributes:
-      label: "Parent Issue Number or Key"
-      description: "Enter the issue number of the parent Epic/Feature (e.g., #2 or PM-145)."
-      placeholder: "#2"
-    validations:
-      required: true
-
-  - type: input
-    id: subtask_title
-    attributes:
-      label: "Subtask Summary"
-      placeholder: "e.g., Implement Redis rate-limiter middleware"
-    validations:
-      required: true
+      label: "Parent issue"
+      placeholder: "#42"
 
   - type: textarea
     id: description
     attributes:
-      label: "Implementation Details & Acceptance Criteria"
-      placeholder: |
-        - [ ] Write unit test suite
-        - [ ] Update API configuration schema
-        - [ ] Verify error handling for timeouts
+      label: "What needs doing?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_when
+    attributes:
+      label: "Done when"
+      value: |
+        - [ ]
+        - [ ]
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "🔴 P0 — Critical: something important is stopped"
+        - "🟠 P1 — High: needed this sprint"
+        - "🟡 P2 — Medium: in the next few weeks"
+        - "🟢 P3 — Low: whenever there's time"
+      default: 2
     validations:
       required: true
 
   - type: dropdown
-    id: component
+    id: size
     attributes:
-      label: "Target Component"
+      label: "Size estimate"
       options:
-        - "🎨 UI/UX Design"
-        - "⚙️ Backend API"
-        - "🗄️ Database"
-        - "🔒 Security"
-        - "📚 Documentation"
-        - "🚀 Ops / Infrastructure"
+        - "XS — a few hours"
+        - "S — about a day"
+        - "M — 2 to 3 days"
+        - "L — about a week"
+        - "XL — more than a week (should be split)"
+        - "❔ Not sure yet"
+      default: 1
+
+  - type: dropdown
+    id: areas
+    attributes:
+      label: "Areas affected"
+      multiple: true
+      options:
+        - "🌐 Web app"
+        - "📱 Mobile app"
+        - "⚙️ API / backend"
+        - "🗄️ Database / data"
+        - "🎨 Design system / UI"
+        - "🏗️ Infrastructure / DevOps"
+        - "📄 Docs"
+        - "🧪 Tests"
     validations:
       required: true
+
+  - type: dropdown
+    id: discipline
+    attributes:
+      label: "Kind of work"
+      multiple: true
+      options:
+        - "Frontend"
+        - "Backend"
+        - "Design"
+        - "QA"
+        - "DevOps"
+        - "Content"
