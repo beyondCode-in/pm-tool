@@ -1,0 +1,253 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Polish layer: the Bright palette, typography, and the finish of every
+   shared component (inputs, popups, dialogs, tables, cards, checkboxes,
+   scrollbars). Targets shadcn's data-slot attributes so components stay
+   stock and upgradeable. Motion is transform/opacity only and switches off
+   under prefers-reduced-motion (see globals.css).
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Bright palette: crisp white, vivid violet, colourful brand ── */
+:root[data-palette="bright"] {
+  --background: oklch(0.985 0.004 285);
+  --foreground: oklch(0.21 0.03 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.03 285);
+  --primary: oklch(0.55 0.24 292);
+  --primary-foreground: oklch(0.99 0.005 290);
+  --secondary: oklch(0.96 0.012 290);
+  --secondary-foreground: oklch(0.3 0.04 290);
+  --muted: oklch(0.965 0.01 285);
+  --muted-foreground: oklch(0.5 0.03 285);
+  --accent: oklch(0.95 0.04 292);
+  --accent-foreground: oklch(0.42 0.18 292);
+  --border: oklch(0.92 0.012 285);
+  --input: oklch(0.89 0.015 285);
+  --ring: oklch(0.55 0.24 292);
+  --chart-1: oklch(0.55 0.24 292);
+  --chart-2: oklch(0.66 0.16 230);
+  --chart-3: oklch(0.7 0.17 160);
+  --chart-4: oklch(0.8 0.16 85);
+  --chart-5: oklch(0.65 0.22 15);
+  --sidebar: oklch(0.975 0.012 290);
+  --sidebar-foreground: oklch(0.3 0.03 285);
+  --sidebar-primary: oklch(0.55 0.24 292);
+  --sidebar-accent: oklch(0.935 0.035 292);
+  --sidebar-accent-foreground: oklch(0.3 0.12 292);
+  --sidebar-border: oklch(0.92 0.015 290);
+  --brand-from: oklch(0.58 0.25 292);
+  --brand-to: oklch(0.7 0.2 350);
+  --brand-spark: oklch(0.92 0.13 95);
+  --shadow-card: 0 1px 2px oklch(0.25 0.06 290 / 0.05), 0 2px 10px -3px oklch(0.25 0.08 290 / 0.08);
+  --shadow-pop: 0 2px 6px oklch(0.25 0.06 290 / 0.06), 0 22px 50px -14px oklch(0.3 0.12 290 / 0.28);
+}
+:root[data-palette="bright"].dark {
+  --background: oklch(0.165 0.03 285);
+  --foreground: oklch(0.95 0.008 285);
+  --card: oklch(0.205 0.035 285);
+  --card-foreground: oklch(0.95 0.008 285);
+  --popover: oklch(0.225 0.04 285);
+  --popover-foreground: oklch(0.95 0.008 285);
+  --primary: oklch(0.72 0.18 295);
+  --primary-foreground: oklch(0.17 0.04 290);
+  --secondary: oklch(0.26 0.04 285);
+  --secondary-foreground: oklch(0.94 0.008 285);
+  --muted: oklch(0.25 0.035 285);
+  --muted-foreground: oklch(0.74 0.03 285);
+  --accent: oklch(0.31 0.08 292);
+  --accent-foreground: oklch(0.93 0.06 292);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.18 295);
+  --chart-1: oklch(0.72 0.18 295);
+  --sidebar: oklch(0.18 0.032 285);
+  --sidebar-foreground: oklch(0.9 0.01 285);
+  --sidebar-primary: oklch(0.72 0.18 295);
+  --sidebar-accent: oklch(0.27 0.06 292);
+  --sidebar-accent-foreground: oklch(0.96 0.02 292);
+  --sidebar-border: oklch(1 0 0 / 7%);
+}
+:root[data-palette="bright"] .tag { --h: 285; }
+
+/* ── Typography ── */
+html { font-size: 16px; text-rendering: optimizeLegibility; }
+body { font-feature-settings: "cv11", "ss01", "ss03", "calt"; letter-spacing: -0.006em; }
+h1 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.15; }
+.text-xs, .text-sm { letter-spacing: 0; }
+kbd { font-family: var(--font-code), ui-monospace, monospace; font-feature-settings: "calt" 0; }
+
+/* ── Inputs, text areas, editable pads ── */
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea, select) {
+  transition: border-color .15s ease, box-shadow .18s ease, background-color .15s ease;
+  caret-color: var(--primary);
+}
+:where(input:not([type="checkbox"]):not([type="radio"]), textarea, select):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent);
+}
+/* Bare fields inside a framed box (search in pickers, comment composer, input
+   groups): the frame glows, never the field, so there is one clean ring. */
+:is([data-slot="command-input"], [data-slot="input-group-control"], .field-bare):focus-visible { box-shadow: none !important; }
+:is([data-slot="input-group"], .field-frame) { transition: border-color .15s ease, box-shadow .18s ease; }
+:is([data-slot="input-group"], .field-frame):has(:focus-visible) {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 22%, transparent) !important;
+}
+:where(input, textarea)::placeholder { color: color-mix(in oklch, var(--muted-foreground) 80%, transparent); }
+
+/* ── Popups: menus, selects, popovers, previews, command palette ── */
+[data-slot="dropdown-menu-content"], [data-slot="context-menu-content"], [data-slot="popover-content"],
+[data-slot="select-content"], [data-slot="hover-card-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="context-menu-sub-content"] {
+  background: color-mix(in oklch, var(--popover) 90%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(1.5);
+  border: 1px solid color-mix(in oklch, var(--border) 85%, var(--foreground) 6%) !important;
+  box-shadow: var(--shadow-pop) !important;
+  border-radius: 14px !important;
+}
+[data-slot$="-item"], [data-slot="command-item"] { border-radius: 8px; transition: background-color .12s ease, color .12s ease; }
+[data-slot$="-item"][data-highlighted], [data-slot="command-item"][data-selected="true"] {
+  background: color-mix(in oklch, var(--primary) 12%, transparent) !important;
+  color: var(--foreground) !important;
+}
+
+/* ── Dialogs and sheets: blurred backdrop, spring-in panel ── */
+[data-slot="dialog-overlay"], [data-slot="sheet-overlay"] {
+  background: color-mix(in oklch, oklch(0.15 0.02 280) 38%, transparent) !important;
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+[data-slot="dialog-content"] { border-radius: 22px; box-shadow: var(--shadow-pop); }
+/* Uses the separate scale property: Tailwind positions dialogs with translate, so transform must stay free. */
+@keyframes pop-in { from { opacity: 0; scale: .965; } to { opacity: 1; scale: 1; } }
+@media (min-width: 40rem) {
+  [data-slot="dialog-content"][data-open] { animation: pop-in .28s cubic-bezier(.2, 1.15, .35, 1) both; }
+}
+
+/* ── Tables ── */
+table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+table tbody tr { transition: background-color .12s ease; }
+
+/* ── Cards: lift + cursor spotlight (see Providers for the pointer tracking) ── */
+.spotlight { position: relative; isolation: isolate; }
+.spotlight::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%);
+  transition: opacity .25s ease;
+}
+.spotlight:hover::before { opacity: 1; }
+@media (hover: hover) {
+  .lift { transition: transform .18s cubic-bezier(.2,.8,.3,1), box-shadow .18s ease, border-color .18s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-pop); }
+}
+
+/* ── Buttons ── */
+@media (hover: hover) {
+  [data-slot="button"][data-variant="default"]:hover { transform: translateY(-1px); filter: brightness(1.06) saturate(1.05); }
+  [data-slot="button"][data-variant="outline"]:hover { border-color: color-mix(in oklch, var(--primary) 40%, var(--border)); }
+}
+[data-slot="button"]:active:not(:disabled) { transform: translateY(0) scale(.98); }
+
+/* ── Checkboxes: rounded, pop when ticked ── */
+[data-slot="checkbox"] { border-radius: 6px !important; transition: background-color .15s, border-color .15s, box-shadow .15s; }
+[data-slot="checkbox"][data-checked] { animation: tick-pop .22s cubic-bezier(.2, 1.4, .4, 1); box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 18%, transparent); }
+@keyframes tick-pop { 0% { transform: scale(.8); } 100% { transform: scale(1); } }
+
+/* ── Scrollbars: thin, rounded, accent on hover ── */
+*::-webkit-scrollbar-thumb:hover { background: linear-gradient(var(--brand-from), var(--brand-to)) !important; background-clip: content-box !important; }
+
+/* ── Primary glow pulse for the main call to action ── */
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 0%, transparent), 0 6px 18px -6px color-mix(in oklch, var(--primary) 55%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 10%, transparent), 0 8px 26px -6px color-mix(in oklch, var(--primary) 65%, transparent); } }
+.glow-pulse { animation: glow-pulse 3.2s ease-in-out infinite; }
+
+/* ── Icons: a soft glow in their own colour when their control is hovered ── */
+.ico { transition: filter .2s ease, transform .2s cubic-bezier(.2,.9,.3,1.4); }
+@media (hover: hover) {
+  :is(button, a, [role="button"], [role="menuitem"], [role="menuitemradio"], [role="radio"], label):hover .ico,
+  .ico:hover {
+    filter: drop-shadow(0 0 5px color-mix(in oklch, currentColor 60%, transparent));
+    transform: scale(1.1);
+  }
+}
+.dark { --icon-l: 0.74; }
+/* Critical priority flickers gently, like a flame. */
+@keyframes flame { 0%, 100% { filter: drop-shadow(0 0 2px oklch(0.7 0.2 40 / .6)); } 50% { filter: drop-shadow(0 0 6px oklch(0.75 0.2 50 / .9)); } }
+.ico-hot { animation: flame 1.8s ease-in-out infinite; }
+
+/* ── Unread badge: a ring that pulses outward ── */
+.notify-ping { position: absolute; inset: 0; border-radius: 999px; background: var(--destructive); animation: notify-ping 1.8s cubic-bezier(0, 0, .2, 1) infinite; z-index: -1; }
+@keyframes notify-ping { 0% { transform: scale(1); opacity: .6; } 80%, 100% { transform: scale(2.2); opacity: 0; } }
+
+/* ── Toasts: icon tile + accent strip + timer bar, one hue per kind ── */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"].toast-card {
+
+  overflow: hidden;
+  display: flex; align-items: flex-start; gap: .75rem;
+  width: 100%; padding: .8rem 2.4rem .9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklch, oklch(.6 var(--t-c) var(--t-hue)) 22%, var(--border));
+  background: color-mix(in oklch, var(--popover) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  color: var(--popover-foreground);
+  box-shadow: 0 1px 2px oklch(0 0 0 / .06), 0 12px 32px -8px oklch(.3 .05 var(--t-hue) / .28);
+  font-family: inherit;
+}
+:where(.toast-card) { --t-hue: 270; --t-c: .03; }
+[data-sonner-toaster] [data-sonner-toast][data-type="success"].toast-card { --t-hue: 150; --t-c: .17; }
+[data-sonner-toast][data-type="info"].toast-card    { --t-hue: 250; --t-c: .17; }
+[data-sonner-toast][data-type="warning"].toast-card { --t-hue: 75;  --t-c: .17; }
+[data-sonner-toast][data-type="error"].toast-card   { --t-hue: 25;  --t-c: .21; }
+[data-sonner-toast][data-type="loading"].toast-card { --t-hue: 280; --t-c: .15; }
+/* accent strip */
+.toast-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: oklch(.62 var(--t-c) var(--t-hue)); }
+/* timer bar; pauses while the stack is hovered, like the toasts themselves */
+.toast-card::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: left;
+  background: linear-gradient(90deg, oklch(.62 var(--t-c) var(--t-hue) / .2), oklch(.62 var(--t-c) var(--t-hue) / .7));
+  animation: toast-timer 4s linear forwards;
+}
+[data-sonner-toast][data-type="error"].toast-card::after { animation-duration: 10s; }
+[data-sonner-toast][data-type="loading"].toast-card::after { display: none; }
+[data-sonner-toaster]:hover .toast-card::after { animation-play-state: paused; }
+@keyframes toast-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+[data-sonner-toast] .toast-icon { width: auto !important; height: auto !important; margin: 0 !important; flex-shrink: 0; }
+.toast-tile {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  color: oklch(.55 var(--t-c) var(--t-hue));
+  background: oklch(.95 calc(var(--t-c) * .35) var(--t-hue));
+  box-shadow: inset 0 0 0 1px oklch(.6 var(--t-c) var(--t-hue) / .18), 0 0 18px -4px oklch(.65 var(--t-c) var(--t-hue) / .55);
+  animation: toast-tile-in .5s cubic-bezier(.2,1.4,.4,1) both;
+}
+.dark .toast-tile { color: oklch(.8 var(--t-c) var(--t-hue)); background: oklch(.32 calc(var(--t-c) * .5) var(--t-hue) / .6); }
+@keyframes toast-tile-in { from { scale: .4; rotate: -25deg; opacity: 0; } to { scale: 1; rotate: 0deg; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast-tile, .toast-card::after { animation: none; } }
+
+.toast-title { font-size: .875rem; font-weight: 600; line-height: 1.35; letter-spacing: -.005em; }
+.toast-desc { margin-top: .15rem; font-size: .78rem; line-height: 1.45; color: var(--muted-foreground) !important; }
+[data-sonner-toast] [data-content] { padding-top: .35rem; min-width: 0; }
+[data-sonner-toast] .toast-action {
+  align-self: center; margin-left: auto !important; height: 28px !important; padding: 0 .7rem !important;
+  border-radius: 8px !important; font-size: .75rem !important; font-weight: 600 !important;
+  background: oklch(.6 var(--t-c) var(--t-hue)) !important; color: white !important;
+  transition: filter .15s ease, transform .15s ease;
+}
+[data-sonner-toast]:not([data-type]) .toast-action, [data-sonner-toast][data-type="default"] .toast-action { background: var(--primary) !important; color: var(--primary-foreground) !important; }
+[data-sonner-toast] .toast-action:hover { filter: brightness(1.08); transform: translateY(-1px); }
+[data-sonner-toast] .toast-close {
+  left: auto !important; right: .55rem !important; top: .6rem !important; transform: none !important;
+  width: 22px !important; height: 22px !important; border-radius: 7px !important;
+  background: transparent !important; border: 0 !important; color: var(--muted-foreground) !important;
+  opacity: .0; transition: opacity .15s ease, background-color .15s ease;
+}
+[data-sonner-toast]:hover .toast-close, [data-sonner-toast] .toast-close:focus-visible { opacity: 1; }
+[data-sonner-toast] .toast-close:hover { background: var(--muted) !important; color: var(--foreground) !important; }
+@media (hover: none) { [data-sonner-toast] .toast-close { opacity: 1; } }
+[data-sonner-toast] .toast-icon .sonner-loader { position: static !important; transform: none !important; }
+
+/* ── ClickUp-style status pill: solid stage colour, white text ── */
+.status-pill { color: white; background: oklch(0.6 var(--pill-c) var(--pill-h)); box-shadow: inset 0 -1px 0 oklch(0 0 0 / .12), 0 1px 2px oklch(.4 var(--pill-c) var(--pill-h) / .3); }
+.dark .status-pill { background: oklch(0.55 var(--pill-c) var(--pill-h)); }
+
+/* ── View tabs: a small coloured tile per view (ClickUp-style) ── */
+.view-tab-icon { color: white; background: oklch(0.62 0.17 var(--vh)); box-shadow: inset 0 -1px 0 oklch(0 0 0 / .15); }
+table thead th button { text-transform: inherit; letter-spacing: inherit; font-weight: inherit; }
