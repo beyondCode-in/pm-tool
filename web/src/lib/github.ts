@@ -1,5 +1,6 @@
 import { config } from "./config";
 import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent } from "./types";
+import { timeBody } from "./time-entry";
 import { workspace } from "./workspace";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
@@ -211,12 +212,8 @@ export function createGitHubSource(token: string): DataSource {
       return { name: file.name, url, isImage };
     },
 
-    async logTime(board, t, minutes, note) {
-      const h = Math.floor(minutes / 60), m = minutes % 60;
-      await rest(`${at(t)}/issues/${t.number}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}` }),
-      });
+    async logTime(board, t, minutes, note, date) {
+      await rest(`${at(t)}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body: timeBody(minutes, note, date) }) });
       // Adds to the board's time field (Settings → Workflow) when it has one.
       const timeField = workspace().timeField;
       if (timeField) {

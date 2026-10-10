@@ -1,5 +1,6 @@
 import { addDays, today } from "./board";
 import type { Board, Comment, DataSource, Field, FieldValues, Person, Ticket, HistoryEvent } from "./types";
+import { timeBody } from "./time-entry";
 
 // A realistic, self-contained board so anyone can try every screen without
 // signing in. Changes live in memory until the page is reloaded.
@@ -180,10 +181,9 @@ export function createDemoSource(): DataSource {
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
       return { name: file.name, url, isImage };
     },
-    async logTime(_b, t, minutes, note) {
+    async logTime(_b, t, minutes, note, date) {
       await wait();
-      const h = Math.floor(minutes / 60), m = minutes % 60;
-      const c = { id: crypto.randomUUID(), author: you, body: `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}`, createdAt: new Date().toISOString() };
+      const c = { id: crypto.randomUUID(), author: you, body: timeBody(minutes, note, date), createdAt: new Date().toISOString() };
       comments.set(t.number, [...(comments.get(t.number) ?? []), c]);
       patch(t.number, (x) => ({ ...x, commentCount: x.commentCount + 1 }));
     },

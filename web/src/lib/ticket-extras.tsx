@@ -7,15 +7,8 @@ import { useSource } from "./data";
 import type { Board, Comment, FieldName, Ticket } from "./types";
 import { workspace } from "./workspace";
 
-// Time entries are comments shaped "⏱️ Logged **1h 30m** — note".
-export const timeBody = (minutes: number, note: string) => {
-  const h = Math.floor(minutes / 60), m = minutes % 60;
-  return `⏱️ Logged **${h ? `${h}h ` : ""}${m}m**${note ? ` — ${note}` : ""}`;
-};
-export function parseTime(body: string): { minutes: number; note: string } | null {
-  const m = /^⏱️ Logged \*\*(?:(\d+)h )?(\d+)m\*\*(?: — ([\s\S]*))?/.exec(body);
-  return m ? { minutes: Number(m[1] ?? 0) * 60 + Number(m[2]), note: (m[3] ?? "").trim() } : null;
-}
+import { parseTime, timeBody } from "./time-entry";
+export { parseTime, timeBody } from "./time-entry";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
@@ -76,7 +69,7 @@ export function useTicketExtras() {
     // A time entry is a "⏱️ Logged" comment; changing it also corrects the total.
     editTime: (b: Board, t: Ticket, c: Comment, minutes: number, note: string) =>
       attempt(async () => {
-        await source!.updateComment(t, c, timeBody(minutes, note));
+        await source!.updateComment(t, c, timeBody(minutes, note, parseTime(c.body)?.date));
         await adjustSpent(b, t, minutes - (parseTime(c.body)?.minutes ?? 0));
       }, `Time entry updated to ${fmtMinutes(minutes)}`, () => Promise.all([refreshComments(t), refreshBoard()])),
     deleteTime: (b: Board, t: Ticket, c: Comment) =>
@@ -84,8 +77,8 @@ export function useTicketExtras() {
         await source!.deleteComment(t, c);
         await adjustSpent(b, t, -(parseTime(c.body)?.minutes ?? 0));
       }, "Time entry removed", () => Promise.all([refreshComments(t), refreshBoard()])),
-    logTime: (b: Board, t: Ticket, minutes: number, note: string) =>
-      attempt(() => source!.logTime(b, t, minutes, note), `Logged ${fmtMinutes(minutes)} on #${t.number}`, () => Promise.all([refreshComments(t), refreshBoard()])),
+    logTime: (b: Board, t: Ticket, minutes: number, note: string, date?: string) =>
+      attempt(() => source!.logTime(b, t, minutes, note, date), `Logged ${fmtMinutes(minutes)} on #${t.number}`, () => Promise.all([refreshComments(t), refreshBoard()])),
   };
 }
 
