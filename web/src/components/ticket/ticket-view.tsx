@@ -39,6 +39,14 @@ import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
 import { LabelPicker, TicketSearch } from "./search-pickers";
 import { Segmented } from "../ui-plus/segmented";
+import { markMentions, MentionTextarea } from "../ui-plus/mention-textarea";
+
+// "@login" in a message shows as a highlighted mention.
+const MENTION_LINKS = {
+  a: ({ href, children }: { href?: string; children?: ReactNode }) => href?.startsWith("#mention-")
+    ? <span className="mention">{children}</span>
+    : <a href={href} target="_blank" rel="noreferrer">{children}</a>,
+};
 import { StatusIcon, statusMeta } from "./status-icons";
 
 // The full ticket: everything about one piece of work, editable in place.
@@ -279,7 +287,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
             )}
           </div>
           {tab === "write" ? (
-            <textarea ref={ref} value={body} onChange={(e) => setBody(e.target.value)} autoFocus rows={12} aria-label="Description"
+            <MentionTextarea ref={ref} value={body} onValueChange={setBody} autoFocus rows={12} aria-label="Description"
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(parts.text); setEditing(false); } }}
               className="field-bare block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
           ) : (
@@ -555,7 +563,7 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
       </div>
       <div className="border-t p-3">
       <div className="field-frame rounded-xl border bg-card p-2 shadow-card">
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="Write a message… Use @name to mention someone. Ctrl+Enter sends." aria-label="New message"
+        <MentionTextarea placement="above" value={text} onValueChange={setText} rows={2} placeholder="Write a message… Type @ to mention someone. Ctrl+Enter sends." aria-label="New message"
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void send(); }}
           className="field-bare block w-full resize-none bg-transparent p-1.5 text-sm outline-none" />
         <div className="flex items-center justify-end gap-2">
@@ -660,7 +668,7 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
                   className="field-bare h-7 min-w-0 flex-1 basis-32 rounded-md bg-muted px-2 text-sm outline-none" />
               </div>
             ) : (
-              <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} aria-label="Edit message"
+              <MentionTextarea autoFocus value={draft} onValueChange={setDraft} rows={3} aria-label="Edit message"
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void save(); }}
                 className="field-bare block w-full resize-y bg-transparent p-1 text-sm outline-none" />
             )}
@@ -676,7 +684,7 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
           </p>
         ) : (
           <div className={cn("prose-ticket mt-1 w-fit max-w-full rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm", system ? "bg-transparent px-0 py-0 text-muted-foreground" : "bg-muted/60")}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.body}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={MENTION_LINKS}>{markMentions(c.body, board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
           </div>
         )}
       </div>

@@ -47,6 +47,9 @@ export type Ticket = {
   fields: FieldValues;
 };
 
+/** A file in the repository (docs and whiteboards live in folders there). */
+export type RepoFile = { path: string; sha: string; updatedAt?: string };
+
 /** A GitHub milestone, shown as a goal: a target date and the tickets that reach it. */
 export type Milestone = { number: number; title: string; description: string; dueOn: string | null; state: "OPEN" | "CLOSED"; url: string; open: number; closed: number };
 export type MilestoneInput = { number?: number; title: string; description: string; dueOn: string | null; state?: "OPEN" | "CLOSED" };
@@ -110,6 +113,12 @@ export interface DataSource {
   createLabel(label: Label): Promise<void>;
   updateLabel(name: string, patch: Partial<Label>): Promise<void>;
   deleteLabel(name: string): Promise<void>;
+  // Files in the board's repository (docs, whiteboards). Every save is a commit.
+  listFiles(folder: string, ext: string): Promise<RepoFile[]>;
+  readFile(path: string): Promise<{ text: string; sha: string }>;
+  /** Create (sha null) or update a file; returns the new sha. Throws on a conflicting edit. */
+  writeFile(path: string, text: string, sha: string | null, message: string): Promise<string>;
+  deleteFile(path: string, sha: string, message: string): Promise<void>;
   // Goals: the repository's milestones.
   milestones(): Promise<Milestone[]>;
   saveMilestone(m: MilestoneInput): Promise<void>;
