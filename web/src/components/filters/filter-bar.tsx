@@ -10,6 +10,7 @@ import { useFilters } from "@/lib/url-state";
 import { ChevronDown, Search, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Avatar, Tag } from "../ticket/bits";
+import { TypeGlyph } from "../ticket/type-badge";
 
 function Multi({ label, values, selected, onChange }: {
   label: string; values: { value: string; label: ReactNode }[]; selected: string[]; onChange: (v: string[]) => void;
@@ -37,7 +38,7 @@ function Multi({ label, values, selected, onChange }: {
 export function FilterBar({ board, children, hideDoneToggle }: { board: Board; children?: ReactNode; hideDoneToggle?: boolean }) {
   const { filters, update, clear, active } = useFilters();
   const opt = (field: string) => options(board, field).map((o) => ({
-    value: o.name, label: <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? o.name : plain(o.name)}</Tag>,
+    value: o.name, label: <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(o.name).toLowerCase()} size={14} />}{plain(o.name)}</Tag>,
   }));
   return (
     <div data-tour="filters" className="flex flex-wrap items-center gap-2" role="search">

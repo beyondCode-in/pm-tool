@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { emojiOf, isOverdue, plain, tint } from "@/lib/board";
+import { isOverdue, plain, tint } from "@/lib/board";
+import { TypeGlyph, typeKey } from "./type-badge";
 import type { Board, Person, Ticket } from "@/lib/types";
 import { AlertTriangle, Calendar, MessageSquare, GitBranch } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -33,7 +34,7 @@ export function AvatarStack({ people, max = 3, size = 22 }: { people: Person[]; 
 }
 
 // A board option as a tinted tag. The text is always shown, so colour is never the only signal.
-// Type keeps its emoji (it's the type's icon); other fields show the plain name.
+// Names show without their emoji; the type is drawn by TypeGlyph instead.
 export function Tag({ color, children, dot }: { color?: string; children: React.ReactNode; dot?: boolean }) {
   return <span className="tag" style={tint(color)}>{dot && <span className="tag-dot" aria-hidden />}{children}</span>;
 }
@@ -42,12 +43,11 @@ export function OptionPill({ board, field, value }: { board: Board; field: strin
   if (!value) return null;
   const f = board.fields.find((x) => x.name === field && x.kind === "single");
   const color = f && f.kind === "single" ? f.options.find((o) => o.name === value)?.color : undefined;
-  return <Tag color={color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? value : plain(value)}</Tag>;
+  return <Tag color={color} dot={field !== "Ticket Type"}>{plain(value)}</Tag>;
 }
 
-export function TypeIcon({ ticket }: { ticket: Ticket }) {
-  const e = emojiOf(ticket.fields["Ticket Type"]) || "📄";
-  return <span aria-label={plain(ticket.fields["Ticket Type"]) || "Ticket"} className="text-[13px] leading-none">{e}</span>;
+export function TypeIcon({ ticket, size = 18 }: { ticket: Ticket; size?: number }) {
+  return <TypeGlyph kind={typeKey(ticket)} size={size} />;
 }
 
 export function PriorityMark({ value }: { value?: string }) {

@@ -14,6 +14,7 @@ import { addDays, format, parseISO } from "date-fns";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Avatar, shortDate, Tag } from "./bits";
+import { TypeGlyph } from "./type-badge";
 
 const NONE = "__none";
 
@@ -36,7 +37,7 @@ export function OptionPicker({ board, field, value, onChange, label }: {
     <DropdownMenu>
       <DropdownMenuTrigger render={triggerButton} aria-label={`${label}: ${value ?? "not set"}`}>
         <Trigger empty={!value}>
-          {value ? <Tag color={opts.find((o) => o.name === value)?.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? value : plain(value)}</Tag> : "Not set"}
+          {value ? <Tag color={opts.find((o) => o.name === value)?.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(value).toLowerCase()} size={14} />}{plain(value)}</Tag> : "Not set"}
         </Trigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56">
@@ -44,7 +45,7 @@ export function OptionPicker({ board, field, value, onChange, label }: {
         <DropdownMenuRadioGroup value={value ?? NONE} onValueChange={(v: string) => onChange(v === NONE ? null : v)}>
           {opts.map((o) => (
             <DropdownMenuRadioItem key={o.id} value={o.name}>
-              <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" ? o.name : plain(o.name)}</Tag>
+              <Tag color={o.color} dot={field !== "Ticket Type"}>{field === "Ticket Type" && <TypeGlyph kind={plain(o.name).toLowerCase()} size={14} />}{plain(o.name)}</Tag>
               {o.description && <span className="ml-auto max-w-40 truncate pl-3 text-xs text-muted-foreground">{o.description}</span>}
             </DropdownMenuRadioItem>
           ))}

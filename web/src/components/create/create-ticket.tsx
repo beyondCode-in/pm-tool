@@ -15,6 +15,7 @@ import { motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, LabelChip } from "../ticket/bits";
+import { TypeGlyph } from "../ticket/type-badge";
 import { DateInput, PeoplePicker } from "../ticket/pickers";
 
 const DRAFT_KEY = "beyondpm.draft";
@@ -222,7 +223,7 @@ function TypeStep({ onPick, selected }: { onPick: (t: TicketType) => void; selec
             style={{ animationDelay: `${Math.min(i, 8) * 25}ms` }}
             className={cn("animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-both flex h-full flex-col transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 active:scale-[0.98] items-start gap-2 rounded-2xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-foreground/20 hover:shadow-md",
               selected === t.id && "border-primary bg-accent")}>
-            <span className="text-3xl leading-none" aria-hidden>{t.emoji}</span>
+            <TypeGlyph kind={t.id} size={40} />
             <span className="font-semibold">{t.name}</span>
             <span className="text-sm leading-snug text-muted-foreground">{t.blurb}</span>
           </button>
@@ -302,7 +303,7 @@ function Preview({ board, type, title, answers, assignees, due, onDropType }: {
         animate={{ scale: over ? 1.03 : 1 }}
         className={cn("rounded-2xl border bg-card p-4 shadow-sm transition-colors", over && "border-primary ring-3 ring-primary/20")}>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="text-base">{type?.emoji ?? "📄"}</span>{type?.name ?? "Drop a type here"}
+          <TypeGlyph kind={type?.id ?? "ticket"} size={20} />{type?.name ?? "Drop a type here"}
         </div>
         <p className={cn("mt-2 font-semibold leading-snug", !title && "text-muted-foreground")}>{title || "Your title appears here"}</p>
         {labels.length > 0 && <div className="mt-3 flex flex-wrap gap-1">{labels.map((l) => <LabelChip key={l} name={l} color={board.labels.find((x) => x.name === l)?.color} />)}</div>}

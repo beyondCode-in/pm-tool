@@ -20,6 +20,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BrandLoader, Logo } from "../brand/logo";
 import { CreateTicketDialog } from "../create/create-ticket";
 import { Guide } from "../guide/guide";
+import { TypeGlyph } from "../ticket/type-badge";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
@@ -176,7 +177,7 @@ function Palette({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => vo
         <CommandGroup heading="Create">
           {TICKET_TYPES.map((t) => (
             <CommandItem key={t.id} value={`new ${t.name}`} onSelect={() => run(() => void newTicket(t.id))}>
-              <span aria-hidden>{t.emoji}</span>New {t.name.toLowerCase()}
+              <TypeGlyph kind={t.id} size={18} />New {t.name.toLowerCase()}
             </CommandItem>
           ))}
         </CommandGroup>
