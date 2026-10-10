@@ -26,6 +26,8 @@ export type Workspace = {
   timeField: string | null;
   /** How far ahead "due soon" looks, in days. */
   dueSoonDays: number;
+  /** Workload: how much one person can carry per working day. */
+  capacity: { tickets: number; points: number };
   /** Confetti when something reaches a done status. */
   celebrate: boolean;
 };
@@ -47,7 +49,7 @@ const opts = (b: Board, name: string) => {
 
 /** The defaults for a board, read from its fields. */
 export function defaults(b: Board | null): Workspace {
-  if (!b) return { done: [], start: null, wip: {}, quickType: null, urgent: [], cardTags: [], tagSync: {}, timeField: null, dueSoonDays: 7, celebrate: true };
+  if (!b) return { done: [], start: null, wip: {}, quickType: null, urgent: [], cardTags: [], tagSync: {}, timeField: null, dueSoonDays: 7, capacity: { tickets: 3, points: 2 }, celebrate: true };
   const statuses = opts(b, "Status");
   const types = opts(b, "Ticket Type");
   const priorities = opts(b, "Priority");
@@ -65,6 +67,7 @@ export function defaults(b: Board | null): Workspace {
     tagSync,
     timeField: b.fields.find((f) => f.kind === "number" && TIME.test(f.name))?.name ?? null,
     dueSoonDays: 7,
+    capacity: { tickets: 3, points: 2 },
     celebrate: true,
   };
 }

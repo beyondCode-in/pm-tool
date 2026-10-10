@@ -119,6 +119,19 @@ export function WorkflowSettings({ board }: { board: Board }) {
         <Chips single items={["3", "7", "14", "30"]} value={[String(ws.dueSoonDays)]} onChange={([d]) => setWorkspace({ dueSoonDays: Number(d) })} render={(s) => `${s} days`} />
       </Row>
 
+      <Row title="Workload capacity" hint="How much one person can carry per working day. The Workload view turns amber near it and red above it.">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          {(["tickets", "points"] as const).map((k) => (
+            <label key={k} className="flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5">
+              <input inputMode="numeric" aria-label={`Capacity in ${k} per day`} value={ws.capacity[k]}
+                onChange={(e) => { const n = Number(e.target.value.replace(/D/g, "")); if (n > 0) setWorkspace({ capacity: { ...ws.capacity, [k]: n } }); }}
+                className="h-7 w-12 rounded-md border bg-background px-2 text-right text-sm tabular outline-none focus:border-ring" />
+              {k} per day
+            </label>
+          ))}
+        </div>
+      </Row>
+
       <Row title="Celebrate finished work" hint="A burst of confetti when a ticket reaches a done stage.">
         <Switch checked={ws.celebrate} onCheckedChange={(celebrate: boolean) => setWorkspace({ celebrate })} aria-label="Celebrate finished work" />
       </Row>
