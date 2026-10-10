@@ -6,7 +6,8 @@ import { useActions } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useGroupBy, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, SearchX } from "lucide-react";
+import { EmptyState } from "../brand/states";
 import { useMemo, useState } from "react";
 import { cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ticket/bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "../ticket/pickers";
@@ -91,7 +92,7 @@ export function TableView({ board, tickets, defaultGroup = "none" }: { board: Bo
             </tbody>
           ))}
         </table>
-        {!tickets.length && <p className="p-10 text-center text-sm text-muted-foreground">No tickets match these filters.</p>}
+        {!tickets.length && <EmptyState icon={SearchX} title="No tickets match" text="Try removing a filter, or search for something else." />}
       </div>
     </div>
   );
@@ -123,7 +124,7 @@ function Row({ board, t }: { board: Board; t: Ticket }) {
 export function ListView({ board, groups, empty }: { board: Board; groups: { name: string; hint?: string; tickets: Ticket[] }[]; empty: React.ReactNode }) {
   const [, open] = useOpenTicket();
   const shown = groups.filter((g) => g.tickets.length);
-  if (!shown.length) return <div className="grid flex-1 place-items-center p-10 text-center">{empty}</div>;
+  if (!shown.length) return <>{empty}</>;
   return (
     <div className="space-y-6 overflow-auto pb-6">
       {shown.map((g) => (

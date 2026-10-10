@@ -2,6 +2,7 @@
 
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsString, useQueryState, useQueryStates } from "nuqs";
 import type { Filters } from "./board";
+import { markDone } from "./onboarding";
 
 // Filters, the open ticket and the "new ticket" dialog all live in the URL,
 // so any view can be bookmarked or shared and Back closes what's open.
@@ -14,6 +15,7 @@ export function useFilters() {
   }, { history: "replace" });
   const filters: Filters = { q: f.q, type: f.type, priority: f.priority, assignee: f.assignee, label: f.label, showDone: f.done };
   const update = (p: Partial<Filters>) => {
+    markDone("filter");
     const { showDone, ...rest } = p;
     void set({ ...rest, ...(showDone !== undefined ? { done: showDone } : {}) });
   };

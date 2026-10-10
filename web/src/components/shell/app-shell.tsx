@@ -5,6 +5,7 @@ import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, Comma
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ACCENTS, setAccent, useAccent } from "@/lib/accent";
 import { signOut } from "@/lib/auth";
+import { markDone } from "@/lib/onboarding";
 import { config } from "@/lib/config";
 import { useBoard, useSource } from "@/lib/data";
 import { TICKET_TYPES } from "@/lib/ticket-types";
@@ -18,6 +19,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Logo } from "../brand/logo";
 import { CreateTicketDialog } from "../create/create-ticket";
+import { Guide } from "../guide/guide";
 import { Avatar, cleanTitle } from "../ticket/bits";
 import { TicketDrawer } from "../ticket/ticket-drawer";
 import { NAV } from "./nav";
@@ -36,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     let g = false;
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof HTMLElement && (e.target.closest("input, textarea, select, [contenteditable=true], [role=dialog]") !== null);
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); markDone("palette"); setPaletteOpen((o) => !o); return; }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (g) { g = false; const item = NAV.find((n) => n.key === e.key.toLowerCase()); if (item) { e.preventDefault(); router.push(item.href); } return; }
       if (e.key === "g") { g = true; setTimeout(() => (g = false), 1200); }
@@ -51,13 +53,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (!source) return null;
   return (
     <div className="flex h-dvh overflow-hidden">
-      <Sidebar onSearch={() => setPaletteOpen(true)} onHelp={() => setHelpOpen(true)} />
+      <Sidebar onSearch={() => { markDone("palette"); setPaletteOpen(true); }} onHelp={() => setHelpOpen(true)} />
       <main className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">{children}</main>
       <MobileNav />
       <TicketDrawer />
       <CreateTicketDialog />
       <Palette open={paletteOpen} setOpen={setPaletteOpen} />
       <Shortcuts open={helpOpen} setOpen={setHelpOpen} />
+      <Guide />
     </div>
   );
 }
@@ -76,10 +79,10 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
     <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
       <div className="px-4 pt-4 pb-3"><Logo subtitle={board?.projectTitle ?? "Loading…"} /></div>
       <div className="space-y-1.5 px-3">
-        <Button className="w-full justify-start" onClick={() => void newTicket("pick")}><Plus />New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></Button>
-        <Button variant="outline" className="w-full justify-start text-muted-foreground" onClick={onSearch}><Search />Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></Button>
+        <Button data-tour="new" className="glow-soft w-full justify-start" onClick={() => void newTicket("pick")}><Plus />New ticket<kbd className="ml-auto rounded bg-primary-foreground/20 px-1.5 text-[10px]">C</kbd></Button>
+        <Button data-tour="search" variant="outline" className="w-full justify-start text-muted-foreground" onClick={onSearch}><Search />Search<kbd className="ml-auto text-[10px]">Ctrl K</kbd></Button>
       </div>
-      <nav className="mt-4 flex-1 space-y-0.5 overflow-y-auto px-3" aria-label="Views">
+      <nav data-tour="nav" className="mt-4 flex-1 space-y-0.5 overflow-y-auto px-3" aria-label="Views">
         {NAV.map((n) => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
@@ -106,7 +109,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" className="min-w-56">
                 <DropdownMenuLabel>Theme</DropdownMenuLabel>
-                <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={(v: string) => setTheme(v)}>
+                <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={(v: string) => { markDone("theme"); setTheme(v); }}>
                   <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="system">Match my device</DropdownMenuRadioItem>
@@ -115,7 +118,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
                 <DropdownMenuLabel>Accent colour</DropdownMenuLabel>
                 <div className="flex flex-wrap gap-1.5 px-2 pb-2" role="radiogroup" aria-label="Accent colour">
                   {ACCENTS.map((a) => (
-                    <button key={a.id} role="radio" aria-checked={accent === a.id} aria-label={a.label} title={a.label} onClick={() => setAccent(a.id)}
+                    <button key={a.id} role="radio" aria-checked={accent === a.id} aria-label={a.label} title={a.label} onClick={() => { markDone("theme"); setAccent(a.id); }}
                       className="size-6 rounded-full ring-offset-2 ring-offset-popover transition-transform hover:scale-110 aria-checked:ring-2 aria-checked:ring-foreground"
                       style={{ background: a.swatch }} />
                   ))}

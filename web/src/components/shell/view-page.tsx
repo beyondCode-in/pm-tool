@@ -6,7 +6,8 @@ import { applyFilters } from "@/lib/board";
 import { useBoard } from "@/lib/data";
 import type { Board, Ticket } from "@/lib/types";
 import { useFilters, useNewTicket } from "@/lib/url-state";
-import { AlertCircle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import { ErrorState } from "../brand/states";
 import type { ReactNode } from "react";
 import { BrandLoader } from "../brand/logo";
 import { FilterBar } from "../filters/filter-bar";
@@ -34,14 +35,7 @@ export function ViewPage({ title, description, scope, children, hideDoneToggle }
         <Button className="ml-auto md:hidden" size="sm" onClick={() => void newTicket("pick")}><Plus />New</Button>
       </header>
       {error ? (
-        <div role="alert" className="flex max-w-xl items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-          <div className="space-y-2">
-            <p className="font-medium">We couldn&apos;t load the board.</p>
-            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-            <Button size="sm" variant="outline" onClick={() => void refetch()}>Try again</Button>
-          </div>
-        </div>
+        <ErrorState title="We couldn't load the board" message={(error as Error).message} onRetry={() => void refetch()} />
       ) : isLoading || !board ? (
         <div className="flex flex-1 flex-col gap-4" aria-busy>
           <div className="flex gap-2">{[44, 16, 18, 16, 14].map((w, i) => <Skeleton key={i} className="h-8 rounded-lg" style={{ width: `${w * 4}px` }} />)}</div>

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tan
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getToken, isDemo } from "./auth";
+import { markDone } from "./onboarding";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
 import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
@@ -102,6 +103,7 @@ export function useActions() {
       // Moving a card to Done also closes the ticket, like Jira's resolution.
       async move(t: Ticket, status: string) {
         const ok = await setField(t, "Status", status);
+        if (ok) markDone("move");
         if (ok && /done/i.test(status) && t.state === "OPEN") await source!.setState(t, "CLOSED", "COMPLETED").catch(() => {});
         if (ok && !/done/i.test(status) && t.state === "CLOSED") await source!.setState(t, "OPEN").catch(() => {});
         return ok;
@@ -119,6 +121,7 @@ export function useActions() {
       async create(input: NewTicket) {
         try {
           const n = await source!.create(board(), input);
+          markDone("create");
           await qc.invalidateQueries({ queryKey: BOARD_KEY });
           return n;
         } catch (e) {

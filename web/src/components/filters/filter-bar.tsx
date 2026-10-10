@@ -41,7 +41,7 @@ export function FilterBar({ board, children, hideDoneToggle }: { board: Board; c
     value: o.name, label: <span className="inline-flex items-center gap-2"><span className={cn("size-2 rounded-full", dotClass(o.color))} />{o.name}</span>,
   }));
   return (
-    <div className="flex flex-wrap items-center gap-2" role="search">
+    <div data-tour="filters" className="flex flex-wrap items-center gap-2" role="search">
       <label className="relative">
         <span className="sr-only">Search tickets</span>
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />

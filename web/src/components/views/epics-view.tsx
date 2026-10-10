@@ -4,7 +4,8 @@ import { isDone, isEpic } from "@/lib/board";
 import type { Board, Ticket } from "@/lib/types";
 import { useNewTicket, useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Network } from "lucide-react";
+import { EmptyState } from "../brand/states";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AvatarStack, cleanTitle, OptionPill, TicketMeta, TypeIcon } from "../ticket/bits";
@@ -17,14 +18,8 @@ export function EpicsView({ board, tickets }: { board: Board; tickets: Ticket[] 
   const loose = tickets.filter((t) => !roots.includes(t) && (!t.parent || !ids.has(t.parent)));
   if (!roots.length) {
     return (
-      <div className="grid flex-1 place-items-center p-10 text-center">
-        <div className="max-w-sm space-y-3">
-          <p className="text-4xl">🗺️</p>
-          <p className="font-semibold">No epics yet</p>
-          <p className="text-sm text-muted-foreground">An epic groups many tickets under one goal, and its progress fills in as they&apos;re done.</p>
-          <Button onClick={() => void newTicket("epic")}>Create an epic</Button>
-        </div>
-      </div>
+      <EmptyState icon={Network} title="No epics yet" text="An epic groups many tickets under one goal, and its progress fills in as they’re done."
+        action={<Button onClick={() => void newTicket("epic")}>Create an epic</Button>} />
     );
   }
   return (
