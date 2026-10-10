@@ -266,3 +266,48 @@ table thead th button { text-transform: inherit; letter-spacing: inherit; font-w
 .status-col-add { color: oklch(0.55 var(--col-c) var(--col-h)); }
 .status-col-add:hover { background: color-mix(in oklch, oklch(0.7 var(--col-c) var(--col-h)) 14%, transparent); }
 .dark .status-col-add { color: oklch(0.78 var(--col-c) var(--col-h)); }
+
+/* ── Sidebar flavour: a soft accent glow at the top, raised active pill,
+      tinted workspace and "today" cards, and a profile card at the foot. ── */
+.sidebar-flavour { position: relative; isolation: isolate; }
+.sidebar-flavour::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 220px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 60%),
+    radial-gradient(90% 70% at 100% 0%, color-mix(in oklch, var(--brand-to, var(--primary)) 9%, transparent), transparent 65%);
+}
+.ws-card:hover, .ws-card[data-popup-open] { background: color-mix(in oklch, var(--sidebar-accent) 70%, transparent); }
+.nav-item:hover { background: color-mix(in oklch, var(--sidebar-accent) 75%, transparent); }
+.nav-item-active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px oklch(0 0 0 / .06), 0 0 0 1px color-mix(in oklch, var(--border) 80%, transparent); }
+.dark .nav-item-active { background: color-mix(in oklch, var(--card) 85%, var(--primary) 8%); }
+.nav-item .view-tab-icon { transition: transform .18s cubic-bezier(.2,1.2,.4,1); }
+.nav-item:hover .view-tab-icon { transform: scale(1.08) rotate(-4deg); }
+.today-strip { background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 10%, var(--card)), color-mix(in oklch, var(--brand-to, var(--primary)) 7%, var(--card))); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 18%, transparent); }
+.profile-card { background: color-mix(in oklch, var(--card) 75%, transparent); box-shadow: inset 0 0 0 1px var(--sidebar-border); }
+.brand-button { background-image: linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 70%, var(--brand-to, var(--primary)))); }
+
+/* ── Menus and select lists: roomier rows, small-caps headings, accent ticks ── */
+[data-slot="dropdown-menu-content"], [data-slot="context-menu-content"] { padding: 6px !important; }
+:is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-sub-trigger"],
+    [data-slot="context-menu-item"], [data-slot="context-menu-radio-item"], [data-slot="context-menu-checkbox-item"], [data-slot="context-menu-sub-trigger"]) {
+  min-height: 34px; padding-top: 6px; padding-bottom: 6px; padding-left: 10px; gap: 10px; font-size: 13.5px; line-height: 1.3;
+}
+:is([data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="context-menu-radio-item"], [data-slot="context-menu-checkbox-item"]) { padding-right: 34px; }
+:is([data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="context-menu-radio-item"], [data-slot="context-menu-checkbox-item"])[data-checked] {
+  background: color-mix(in oklch, var(--primary) 7%, transparent); font-weight: 500;
+}
+:is([data-slot$="-radio-item-indicator"], [data-slot$="-checkbox-item-indicator"]) { color: var(--primary); right: 10px !important; }
+:is([data-slot$="-radio-item-indicator"], [data-slot$="-checkbox-item-indicator"]) svg { stroke-width: 2.5; }
+:is([data-slot="dropdown-menu-label"], [data-slot="context-menu-label"]) {
+  padding: 8px 10px 5px !important; font-size: 10.5px !important; font-weight: 600 !important; letter-spacing: .08em; text-transform: uppercase;
+}
+:is([data-slot="dropdown-menu-separator"], [data-slot="context-menu-separator"]) { margin: 5px 4px !important; }
+[data-slot="command-item"] { min-height: 34px; padding: 6px 10px !important; gap: 10px; font-size: 13.5px; }
+
+/* ── Select boxes (field pickers): look like a field on hover, with a chevron ── */
+.picker-trigger { border: 1px solid transparent; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+.picker-trigger:hover { border-color: var(--border); background: var(--card) !important; box-shadow: 0 1px 2px oklch(0 0 0 / .04); }
+.picker-trigger[data-popup-open], .picker-trigger[aria-expanded="true"] { border-color: color-mix(in oklch, var(--ring) 55%, var(--border)); background: var(--card) !important; box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 14%, transparent); }
+.picker-trigger .picker-chevron { transition: transform .18s ease, opacity .15s ease; opacity: .45; }
+.picker-trigger:hover .picker-chevron { opacity: .8; }
+.picker-trigger[data-popup-open] .picker-chevron, .picker-trigger[aria-expanded="true"] .picker-chevron { transform: rotate(180deg); opacity: 1; }

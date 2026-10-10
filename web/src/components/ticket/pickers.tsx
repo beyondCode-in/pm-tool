@@ -21,12 +21,12 @@ function Trigger({ children, empty, className }: { children: ReactNode; empty?: 
   return (
     <span className={cn("flex w-full items-center gap-2 text-left", empty && "text-muted-foreground", className)}>
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      <ChevronDown className="size-3.5 opacity-50" aria-hidden />
+      <ChevronDown className="picker-chevron size-3.5" aria-hidden />
     </span>
   );
 }
 
-const triggerButton = <Button variant="ghost" size="sm" className="h-8 w-full justify-start px-2 font-normal" />;
+const triggerButton = <Button variant="ghost" size="sm" className="picker-trigger h-8 w-full justify-start rounded-lg px-2 font-normal" />;
 
 export function OptionPicker({ board, field, value, onChange, label }: {
   board: Board; field: string; value?: string; onChange: (v: string | null) => void; label: string;
