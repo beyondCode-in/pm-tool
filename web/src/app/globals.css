@@ -289,3 +289,13 @@
 }
 [data-slot="button"][data-variant="outline"] { box-shadow: var(--shadow-card); }
 [data-slot="button"] { transition: background-color .15s, box-shadow .15s, transform .1s, color .15s; }
+
+/* Narrow panels (the sidebar): a slimmer bar that only shows while you're
+   over the panel, so it never sits as a stray line beside the icons. */
+.scroll-quiet::-webkit-scrollbar { width: 6px; height: 6px; }
+.scroll-quiet::-webkit-scrollbar-thumb { background-color: transparent; border-width: 1px; }
+.scroll-quiet:hover::-webkit-scrollbar-thumb { background-color: color-mix(in oklch, var(--foreground) 22%, transparent); }
+@supports not selector(::-webkit-scrollbar) { .scroll-quiet { scrollbar-color: transparent transparent; } .scroll-quiet:hover { scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent; } }
+/* The collapsed icon rail scrolls with the wheel but never shows a bar. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

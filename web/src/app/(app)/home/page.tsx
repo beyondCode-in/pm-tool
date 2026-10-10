@@ -51,7 +51,7 @@ export default function HomePage() {
       </header>
       <div className="md:hidden"><RunningTimer /></div>
       <LineUp board={board} />
-      <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid shrink-0 gap-5 pb-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <ToDo board={board} />
         <div className="flex min-w-0 flex-col gap-5">
           <Reminders />

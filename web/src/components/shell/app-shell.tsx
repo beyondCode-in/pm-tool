@@ -127,15 +127,15 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
           </Button>
         </Tip>
       </div>
-      <nav data-tour="nav" className={cn("mt-4 flex-1 space-y-0.5 overflow-y-auto", collapsed ? "px-2" : "px-3")} aria-label="Views">
-        {!collapsed ? <SidebarSections items={navItems} pathname={pathname} counts={{ "/inbox/": inbox, "/my-work/": mine }} /> : navItems.map((n) => {
+      <nav data-tour="nav" className={cn("scroll-quiet flex-1 overflow-x-hidden overflow-y-auto", collapsed ? "no-scrollbar mt-2 space-y-0 px-2" : "mt-4 space-y-0.5 px-3")} aria-label="Views">
+        {!collapsed ? <SidebarSections items={navItems} pathname={pathname} counts={{ "/inbox/": inbox, "/my-work/": mine }} /> : railItems(navItems).map((n, i) => n === "divider" ? <div key={`divider-${i}`} className="mx-auto my-1.5 h-px w-6 bg-sidebar-border" aria-hidden /> : (() => {
           const active = pathname?.startsWith(n.href.slice(0, -1));
           const count = n.href === "/inbox/" ? inbox : n.href === "/my-work/" ? mine : 0;
           return (
             <Tip key={n.href} label={n.label} kbd={`G ${n.key.toUpperCase()}`} show={collapsed}>
               <Link href={n.href} aria-current={active ? "page" : undefined} aria-label={collapsed ? n.label : undefined} title={collapsed ? undefined : n.hint}
                 className={cn("relative flex items-center gap-2.5 rounded-lg py-1.5 text-sm transition-colors hover:bg-sidebar-accent",
-                  collapsed ? "mx-auto size-10 justify-center px-0" : "px-2.5",
+                  collapsed ? "mx-auto size-9 justify-center px-0" : "px-2.5",
                   active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground")}>
                 {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-primary" aria-hidden />}
                 <n.icon className="size-4 shrink-0 opacity-80" aria-hidden />{!collapsed && n.label}
@@ -145,7 +145,7 @@ function Sidebar({ onSearch, onHelp }: { onSearch: () => void; onHelp: () => voi
               </Link>
             </Tip>
           );
-        })}
+        })())}
       </nav>
       <div className={cn("space-y-2 border-t", collapsed ? "p-2" : "p-3")}>
         {!collapsed && (
@@ -284,4 +284,13 @@ function Shortcuts({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => 
     </Command>
     </CommandDialog>
   );
+}
+
+// The collapsed rail groups icons like the expanded sidebar: personal, views, settings.
+const RAIL_HOME = ["/home/", "/my-work/", "/inbox/"];
+function railItems<T extends { href: string }>(items: T[]): (T | "divider")[] {
+  const home = items.filter((n) => RAIL_HOME.includes(n.href));
+  const foot = items.filter((n) => n.href === "/settings/");
+  const views = items.filter((n) => !RAIL_HOME.includes(n.href) && n.href !== "/settings/");
+  return [...home, ...(home.length && views.length ? ["divider" as const] : []), ...views, ...(foot.length ? ["divider" as const] : []), ...foot];
 }

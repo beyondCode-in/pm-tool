@@ -113,8 +113,8 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
         <span className="ml-auto shrink-0"><CustomiseMenu layout={cols} label="Columns" heading="Show columns" labels={Object.fromEntries(allStatuses.map((o) => [o.name, o.name]))} /></span>
       </div>
       <LayoutGroup>
-        <div className="min-h-0 flex-1 overflow-auto pb-4">
-          {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} allStatuses={allStatuses} cols={cols} showTitle={lane.key !== "all"} />)}
+        <div className={cn("min-h-0 flex-1 overflow-auto pb-2", lanes.length === 1 && lanes[0].key === "all" && "flex flex-col")}>
+          {lanes.map((lane) => <LaneRow key={lane.key} board={board} lane={lane} statuses={statuses} allStatuses={allStatuses} cols={cols} showTitle={lane.key !== "all"} fill={lane.key === "all"} />)}
         </div>
       </LayoutGroup>
       <DragDock board={board} />
@@ -122,11 +122,11 @@ export function BoardView({ board, tickets }: { board: Board; tickets: Ticket[] 
   );
 }
 
-function LaneRow({ board, lane, statuses, allStatuses, cols, showTitle }: { board: Board; lane: Lane; statuses: Option[]; allStatuses: Option[]; cols: Layout; showTitle: boolean }) {
+function LaneRow({ board, lane, statuses, allStatuses, cols, showTitle, fill }: { board: Board; lane: Lane; statuses: Option[]; allStatuses: Option[]; cols: Layout; showTitle: boolean; fill?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   const noStatus = lane.tickets.filter((t) => !t.fields.Status || !allStatuses.some((s) => s.name === t.fields.Status));
   return (
-    <section className="mb-4" aria-label={typeof lane.title === "string" ? lane.title : undefined}>
+    <section className={cn(fill ? "flex min-h-full flex-1 flex-col" : "mb-4")} aria-label={typeof lane.title === "string" ? lane.title : undefined}>
       {showTitle && (
         <button onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed} className="sticky left-0 mb-2 flex items-center gap-2 text-sm font-semibold">
           <ChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />{lane.title}
@@ -134,7 +134,7 @@ function LaneRow({ board, lane, statuses, allStatuses, cols, showTitle }: { boar
         </button>
       )}
       {!collapsed && (
-        <div className="flex snap-x snap-mandatory gap-3 sm:snap-none">
+        <div className={cn("flex snap-x snap-mandatory gap-3 sm:snap-none", fill && "flex-1 items-stretch")}>
           {noStatus.length > 0 && <Column board={board} status={null} tickets={noStatus} scope={lane.key} />}
           {statuses.map((s) => <Column key={s.id} board={board} status={s} scope={lane.key} cols={cols} tickets={lane.tickets.filter((t) => t.fields.Status === s.name)} />)}
         </div>

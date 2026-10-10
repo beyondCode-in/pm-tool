@@ -169,11 +169,11 @@ function Chip({ t }: { t: Ticket }) {
     <MaybeMenu ticket={t}>
     <div className="group/chip relative">
     <button ref={ref} onClick={() => void open(t.number)} title={`#${t.number} ${cleanTitle(t.title)}${p ? ` · ${plain(t.fields.Priority)} priority` : ""}${overdue ? " · overdue" : ""}`}
-      className={cn("relative flex w-full min-w-0 cursor-grab items-center gap-1.5 overflow-hidden rounded-md border bg-background py-1 pr-1.5 pl-2.5 text-left text-xs shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-pop active:cursor-grabbing",
+      className={cn("relative flex w-full min-w-0 cursor-grab items-start gap-1.5 overflow-hidden rounded-md border bg-background py-1 pr-1.5 pl-2.5 text-left text-xs shadow-card transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-pop active:cursor-grabbing",
         "before:absolute before:inset-y-0 before:left-0 before:w-[3px]", EDGE[p] ?? "before:bg-border",
         isDone(t) && "text-muted-foreground line-through opacity-70", overdue && "border-destructive/40 bg-destructive/5")}>
       <TypeIcon ticket={t} />
-      <span className="truncate font-medium">{cleanTitle(t.title)}</span>
+      <span className="line-clamp-2 leading-snug font-medium">{cleanTitle(t.title)}</span>
     </button>
     {board && t.fields["Target date"] && (
       <button type="button" aria-label={`Clear the due date of #${t.number}`} title="Clear due date"

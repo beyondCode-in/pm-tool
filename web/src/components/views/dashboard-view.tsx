@@ -66,7 +66,7 @@ function Panel({ id, title, sub, children, wide }: { id: string; title: string; 
   const layout = useContext(DashLayout)!;
   return (
     <CustomSection id={id} scope="dashboard" layout={layout} title={title}
-      className={`spotlight rounded-2xl border bg-card p-4 shadow-card ${wide ? "lg:col-span-2" : ""}`}>
+      className={`rounded-2xl border bg-card p-4 shadow-card ${wide ? "lg:col-span-2" : ""}`}>
       <p className="-mt-1 mb-3 text-xs text-muted-foreground">{sub}</p>
       {children}
     </CustomSection>
