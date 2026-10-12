@@ -1,6 +1,7 @@
 import { config } from "./config";
 import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent } from "./types";
 import { timeBody } from "./time-entry";
+import { parseAudit } from "./audit";
 import { workspace } from "./workspace";
 
 const ATTACH_BRANCH = "beyondpm-attachments";
@@ -140,11 +141,16 @@ export function createGitHubSource(token: string): DataSource {
     async history(t) {
       type Ev = { id?: number; node_id?: string; event: string; created_at?: string; actor?: { login: string; avatar_url: string } | null;
         label?: { name: string }; assignee?: { login: string }; rename?: { from: string; to: string }; state_reason?: string | null;
-        source?: { issue?: { number: number; title: string } }; project_card?: unknown; previous_status?: string; status?: string };
+        source?: { issue?: { number: number; title: string } }; project_card?: unknown; previous_status?: string; status?: string; body?: string; user?: { login: string; avatar_url: string } | null };
       const list = await rest<Ev[]>(`${at(t)}/issues/${t.number}/timeline?per_page=100`);
       const out: HistoryEvent[] = [{ id: "created", at: t.createdAt, actor: t.author ?? null, kind: "created" }];
       for (const e of list) {
-        if (!e.created_at || e.event === "commented") continue;
+        if (!e.created_at) continue;
+        if (e.event === "commented") {
+          const a = parseAudit(e.body ?? "");
+          if (a) out.push({ id: String(e.id ?? e.node_id), at: e.created_at, actor: e.actor ? { login: e.actor.login, avatarUrl: e.actor.avatar_url } : (e.user ? { login: e.user.login, avatarUrl: e.user.avatar_url } : null), kind: a.field === "Status" ? "status" : "field", field: a.field, from: a.from, to: a.to });
+          continue;
+        }
         const base = { id: String(e.id ?? e.node_id ?? `${e.event}-${e.created_at}`), at: e.created_at, actor: e.actor ? { login: e.actor.login, avatarUrl: e.actor.avatar_url } : null };
         switch (e.event) {
           case "labeled": out.push({ ...base, kind: "labeled", to: e.label?.name }); break;
@@ -157,7 +163,11 @@ export function createGitHubSource(token: string): DataSource {
           case "cross-referenced": if (e.source?.issue) out.push({ ...base, kind: "linked", to: `#${e.source.issue.number} ${e.source.issue.title}` }); break;
           case "parent_issue_added": case "sub_issue_added": case "parent_issue_removed": case "sub_issue_removed":
             out.push({ ...base, kind: "parent", text: e.event.replace(/_/g, " ") }); break;
-          case "project_v2_item_status_changed": out.push({ ...base, kind: "status", from: e.previous_status, to: e.status }); break;
+          case "project_v2_item_status_changed":
+            // Changes made in the app already left a note; keep GitHub's own entry only for changes made elsewhere.
+            if (!out.some((x) => x.kind === "status" && x.to === e.status && Math.abs(Date.parse(x.at) - Date.parse(e.created_at!)) < 120_000))
+              out.push({ ...base, kind: "status", from: e.previous_status, to: e.status });
+            break;
           default: if (!/^(subscribed|mentioned|referenced|unsubscribed)$/.test(e.event)) out.push({ ...base, kind: "other", text: e.event.replace(/_/g, " ") });
         }
       }
