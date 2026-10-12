@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
 import { repeatOf, REPEATS, withRepeat, type Repeat } from "@/lib/recurring";
 import { isAudit } from "@/lib/audit";
+import { chordPending } from "@/lib/keys";
 import { useGoalActions, useMilestones } from "@/lib/goals";
 import { Target as TargetIcon } from "@/components/icons";
 import { Repeat as RepeatIcon } from "@/components/icons";
@@ -141,7 +142,7 @@ function StepButtons({ board, ticket: t }: { board: Board; ticket: Ticket }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (e.defaultPrevented || chordPending() || e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
       if (e.key === "j") { e.preventDefault(); go(1); }
       if (e.key === "k") { e.preventDefault(); go(-1); }
     };
