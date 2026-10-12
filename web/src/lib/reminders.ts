@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { scoped } from "./scope";
 
 // Reminders (ClickUp's "R"): a note to yourself at a time, optionally tied to
 // a ticket. Kept in this browser; when one comes due the app shows it (and a
@@ -8,14 +9,15 @@ import { useSyncExternalStore } from "react";
 
 export type Reminder = { id: string; text: string; at: string; ticket?: number; ticketTitle?: string; done: boolean; fired: boolean; createdAt: string };
 
-const KEY = "beyondpm.reminders";
+const KEY = () => scoped("beyondpm.reminders");
 const listeners = new Set<() => void>();
 let raw: string | null = null;
-const read = () => { if (raw === null) { try { raw = localStorage.getItem(KEY) ?? "[]"; } catch { raw = "[]"; } } return raw; };
+let rawKey = "";
+const read = () => { if (raw === null || rawKey !== KEY()) { rawKey = KEY(); try { raw = localStorage.getItem(KEY()) ?? "[]"; } catch { raw = "[]"; } } return raw; };
 const all = (): Reminder[] => { try { return JSON.parse(read()) as Reminder[]; } catch { return []; } };
 const save = (list: Reminder[]) => {
   raw = JSON.stringify(list.slice(-200));
-  try { localStorage.setItem(KEY, raw); } catch { /* per-browser only */ }
+  try { localStorage.setItem(KEY(), raw); } catch { /* per-browser only */ }
   listeners.forEach((l) => l());
 };
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };

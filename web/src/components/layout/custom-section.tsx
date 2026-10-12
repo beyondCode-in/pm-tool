@@ -46,9 +46,9 @@ export function CustomSection({ id, scope, layout, title, icon: Icon, count, act
     <motion.section layout="position" ref={ref as React.Ref<HTMLElement>} aria-label={title} data-section={id}
       className={cn("group/section relative", dragging && "opacity-40", className)}>
       {edge && <span aria-hidden className={cn("absolute right-0 left-0 z-10 h-0.5 rounded-full bg-primary", edge === "top" ? "-top-2" : "-bottom-2")} />}
-      <div className={cn("flex items-center gap-1.5", open ? "mb-2.5" : "mb-0", bare && "px-0")}>
+      <div className={cn("relative flex items-center gap-1.5", open ? "mb-2.5" : "mb-0", bare && "px-0")}>
         <button ref={handle} aria-label={`Drag to move ${title}`} title="Drag to move"
-          className="-ml-1.5 grid size-6 cursor-grab place-items-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/section:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:hidden">
+          className="absolute top-1/2 -left-6 grid size-6 -translate-y-1/2 cursor-grab place-items-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/section:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:hidden">
           <GripVertical className="size-3.5" />
         </button>
         <button onClick={() => layout.toggleCollapsed(id)} aria-expanded={open} className="flex min-w-0 items-center gap-2 rounded-md py-0.5 text-left hover:text-foreground">

@@ -31,12 +31,30 @@ jobs:
         with:
           script: |
             const { parseForm, labelsFromAnswers, OWNED } = require('./.github/scripts/project-sync.cjs');
+            // Form answers set the tags when a ticket is opened. After that the board
+            // (and BeyondPM) own them: a later edit only re-applies an answer the person
+            // actually changed in the description, and tag changes never trigger this.
+            // (A new ticket's "opened" run can be replaced by a "labeled" run from the same
+            // moment, so tag events in a ticket's first two minutes count as opening it.)
             const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.payload.issue.number });
-            const wanted = labelsFromAnswers(parseForm(issue.body || ''));
+            const isNew = Date.now() - Date.parse(issue.created_at) < 120e3;
+            const action = context.payload.action === 'edited' ? 'edited' : isNew || context.payload.action === 'opened' ? 'opened' : 'tag';
+            if (action === 'tag') return core.info('Tag change; form answers are not re-applied.');
+            let wanted = labelsFromAnswers(parseForm(issue.body || ''));
             if (!wanted.size) return core.info('No form answers found; leaving labels alone.');
+            const family = (n) => (n.match(OWNED) || [])[1];
+            let families = null; // null = every owned family (a new ticket)
+            if (action === 'edited') {
+              const before = context.payload.changes?.body?.from;
+              if (before === undefined) return core.info('Description unchanged; leaving labels alone.');
+              const was = labelsFromAnswers(parseForm(before));
+              families = new Set([...wanted, ...was].filter(n => OWNED.test(n) && wanted.has(n) !== was.has(n)).map(family));
+              if (!families.size) return core.info('Form answers unchanged; keeping the tags set on the board.');
+              wanted = new Set([...wanted].filter(n => OWNED.test(n) && families.has(family(n))));
+            }
 
             const current = issue.labels.map(l => l.name);
-            const stale = current.filter(n => OWNED.test(n) && !wanted.has(n));
+            const stale = current.filter(n => OWNED.test(n) && !wanted.has(n) && (!families || families.has(family(n))));
             for (const name of stale) {
               await github.rest.issues.removeLabel({ ...context.repo, issue_number: issue.number, name });
             }

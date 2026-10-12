@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { scoped } from "./scope";
 import { isDone, isOverdue, plain, today } from "./board";
 import type { Activity, Board, Person } from "./types";
 
@@ -13,19 +14,20 @@ export type NoticeKind = "assigned" | "status" | "comment" | "triage" | "due" | 
 export type Notice = { id: string; kind: NoticeKind; ticket: number; title: string; text: string; at: string; read: boolean; later?: string; cleared?: boolean; actor?: Person | null };
 
 type Snap = Record<string, { status?: string; assignees: string[]; comments: number; triage: boolean; state: string }>;
-const KEY = "beyondpm.notifications";
-const SNAP = "beyondpm.notify-snapshot";
+const KEY = () => scoped("beyondpm.notifications");
+const SNAP = () => scoped("beyondpm.notify-snapshot");
 const MAX = 80;
 const listeners = new Set<() => void>();
 let raw: string | null = null;
+let rawKey = "";
 
 const load = (): Notice[] => {
-  if (raw === null) { try { raw = localStorage.getItem(KEY) ?? "[]"; } catch { raw = "[]"; } }
+  if (raw === null || rawKey !== KEY()) { rawKey = KEY(); try { raw = localStorage.getItem(KEY()) ?? "[]"; } catch { raw = "[]"; } }
   try { return JSON.parse(raw) as Notice[]; } catch { return []; }
 };
 const save = (list: Notice[]) => {
   raw = JSON.stringify(list.slice(0, MAX));
-  try { localStorage.setItem(KEY, raw); } catch { /* per-browser only */ }
+  try { localStorage.setItem(KEY(), raw); } catch { /* per-browser only */ }
   listeners.forEach((l) => l());
 };
 
@@ -55,7 +57,7 @@ export function useNotifications(): Notice[] {
 
 // "Watch everything": notify about every ticket, not only yours. Per browser.
 const WATCH = "beyondpm.watch-all";
-const CURSOR = "beyondpm.activity-since";
+const CURSOR = () => scoped("beyondpm.activity-since");
 export const getWatchAll = () => { try { return localStorage.getItem(WATCH) === "1"; } catch { return false; } };
 export const setWatchAll = (on: boolean) => { try { localStorage.setItem(WATCH, on ? "1" : "0"); } catch { /* ignore */ } listeners.forEach((l) => l()); };
 export function useWatchAll() {
@@ -64,7 +66,7 @@ export function useWatchAll() {
 
 /** Where to read activity from: the last time we looked (first run: now, so there is no flood). */
 export function activityCursor(): string {
-  try { const c = localStorage.getItem(CURSOR); if (c) return c; const now = new Date().toISOString(); localStorage.setItem(CURSOR, now); return now; } catch { return new Date().toISOString(); }
+  try { const c = localStorage.getItem(CURSOR()); if (c) return c; const now = new Date().toISOString(); localStorage.setItem(CURSOR(), now); return now; } catch { return new Date().toISOString(); }
 }
 
 // Turn what other people did into notices: on tickets you're assigned to or
@@ -88,7 +90,7 @@ export function ingestActivity(board: Board, events: Activity[]) {
     const text = assignedMe ? "assigned it to you" : mentioned ? e.text.replace(/^commented/, "mentioned you") : e.text;
     add.push({ id: `act:${e.id}`, kind, ticket: t.number, title: `#${t.number} ${clean(t.title)}`, text, at: e.at, read: false, actor: e.actor });
   }
-  if (newest) { try { localStorage.setItem(CURSOR, newest); } catch { /* ignore */ } }
+  if (newest) { try { localStorage.setItem(CURSOR(), newest); } catch { /* ignore */ } }
   if (add.length) save([...add, ...load()].sort((a, b) => b.at.localeCompare(a.at)));
   return add;
 }
@@ -101,7 +103,7 @@ const clean = (t: string) => t.replace(/^\[[^\]]+\]:?\s*/, "");
 export function digest(board: Board, live = false) {
   const me = board.viewer.login;
   let prev: Snap | null = null;
-  try { prev = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch { prev = null; }
+  try { prev = JSON.parse(localStorage.getItem(SNAP()) || "null"); } catch { prev = null; }
   const next: Snap = {};
   const add: Notice[] = [];
   const now = new Date().toISOString();
@@ -131,7 +133,7 @@ export function digest(board: Board, live = false) {
       else if (t.fields["Target date"] === today()) push({ id: `due:${t.url}:${today()}`, kind: "due", ticket: t.number, title, text: "is due today" });
     }
   }
-  try { localStorage.setItem(SNAP, JSON.stringify(next)); } catch { /* ignore */ }
+  try { localStorage.setItem(SNAP(), JSON.stringify(next)); } catch { /* ignore */ }
   if (add.length) save([...add, ...load()]);
   return add;
 }

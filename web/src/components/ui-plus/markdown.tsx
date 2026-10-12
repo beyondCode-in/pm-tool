@@ -149,3 +149,6 @@ export function Mermaid({ code }: { code: string }) {
     </figure>
   );
 }
+
+/** Drop HTML comments (GitHub templates and BeyondPM's hidden markers) before rendering. */
+export const cleanMd = (s: string) => s.replace(/<!--[\s\S]*?(-->|$)/g, "").replace(/^\s*\n/, "");

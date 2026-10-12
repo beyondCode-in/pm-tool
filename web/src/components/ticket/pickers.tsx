@@ -39,13 +39,13 @@ export function OptionPicker({ board, field, value, onChange, label }: {
           {value ? <OptionLabel field={field} name={value} color={opts.find((o) => o.name === value)?.color} /> : "Not set"}
         </Trigger>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-56">
+      <DropdownMenuContent className="max-w-sm min-w-72">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={value ?? NONE} onValueChange={(v: string) => onChange(v === NONE ? null : v)}>
           {opts.map((o) => (
             <DropdownMenuRadioItem key={o.id} value={o.name}>
               <OptionLabel field={field} name={o.name} color={o.color} />
-              {o.description && <span className="ml-auto max-w-40 truncate pl-3 text-xs text-muted-foreground">{o.description}</span>}
+              {o.description && <span title={o.description} className="ml-auto line-clamp-2 max-w-52 pl-3 text-right text-xs leading-snug text-muted-foreground">{o.description}</span>}
             </DropdownMenuRadioItem>
           ))}
           <DropdownMenuSeparator />

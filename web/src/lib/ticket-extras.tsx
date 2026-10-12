@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
+import { scoped } from "./scope";
 import { toast } from "sonner";
 import { useSource } from "./data";
 import type { Board, Comment, FieldName, Ticket } from "./types";
@@ -85,16 +86,17 @@ export function useTicketExtras() {
 // ── One running timer per browser ───────────────────────────────────────
 
 type Running = { ticket: number; title: string; startedAt: number } | null;
-const KEY = "beyondpm.timer";
+const KEY = () => scoped("beyondpm.timer");
 const listeners = new Set<() => void>();
 let raw: string | null = null;
+let rawKey = "";
 const read = () => {
-  if (raw === null) { try { raw = localStorage.getItem(KEY) ?? "null"; } catch { raw = "null"; } }
+  if (raw === null || rawKey !== KEY()) { rawKey = KEY(); try { raw = localStorage.getItem(KEY()) ?? "null"; } catch { raw = "null"; } }
   return raw;
 };
 const write = (v: Running) => {
   raw = JSON.stringify(v);
-  try { localStorage.setItem(KEY, raw); } catch { /* per-browser only */ }
+  try { localStorage.setItem(KEY(), raw); } catch { /* per-browser only */ }
   listeners.forEach((l) => l());
 };
 
