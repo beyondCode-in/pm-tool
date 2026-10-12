@@ -4,6 +4,7 @@ import * as P from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useBoard, useSource } from "@/lib/data";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "../ticket/bits";
 import { activityCursor, ingestActivity, setWatchAll, useWatchAll } from "@/lib/notifications";
 import { clearAll, clearNotice, digest, isWaiting, laterNotice, markAllRead, markRead, restoreNotice, useNotifications, wakeLater, type Notice, type NoticeKind } from "@/lib/notifications";
@@ -51,8 +52,17 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
       else if (added.length > 1) toast(`${added.length} new notifications`, { icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
     };
     announce(digest(board, live));
-    if (live) source!.activity!(activityCursor()).then((ev) => announce(ingestActivity(board, ev))).catch(() => { /* try again on the next refresh */ });
   }, [board, dataUpdatedAt, source]);
+
+  // Other people's changes: polled on their own every 15 s, not only with the board.
+  const activity = useQuery({ queryKey: ["activity"], enabled: !!source?.activity && !!board, refetchInterval: 15_000, staleTime: 5_000, queryFn: () => source!.activity!(activityCursor()) });
+  useEffect(() => {
+    if (!board || !activity.data) return;
+    const added = ingestActivity(board, activity.data);
+    if (added.length === 1) toast(added[0].title, { description: `${added[0].actor ? added[0].actor.login + " " : ""}${added[0].text}`, icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
+    else if (added.length > 1) toast(`${added.length} new notifications`, { icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity.data, activity.dataUpdatedAt]);
 
   const shown = tab === "inbox" ? inbox : tab === "later" ? later : cleared;
   const go = (n: Notice) => { markRead(n.id); setOpen(false); void openTicket(n.ticket); };

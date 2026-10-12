@@ -30,7 +30,9 @@ function browserSource(): DataSource | null {
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 20_000, refetchInterval: 45_000, refetchOnWindowFocus: true, retry: 1 } },
+    // Live feel: refresh every 15 s while the tab is visible, and at once on return.
+    // Reads revalidate with ETags, so unchanged answers are cheap 304s.
+    defaultOptions: { queries: { staleTime: 10_000, refetchInterval: 15_000, refetchOnWindowFocus: true, retry: 1 } },
   }));
   // The pre-rendered HTML has no source (no browser storage on the server);
   // the browser value is swapped in right after hydration, without a mismatch.
@@ -191,13 +193,13 @@ export function useActions() {
 
 export function useComments(t: Ticket | null) {
   const source = useSource();
-  return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: false });
+  return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: 15_000 });
 }
 
 // The change history; refetched whenever the ticket itself changes.
 export function useHistory(t: Ticket | null) {
   const source = useSource();
-  return useQuery({ queryKey: ["history", t?.url, t?.updatedAt, t?.labels.length, t?.assignees.length], enabled: !!source && !!t, queryFn: () => source!.history(t!), refetchInterval: false, placeholderData: (prev) => prev });
+  return useQuery({ queryKey: ["history", t?.url, t?.updatedAt, t?.labels.length, t?.assignees.length], enabled: !!source && !!t, queryFn: () => source!.history(t!), refetchInterval: 15_000, placeholderData: (prev) => prev });
 }
 
 export function useAddComment() {
