@@ -62,7 +62,7 @@ export default function Login() {
           <div className="mb-7 text-center">
             <span className="relative mx-auto mb-5 block w-fit">
               <span className="absolute inset-0 -z-10 rounded-2xl bg-primary/50 blur-xl" aria-hidden />
-              <LogoMark size={52} animated />
+              <LogoMark size={52} />
             </span>
             <h2 className="text-2xl font-semibold tracking-tight">Welcome</h2>
             <p className="mt-1.5 text-sm text-muted-foreground">{config.owner ? <>Sign in to see {config.owner}&apos;s board.</> : "Sign in with GitHub, then pick your team's board."}</p>

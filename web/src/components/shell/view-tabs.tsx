@@ -25,7 +25,7 @@ export function ViewTabs() {
   if (!VIEWS.some((v) => path.startsWith(v.href.slice(0, -1)))) return null;
 
   return (
-    <nav aria-label="Views" className="-mx-1 flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden border-b [scrollbar-width:none]">
+    <nav aria-label="Views" className="-mx-1 flex min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden border-b pr-10 [mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)] [scrollbar-width:none]">
       {shown.map((v) => {
         const i = VIEWS.indexOf(v);
         const on = path.startsWith(v.href.slice(0, -1));

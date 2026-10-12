@@ -76,7 +76,7 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
         <AnimatePresence>
           {unread > 0 && (
             <motion.span key="badge" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 600, damping: 22 }}
-              className="pointer-events-none absolute -top-0.5 -right-0.5 grid min-w-[18px] place-items-center rounded-full bg-destructive px-1 text-[10px] leading-[18px] font-bold text-white ring-2 ring-sidebar">
+              className="pointer-events-none absolute top-0 right-0 grid min-w-[18px] place-items-center rounded-full bg-destructive px-1 text-[10px] leading-[18px] font-bold text-white ring-2 ring-sidebar">
               <span className="notify-ping" aria-hidden />
               {unread > 99 ? "99+" : unread}
             </motion.span>
@@ -95,7 +95,7 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
               const Icon = k.icon;
               return (
                 <motion.li key={n.id} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }} className="group/n relative">
-                  <button onClick={() => go(n)} className={cn("flex w-full gap-3 px-4 py-3 pr-20 text-left transition-colors hover:bg-muted/60", !n.read && "bg-accent/40")}>
+                  <button onClick={() => go(n)} className={cn("flex w-full gap-3 px-4 py-3 pr-4 text-left transition-colors hover:bg-muted/60 [@media(hover:none)]:pr-20", !n.read && "bg-accent/40")}>
                     <span className="relative shrink-0">
                       {n.actor ? <Avatar person={n.actor} size={32} /> : (
                         <span className="ico grid size-8 place-items-center rounded-lg" style={{ background: `oklch(0.94 ${k.chroma * 0.4} ${k.hue})`, color: `oklch(0.5 ${k.chroma} ${k.hue})` }}><Icon size={17} weight="duotone" /></span>
@@ -103,7 +103,7 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
                       {n.actor && <span className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full ring-2 ring-popover" style={{ background: `oklch(0.94 ${k.chroma * 0.4} ${k.hue})`, color: `oklch(0.5 ${k.chroma} ${k.hue})` }}><Icon size={10} weight="bold" /></span>}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{n.title}</span>
+                      <span className="line-clamp-2 text-sm leading-snug font-medium">{n.title}</span>
                       <span className="block text-xs text-muted-foreground">{n.actor && <span className="font-medium text-foreground">{n.actor.login} </span>}{n.text} · {formatDistanceToNow(parseISO(n.at))} ago</span>
                     </span>
                     {!n.read && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-label="unread" />}
