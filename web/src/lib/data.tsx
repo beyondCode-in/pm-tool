@@ -15,6 +15,7 @@ import { nextOccurrence, repeatOf, REPEATS } from "./recurring";
 import { auditBody } from "./audit";
 
 const BOARD_KEY = ["board"] as const;
+const tagQueue = new Map<string, Promise<void>>();
 // undefined = not known yet (pre-render), null = signed out.
 const SourceContext = createContext<DataSource | null | undefined>(undefined);
 
@@ -88,7 +89,14 @@ export function useActions() {
     // Priority and Size also live as tags ("priority: p1", "size: m") because the
     // GitHub forms and the triage workflow work from tags. Keep the two in step,
     // otherwise the workflow would later "correct" the board back to the old tag.
-    const syncTag = async (id: string, field: FieldName, value: FieldValue) => {
+    // Tag updates run in the background, one at a time per ticket, and each reads
+    // the field's latest value, so quick successive changes always end in step.
+    const syncTag = (id: string, field: FieldName) => {
+      const next = (tagQueue.get(id) ?? Promise.resolve()).then(() => syncTagNow(id, field, board().tickets.find((x) => x.itemId === id)?.fields[field] ?? null));
+      tagQueue.set(id, next);
+      return next;
+    };
+    const syncTagNow = async (id: string, field: FieldName, value: FieldValue) => {
       const tagName = workspace().tagSync[field];
       if (!tagName) return;
       const prefix = `${tagName}: `;
@@ -132,7 +140,7 @@ export function useActions() {
     };
     const runThenSync = async (id: string, field: FieldName, value: FieldValue, write: () => Promise<boolean>) => {
       const ok = await write();
-      if (ok) void syncTag(id, field, value);
+      if (ok) void syncTag(id, field);
       return ok;
     };
 
