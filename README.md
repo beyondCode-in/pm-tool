@@ -3,13 +3,14 @@
 **Jira- and ClickUp-style project management that runs on GitHub.** Anyone can raise a ticket from GitHub's **New issue** page by picking from lists, with no technical knowledge needed. Every ticket lands on one project board, and automation keeps its labels and board fields up to date.
 
 - ✅ **Today:** structured ticket forms, automatic labelling, board sync, ticket moves driven by pull requests, SLA reminders.
-- 🛠️ **Next:** a full web app (Next.js + shadcn/ui) with boards, timelines, sprints and dashboards on top of the same GitHub data. Its complete build brief is in [`docs/BUILD-PROMPT.md`](docs/BUILD-PROMPT.md).
+- 🌐 **The web app:** boards, sprints, roadmaps, goals, docs, chat, whiteboards, timesheets and dashboards on the same GitHub data, at **https://beyondcode-in.github.io/pm-tool/**. See [The web app](#the-web-app) below; the complete, detailed guide is inside the app under **Guide** (press `G` then `U`).
 - ⚠️ **Not here yet:** see [What GitHub can and can't do](#what-github-can-and-cant-do) before you promise Jira parity to anyone.
 
 ---
 
 ## Contents
 
+0. [The web app](#the-web-app)
 1. [Create a ticket (everyone)](#1-create-a-ticket-everyone)
 2. [Which form should I use?](#2-which-form-should-i-use)
 3. [What happens after you submit](#3-what-happens-after-you-submit)
@@ -24,6 +25,16 @@
 12. [Troubleshooting](#12-troubleshooting)
 
 ---
+
+## The web app
+
+Sign in with **Continue with GitHub** and pick your board, or try the demo board without signing in. The in-app **Guide** (`G` then `U`, or the ✨ button → Full guide) explains every feature in detail. The essentials:
+
+- **Who sees what:** GitHub access decides it. The app shows only what your own GitHub account can open, so members of another organisation can't see your board. Keep company work in a **private** repository and project: a public repository is readable by anyone.
+- **History:** every ticket has a History tab saying who changed what, and when. GitHub records tags, assignees, closes and status changes itself; for other board fields the app leaves a short note on the issue from the person's account.
+- **Notifications:** the bell names the person behind each change on your tickets, @mentions and assignments, plus due and overdue reminders. Tick **Watch everything** for all tickets. For email or phone alerts, press **Watch** on the repository on GitHub.
+- **Where things live:** tickets, fields, docs, whiteboards, chat, goals and time logs are on GitHub. Favourites, saved views, reminders, templates and notification state are kept in your browser.
+- **Shortcuts:** `C` new ticket · `/` search · `Ctrl K` jump · `R` reminder · `?` all shortcuts · `[` sidebar · `J`/`K` next/previous ticket · `G` + letter to change view.
 
 ## 1. Create a ticket (everyone)
 

@@ -328,3 +328,10 @@ table thead th button { text-transform: inherit; letter-spacing: inherit; font-w
 .doc-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
 .chat-body p { margin: 0; } .chat-body p + p { margin-top: .35em; }
 .wb-thumb { background-color: var(--muted); background-image: radial-gradient(color-mix(in oklch, var(--foreground) 14%, transparent) 1px, transparent 1px); background-size: 14px 14px; }
+
+/* Guide page prose */
+.guide-prose p { margin: 0.5rem 0; line-height: 1.65; font-size: 0.9rem; }
+.guide-prose ul { margin: 0.5rem 0; padding-left: 1.2rem; list-style: disc; line-height: 1.65; font-size: 0.9rem; }
+.guide-prose li { margin: 0.2rem 0; }
+.guide-prose li::marker { color: var(--primary); }
+.guide-prose code { border-radius: 0.3rem; background: var(--muted); padding: 0.05rem 0.3rem; font-size: 0.82em; }

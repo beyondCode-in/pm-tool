@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { chord, chordPending, SHORTCUTS } from "@/lib/keys";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ACCENTS, PALETTES, setAccent, setPalette, useAccent, usePalette, type PaletteId } from "@/lib/accent";
@@ -57,15 +58,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); markDone("palette"); setPaletteOpen((o) => !o); return; }
       // R: a reminder, from anywhere (inside an open ticket it links to that ticket).
       const inField = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable=true]") !== null;
-      if (e.key === "r" && !inField && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key === "r" && !chordPending() && !inField && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         const n = Number(new URLSearchParams(window.location.search).get("ticket") || new URLSearchParams(window.location.search).get("n"));
         openReminder(n ? { ticket: n } : {});
         return;
       }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (g) { g = false; const item = NAV.find((n) => n.key === e.key.toLowerCase()); if (item) { e.preventDefault(); router.push(item.href); } return; }
-      if (e.key === "g") { g = true; setTimeout(() => (g = false), 1200); }
+      if (g) { g = false; chord.gAt = 0; const item = NAV.find((n) => n.key === e.key.toLowerCase()); if (item) { e.preventDefault(); router.push(item.href); } return; }
+      if (e.key === "g") { g = true; chord.gAt = Date.now(); setTimeout(() => (g = false), 1200); }
       else if (e.key === "c") { e.preventDefault(); void newTicket("pick"); }
       else if (e.key === "/") { e.preventDefault(); (document.querySelector("[data-search]") as HTMLInputElement | null)?.focus(); }
       else if (e.key === "?") setHelpOpen(true);
@@ -271,8 +272,7 @@ function Palette({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => vo
 }
 
 function Shortcuts({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => void }) {
-  const rows: [string, string][] = [["C", "New ticket"], ["/", "Search this view"], ["Ctrl K", "Jump to anything"], ["?", "This list"], ["[", "Collapse or expand the sidebar"], ["Esc", "Close"],
-    ...NAV.map((n) => [`G ${n.key.toUpperCase()}`, `Go to ${n.label}`] as [string, string])];
+  const rows = SHORTCUTS.map((s) => [s.keys, s.where === "Anywhere" ? s.label : `${s.label} (${s.where.toLowerCase()})`] as [string, string]);
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Keyboard shortcuts" description="Shortcuts work anywhere except while typing">
       <Command>

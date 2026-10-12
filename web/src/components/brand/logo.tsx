@@ -1,12 +1,11 @@
 import { cn } from "@/lib/utils";
 import { useId } from "react";
 
-// The BeyondPM mark: a lowercase "b" whose bowl is a progress ring, three
-// quarters closed, with a spark where it opens — work moving towards done,
-// and a little beyond. Colours come from the theme tokens.
+// The BeyondPM mark: three board columns rising left to right, like work
+// moving across a board, with a spark just past the last one: done, and a
+// little beyond. Reads at 16 px; colours come from the theme tokens.
 export function LogoMark({ size = 28, className, animated }: { size?: number; className?: string; animated?: boolean }) {
   const id = useId();
-  // Ring: centre (19, 19.5), radius 6. Circumference ≈ 37.7; draw 78% of it.
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden className={cn("shrink-0", animated && "logo-animated", className)}>
       <defs>
@@ -22,13 +21,10 @@ export function LogoMark({ size = 28, className, animated }: { size?: number; cl
       <rect width="32" height="32" rx="9.5" fill={`url(#${id}-bg)`} />
       <rect width="32" height="32" rx="9.5" fill={`url(#${id}-glow)`} />
       <rect x="0.5" y="0.5" width="31" height="31" rx="9" fill="none" stroke="white" strokeOpacity="0.18" />
-      {/* stem */}
-      <rect x="7.2" y="5.6" width="3.8" height="20.4" rx="1.9" fill="white" />
-      {/* bowl as a progress ring */}
-      <circle className="logo-ring" cx="19" cy="19.5" r="6" fill="none" stroke="white" strokeWidth="3.8" strokeLinecap="round"
-        strokeDasharray="29.4 37.7" transform="rotate(-50 19 19.5)" />
-      {/* spark at the open end */}
-      <path className="logo-spark" d="M24.9 8.2 l0.9 2.2 2.2 0.9 -2.2 0.9 -0.9 2.2 -0.9 -2.2 -2.2 -0.9 2.2 -0.9z" style={{ fill: "var(--brand-spark)" }} />
+      <rect className="logo-bar" x="6.5" y="17" width="4.6" height="8.5" rx="2.3" fill="white" fillOpacity="0.62" />
+      <rect className="logo-bar" x="13.7" y="12.5" width="4.6" height="13" rx="2.3" fill="white" fillOpacity="0.82" style={{ animationDelay: "0.12s" }} />
+      <rect className="logo-bar" x="20.9" y="8" width="4.6" height="17.5" rx="2.3" fill="white" style={{ animationDelay: "0.24s" }} />
+      <path className="logo-spark" d="M26.6 3.6 l0.75 1.85 1.85 0.75 -1.85 0.75 -0.75 1.85 -0.75 -1.85 -1.85 -0.75 1.85 -0.75z" style={{ fill: "var(--brand-spark)" }} />
     </svg>
   );
 }
@@ -45,7 +41,7 @@ export function Logo({ size = 28, subtitle }: { size?: number; subtitle?: string
   );
 }
 
-// Loading state: the ring fills and the spark twinkles.
+// Loading state: the columns rise and the spark twinkles.
 export function BrandLoader({ label = "Loading your board…" }: { label?: string }) {
   return (
     <div role="status" aria-live="polite" className="grid flex-1 place-items-center p-10">

@@ -20,8 +20,8 @@ import { NAV } from "./nav";
 
 type Item = (typeof NAV)[number];
 const HOME = ["/home/", "/my-work/", "/inbox/"];
-const HOME_HUE: Record<string, number> = { "/home/": 285, "/my-work/": 230, "/inbox/": 45, "/settings/": 250 };
-const FOOT = ["/settings/"];
+const HOME_HUE: Record<string, number> = { "/home/": 285, "/my-work/": 230, "/inbox/": 45, "/settings/": 250, "/help/": 160 };
+const FOOT = ["/help/", "/settings/"];
 
 const OPEN_KEY = "beyondpm.sidebar-open";
 const openListeners = new Set<() => void>();
