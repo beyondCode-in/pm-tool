@@ -35,7 +35,7 @@ import { createContext, Fragment, useContext, useEffect, useEffectEvent, useRef,
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
@@ -293,7 +293,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(parts.text); setEditing(false); } }}
               className="field-bare block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
           ) : (
-            <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown remarkPlugins={[remarkGfm]}>{body || "_Nothing to preview._"}</ReactMarkdown></div>
+            <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{body || "_Nothing to preview._"}</ReactMarkdown></div>
           )}
           <div className="flex items-center gap-2 border-t px-3 py-2">
             <span className="text-xs text-muted-foreground">Ctrl+Enter to save · Esc to cancel</span>
@@ -303,7 +303,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
         </div>
       ) : parts.text.trim() ? (
         <div className="prose-ticket cursor-text rounded-xl p-1 text-[15px] hover:bg-muted/40" onDoubleClick={() => { setBody(parts.text); setEditing(true); }}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{parts.text}</ReactMarkdown>
+          <ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{parts.text}</ReactMarkdown>
         </div>
       ) : (
         <button onClick={() => setEditing(true)} className="w-full rounded-xl border border-dashed p-5 text-left text-sm text-muted-foreground hover:bg-muted/40">
@@ -686,7 +686,7 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
           </p>
         ) : (
           <div className={cn("prose-ticket mt-1 w-fit max-w-full rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm", system ? "bg-transparent px-0 py-0 text-muted-foreground" : "bg-muted/60")}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={MENTION_LINKS}>{markMentions(c.body, board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
+            <ReactMarkdown {...MD_PLUGINS} components={{ ...MD_CODE, ...MENTION_LINKS }}>{markMentions(c.body, board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
           </div>
         )}
       </div>

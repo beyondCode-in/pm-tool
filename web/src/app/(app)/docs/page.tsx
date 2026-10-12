@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 import { markMentions, MentionTextarea } from "@/components/ui-plus/mention-textarea";
 
@@ -208,7 +208,8 @@ function Doc({ path, onRenamed, onDeleted, onOpenDoc }: { path: string; onRename
   });
 
   const md = (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+    <ReactMarkdown {...MD_PLUGINS} components={{
+      ...MD_CODE,
       a: ({ href, children }) => href?.startsWith("#mention-") ? <span className="mention">{children}</span> : href?.startsWith("#ticket-")
         ? <button className="ticket-ref" onClick={() => void openTicket(Number(href.slice(8)))}>{children}</button>
         : href && /.md$/i.test(href) && !/^[a-z]+:/i.test(href)

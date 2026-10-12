@@ -16,7 +16,7 @@ import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 
 // Chat (ClickUp Chat, on GitHub Discussions): channels are discussion
@@ -99,7 +99,8 @@ function Body({ text }: { text: string }) {
   const md = markMentions(text.replace(/(^|[\s(])#(\d+)\b/g, (_, pre, n) => `${pre}[#${n}](#ticket-${n})`), board?.people.map((p) => p.login) ?? []);
   return (
     <div className="prose-ticket chat-body text-[14.5px]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+      <ReactMarkdown {...MD_PLUGINS} components={{
+        ...MD_CODE,
         a: ({ href, children }) => href?.startsWith("#mention-") ? <span className="mention">{children}</span>
           : href?.startsWith("#ticket-") ? <button className="ticket-ref" onClick={() => void open(Number(href.slice(8)))}>{children}</button>
           : <a href={href} target="_blank" rel="noreferrer">{children}</a>,
