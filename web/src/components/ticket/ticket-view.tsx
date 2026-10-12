@@ -35,7 +35,7 @@ import { createContext, Fragment, useContext, useEffect, useEffectEvent, useRef,
 import { useLayout, type Layout } from "@/lib/layout";
 import { CustomiseMenu, CustomSection, useSectionDrops } from "../layout/custom-section";
 import ReactMarkdown from "react-markdown";
-import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
+import { cleanMd, MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 import { Avatar, cleanTitle, LabelChip, OptionPill, TypeIcon } from "./bits";
 import { DateInput, NumberInput, OptionPicker, PeoplePicker, SprintPicker } from "./pickers";
@@ -293,7 +293,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
               onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); if (e.key === "Escape") { setBody(parts.text); setEditing(false); } }}
               className="field-bare block w-full resize-y bg-transparent p-3 font-mono text-sm leading-relaxed outline-none" placeholder="Describe the work. Markdown works: **bold**, - [ ] checklists, ### headings." />
           ) : (
-            <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{body || "_Nothing to preview._"}</ReactMarkdown></div>
+            <div className="prose-ticket min-h-40 p-4 text-sm"><ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{cleanMd(body) || "_Nothing to preview._"}</ReactMarkdown></div>
           )}
           <div className="flex items-center gap-2 border-t px-3 py-2">
             <span className="text-xs text-muted-foreground">Ctrl+Enter to save · Esc to cancel</span>
@@ -303,7 +303,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
         </div>
       ) : parts.text.trim() ? (
         <div className="prose-ticket cursor-text rounded-xl p-1 text-[15px] hover:bg-muted/40" onDoubleClick={() => { setBody(parts.text); setEditing(true); }}>
-          <ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{parts.text}</ReactMarkdown>
+          <ReactMarkdown {...MD_PLUGINS} components={MD_CODE}>{cleanMd(parts.text)}</ReactMarkdown>
         </div>
       ) : (
         <button onClick={() => setEditing(true)} className="w-full rounded-xl border border-dashed p-5 text-left text-sm text-muted-foreground hover:bg-muted/40">
@@ -321,6 +321,7 @@ function Description({ ticket: t }: { ticket: Ticket }) {
 // started before the last save. Expires after 15s in case GitHub reformats it.
 const pendingBody = new Map<string, string>();
 const PENDING_MS = 15_000;
+const bodyQueue = new Map<string, Promise<unknown>>();
 
 function Checklist({ ticket: t }: { ticket: Ticket }) {
   const actions = useActions();
@@ -339,7 +340,11 @@ function Checklist({ ticket: t }: { ticket: Ticket }) {
     pendingBody.set(t.url, body);
     const forget = () => { if (pendingBody.get(t.url) === body) pendingBody.delete(t.url); };
     setTimeout(forget, PENDING_MS);
-    void actions.updateText(t, { body }).then((ok) => { if (!ok) forget(); });
+    // One save at a time per ticket, and only the newest body: parallel saves can
+    // reach GitHub out of order and an older list would win.
+    const run = () => (pendingBody.get(t.url) === body ? actions.updateText(t, { body }).then((ok) => { if (!ok) forget(); }) : Promise.resolve());
+    const next = (bodyQueue.get(t.url) ?? Promise.resolve()).then(run, run);
+    bodyQueue.set(t.url, next);
   };
   const doneCount = items.filter((i) => i.done).length;
   const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
@@ -643,7 +648,7 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
       {c.author ? <Avatar person={c.author} size={30} /> : <span className="size-[30px] rounded-full bg-muted" />}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{c.author?.name || c.author?.login || "Someone"}</span>
+          <span className="font-semibold text-foreground">{(c.author && board?.people.find((p) => p.login === c.author!.login)?.name) || c.author?.name || c.author?.login || "Someone"}</span>
           <span title={format(parseISO(c.createdAt), "PPpp")}> · {formatDistanceToNow(parseISO(c.createdAt))} ago</span>
           {c.editedAt && <span title={format(parseISO(c.editedAt), "PPpp")}>· edited</span>}
           {mine && !editing && (
@@ -686,7 +691,7 @@ function Message({ c, ticket: t }: { c: Comment; ticket: Ticket }) {
           </p>
         ) : (
           <div className={cn("prose-ticket mt-1 w-fit max-w-full rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm", system ? "bg-transparent px-0 py-0 text-muted-foreground" : "bg-muted/60")}>
-            <ReactMarkdown {...MD_PLUGINS} components={{ ...MD_CODE, ...MENTION_LINKS }}>{markMentions(c.body, board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
+            <ReactMarkdown {...MD_PLUGINS} components={{ ...MD_CODE, ...MENTION_LINKS }}>{markMentions(cleanMd(c.body), board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
           </div>
         )}
       </div>
