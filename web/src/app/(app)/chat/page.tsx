@@ -16,7 +16,7 @@ import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
-import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
+import { cleanMd, MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 
 // Chat (ClickUp Chat, on GitHub Discussions): channels are discussion
@@ -96,7 +96,7 @@ const dayLabel = (iso: string) => { const d = parseISO(iso); return isToday(d) ?
 function Body({ text }: { text: string }) {
   const { data: board } = useBoard();
   const [, open] = useOpenTicket();
-  const md = markMentions(text.replace(/(^|[\s(])#(\d+)\b/g, (_, pre, n) => `${pre}[#${n}](#ticket-${n})`), board?.people.map((p) => p.login) ?? []);
+  const md = markMentions(cleanMd(text).replace(/(^|[\s(])#(\d+)\b/g, (_, pre, n) => `${pre}[#${n}](#ticket-${n})`), board?.people.map((p) => p.login) ?? []);
   return (
     <div className="prose-ticket chat-body text-[14.5px]">
       <ReactMarkdown {...MD_PLUGINS} components={{

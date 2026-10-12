@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
+import { cleanMd, MD_CODE, MD_PLUGINS } from "@/components/ui-plus/markdown";
 import { toast } from "sonner";
 import { markMentions, MentionTextarea } from "@/components/ui-plus/mention-textarea";
 
@@ -215,7 +215,7 @@ function Doc({ path, onRenamed, onDeleted, onOpenDoc }: { path: string; onRename
         : href && /.md$/i.test(href) && !/^[a-z]+:/i.test(href)
           ? <button className="doc-link" onClick={() => onOpenDoc(resolveDoc(path, href))}>{children}</button>
           : <a href={href} target={href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer">{children}</a>,
-    }}>{markMentions(linkTickets(editing ? text : file.data?.text ?? ""), board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
+    }}>{markMentions(linkTickets(cleanMd(editing ? text : file.data?.text ?? "")), board?.people.map((x) => x.login) ?? [])}</ReactMarkdown>
   );
 
   return (
