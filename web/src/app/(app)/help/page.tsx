@@ -70,6 +70,7 @@ const SECTIONS: Section[] = [
       ]} />
       <p>To give someone access, add them to the organisation or the repository on GitHub, and to the GitHub Project. To remove access, remove them there; it applies immediately.</p>
       <Note tone="warn"><b>Private repository = private board.</b> If the repository is public, its issues, docs, whiteboards and discussions are readable by anyone on the internet, whatever this app shows. Keep company work in a <b>private</b> repository with a <b>private</b> project.</Note>
+      <p><b>Members-only sign-in:</b> an admin can limit the whole app to members of chosen GitHub organisations. Anyone else is turned away at sign-in, and the key GitHub issued them is withdrawn on the spot. Removing someone from the organisation on GitHub locks them out of a private board immediately.</p>
       <p><b>Two ways to run it:</b></p>
       <ul>
         <li><b>Shared site:</b> after signing in, each person picks a board on the <b>Connect</b> page. Links carry the board (<code>?board=owner/repo/number</code>), so they can be shared.</li>

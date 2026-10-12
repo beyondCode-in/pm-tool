@@ -4,6 +4,8 @@ compatibility_date = "2026-10-01"
 
 [vars]
 ALLOWED_ORIGIN = "https://beyondcode-in.github.io"
+# Only members of these GitHub organisations can sign in (comma-separated).
+ALLOWED_ORGS = "beyondCode-in"
 # GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are set with:
 #   npx wrangler secret put GITHUB_CLIENT_ID
 #   npx wrangler secret put GITHUB_CLIENT_SECRET
