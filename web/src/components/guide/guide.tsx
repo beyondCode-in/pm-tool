@@ -37,9 +37,11 @@ export function Guide() {
   const count = CHECKLIST.filter((c) => done.has(c.id)).length;
   const pct = Math.round((count / CHECKLIST.length) * 100);
 
-  // First visit: offer the tour once, gently.
+  // First visit: offer the tour once, gently. Remembered, so it never pops up again by itself.
   useEffect(() => {
-    if (done.size) return;
+    let offered = true;
+    try { offered = done.size > 0 || localStorage.getItem("beyondpm.guide-offered") === "1"; localStorage.setItem("beyondpm.guide-offered", "1"); } catch { /* storage blocked: don't nag */ }
+    if (offered) return;
     const t = setTimeout(() => setOpen(true), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
