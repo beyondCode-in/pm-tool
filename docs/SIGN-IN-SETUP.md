@@ -103,3 +103,13 @@ npx wrangler deploy
 | "origin_not_allowed" | The site's address doesn't match `ALLOWED_ORIGIN`. |
 | Signed in but no boards | The account lacks access to that repository or project, or the organisation restricts OAuth apps. An owner approves BeyondPM under Settings → Third-party access. |
 | "redirect_uri mismatch" on GitHub | The OAuth app's callback URL must be exactly `https://beyondcode-in.github.io/pm-tool/auth/callback/`. |
+
+## App logo on GitHub's sign-in screen
+
+GitHub shows the OAuth app's logo on the "Authorize BeyondPM" screen. To set it:
+
+1. Open the **BeyondPM** OAuth app (organisation → Settings → Developer settings → OAuth Apps).
+2. Under **Upload new logo**, choose `docs/brand/beyondpm-oauth-logo.png` (1024 × 1024, square, full bleed; GitHub rounds the corners).
+3. Set **Badge background color** to `#211a16`, then click **Update application**.
+
+The other brand files are in `docs/brand/`: `beyondpm-mark.svg` (the app icon) and `beyondpm-mark-512.png`.
