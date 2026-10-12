@@ -54,7 +54,9 @@ export function defaults(b: Board | null): Workspace {
   const types = opts(b, "Ticket Type");
   const priorities = opts(b, "Priority");
   const done = statuses.filter((s) => DONE.test(s));
-  const prefixes = [...new Set(b.labels.map((l) => /^([\w-]+):\s/.exec(l.name)?.[1]).filter((x): x is string => !!x))];
+  // Tag prefixes from the repository's labels and from tags tickets already carry.
+  const names = [...b.labels.map((l) => l.name), ...b.tickets.flatMap((t) => t.labels.map((l) => l.name))];
+  const prefixes = [...new Set(names.map((n) => /^([\w-]+):\s/.exec(n)?.[1]).filter((x): x is string => !!x))];
   const tagSync: Record<string, string> = {};
   for (const f of b.fields) if (f.kind === "single" && prefixes.includes(f.name.toLowerCase())) tagSync[f.name] = f.name.toLowerCase();
   return {

@@ -9,7 +9,7 @@ import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
 import { plain, today, iterationField } from "./board";
-import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
+import type { Board, Comment, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
 import { bindBoard, isDoneStatus, priorityIndex, workspace } from "./workspace";
 import { nextOccurrence, repeatOf, REPEATS } from "./recurring";
 import { auditBody } from "./audit";
@@ -30,7 +30,9 @@ function browserSource(): DataSource | null {
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({
-    defaultOptions: { queries: { staleTime: 20_000, refetchInterval: 45_000, refetchOnWindowFocus: true, retry: 1 } },
+    // Live feel: refresh every 15 s while the tab is visible, and at once on return.
+    // Reads revalidate with ETags, so unchanged answers are cheap 304s.
+    defaultOptions: { queries: { staleTime: 10_000, refetchInterval: 15_000, refetchOnWindowFocus: true, retry: 1 } },
   }));
   // The pre-rendered HTML has no source (no browser storage on the server);
   // the browser value is swapped in right after hydration, without a mismatch.
@@ -191,13 +193,13 @@ export function useActions() {
 
 export function useComments(t: Ticket | null) {
   const source = useSource();
-  return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: false });
+  return useQuery({ queryKey: ["comments", t?.url], enabled: !!source && !!t, queryFn: () => source!.comments(t!), refetchInterval: 15_000 });
 }
 
 // The change history; refetched whenever the ticket itself changes.
 export function useHistory(t: Ticket | null) {
   const source = useSource();
-  return useQuery({ queryKey: ["history", t?.url, t?.updatedAt, t?.labels.length, t?.assignees.length], enabled: !!source && !!t, queryFn: () => source!.history(t!), refetchInterval: false, placeholderData: (prev) => prev });
+  return useQuery({ queryKey: ["history", t?.url, t?.updatedAt, t?.labels.length, t?.assignees.length], enabled: !!source && !!t, queryFn: () => source!.history(t!), refetchInterval: 15_000, placeholderData: (prev) => prev });
 }
 
 export function useAddComment() {
@@ -205,7 +207,9 @@ export function useAddComment() {
   const qc = useQueryClient();
   return async (t: Ticket, body: string) => {
     try {
-      await source!.addComment(t, body);
+      const added = await source!.addComment(t, body);
+      // Show it straight away; the refetch below then confirms it.
+      qc.setQueryData<Comment[]>(["comments", t.url], (list) => (list && !list.some((c) => c.id === added.id) ? [...list, added] : list));
       await qc.invalidateQueries({ queryKey: ["comments", t.url] });
       return true;
     } catch (e) {

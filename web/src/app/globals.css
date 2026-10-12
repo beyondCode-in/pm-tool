@@ -299,3 +299,47 @@
 /* The collapsed icon rail scrolls with the wheel but never shows a bar. */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Markdown: code blocks and Mermaid diagrams ───────────────────────── */
+.md-code, .md-diagram { margin: 0.9em 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px -16px oklch(0 0 0 / 0.18); }
+.md-code-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.35rem 0.5rem 0.35rem 0.85rem; border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--muted) 70%, transparent); font: 600 11px/1.4 var(--font-geist-mono), ui-monospace, monospace; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+.md-code-bar button { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 7px; padding: 0.2rem 0.45rem; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted-foreground); transition: background 0.15s, color 0.15s; }
+.md-code-bar button:hover { background: var(--background); color: var(--foreground); }
+.prose-ticket .md-code pre { margin: 0; border-radius: 0; background: transparent; padding: 0.9rem 1rem; font: 13px/1.65 var(--font-geist-mono), ui-monospace, monospace; }
+.md-diagram { background: radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--foreground) 9%, transparent) 1px, transparent 0) 0 0 / 18px 18px, var(--card); }
+.md-diagram-svg { display: flex; justify-content: center; overflow-x: auto; padding: 1.25rem 1rem; }
+.md-diagram-svg svg { max-width: 100%; height: auto; }
+.md-diagram-svg .node rect, .md-diagram-svg .node polygon, .md-diagram-svg .node circle, .md-diagram-svg .node path { rx: 10px; ry: 10px; filter: drop-shadow(0 2px 4px oklch(0 0 0 / 0.08)); }
+.md-diagram-svg .edgePath path, .md-diagram-svg .flowchart-link { stroke-width: 1.6px; }
+.md-diagram-src { margin: 0 !important; border-radius: 0 !important; background: transparent !important; padding: 0.9rem 1rem !important; font: 13px/1.6 var(--font-geist-mono), ui-monospace, monospace; white-space: pre; overflow-x: auto; }
+.md-diagram-full { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 3rem 1.5rem; background: oklch(0 0 0 / 0.55); backdrop-filter: blur(6px); animation: md-fade 0.15s ease-out; }
+.md-diagram-svg-full { max-width: min(1200px, 100%); max-height: 100%; overflow: auto; border-radius: 16px; background: var(--card); padding: 2rem; box-shadow: 0 30px 80px -20px oklch(0 0 0 / 0.5); }
+.md-diagram-svg-full svg { max-width: none; width: 100%; }
+.md-diagram-close { position: fixed; top: 1rem; right: 1rem; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 999px; background: var(--card); color: var(--foreground); box-shadow: 0 4px 14px oklch(0 0 0 / 0.25); }
+@keyframes md-fade { from { opacity: 0; } }
+
+/* Markdown tables, quotes and headings in docs */
+.prose-ticket table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; font-size: 0.92em; }
+.prose-ticket th { background: var(--muted); text-align: left; font-weight: 600; }
+.prose-ticket td, .prose-ticket th { border: 0; border-bottom: 1px solid var(--border); padding: 0.5rem 0.75rem; }
+.prose-ticket tr:last-child td { border-bottom: 0; }
+.prose-ticket tbody tr:hover td { background: color-mix(in oklch, var(--muted) 50%, transparent); }
+.prose-ticket blockquote { border-left: 3px solid var(--primary); background: var(--accent); color: var(--accent-foreground); padding: 0.6rem 0.9rem; border-radius: 0 10px 10px 0; }
+.doc-prose h1 { font-size: 1.6rem; letter-spacing: -0.01em; }
+.doc-prose h2 { font-size: 1.2rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+
+/* Syntax colours (highlight.js classes), from the theme */
+.hljs-comment, .hljs-quote { color: var(--muted-foreground); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-type { color: oklch(0.55 0.19 295); }
+.hljs-string, .hljs-attr-value, .hljs-template-variable, .hljs-addition { color: oklch(0.55 0.14 150); }
+.hljs-number, .hljs-literal, .hljs-symbol { color: oklch(0.6 0.16 50); }
+.hljs-title, .hljs-section, .hljs-function .hljs-title { color: oklch(0.55 0.16 250); }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-property { color: oklch(0.57 0.13 200); }
+.hljs-meta, .hljs-tag { color: oklch(0.6 0.12 20); }
+.hljs-deletion { color: oklch(0.58 0.2 25); }
+.dark .hljs-keyword, .dark .hljs-selector-tag, .dark .hljs-built_in, .dark .hljs-type { color: oklch(0.78 0.13 295); }
+.dark .hljs-string, .dark .hljs-attr-value, .dark .hljs-template-variable, .dark .hljs-addition { color: oklch(0.8 0.13 150); }
+.dark .hljs-number, .dark .hljs-literal, .dark .hljs-symbol { color: oklch(0.82 0.12 60); }
+.dark .hljs-title, .dark .hljs-section, .dark .hljs-function .hljs-title { color: oklch(0.8 0.11 250); }
+.dark .hljs-attr, .dark .hljs-attribute, .dark .hljs-variable, .dark .hljs-property { color: oklch(0.8 0.1 200); }
+.dark .hljs-meta, .dark .hljs-tag { color: oklch(0.78 0.1 20); }
