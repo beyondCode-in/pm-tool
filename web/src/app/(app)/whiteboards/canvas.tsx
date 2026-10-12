@@ -69,7 +69,8 @@ export function Canvas({ path, title, onBack }: { path: string; title: string; o
       </header>
       <div className="relative min-h-0 flex-1" data-testid="whiteboard">
         <Excalidraw
-          excalidrawAPI={(a) => { api.current = a; requestAnimationFrame(() => { saved.current = scene(); }); }}
+          // Excalidraw can call this more than once; take the "saved" snapshot only the first time.
+          excalidrawAPI={(a) => { if (api.current) return; api.current = a; requestAnimationFrame(() => { saved.current = scene(); }); }}
           initialData={{ elements: (initial.elements ?? []) as never, appState: { ...(initial.appState ?? {}), collaborators: undefined } as never, files: (initial.files ?? {}) as never, scrollToContent: true }}
           theme={resolvedTheme === "dark" ? "dark" : "light"}
           name={title}
