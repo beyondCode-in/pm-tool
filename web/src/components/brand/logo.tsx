@@ -1,30 +1,16 @@
 import { cn } from "@/lib/utils";
-import { useId } from "react";
 
-// The BeyondPM mark: three board columns rising left to right, like work
-// moving across a board, with a spark just past the last one: done, and a
-// little beyond. Reads at 16 px; colours come from the theme tokens.
+// The BeyondPM mark: a heavy lowercase "b" with a ticket card flying off its
+// shoulder. The "b" is the name; the card is work moving on, a little beyond.
+// Flat, two colours, no gradients: it has to hold up at 16 px and in one ink.
+// Ink and paper swap in dark mode; the card is always the brand orange.
 export function LogoMark({ size = 28, className, animated }: { size?: number; className?: string; animated?: boolean }) {
-  const id = useId();
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden className={cn("shrink-0", animated && "logo-animated", className)}>
-      <defs>
-        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: "var(--brand-from)" }} />
-          <stop offset="1" style={{ stopColor: "var(--brand-to)" }} />
-        </linearGradient>
-        <radialGradient id={`${id}-glow`} cx="0.25" cy="0.15" r="0.9">
-          <stop offset="0" stopColor="white" stopOpacity="0.32" />
-          <stop offset="0.6" stopColor="white" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="32" height="32" rx="9.5" fill={`url(#${id}-bg)`} />
-      <rect width="32" height="32" rx="9.5" fill={`url(#${id}-glow)`} />
-      <rect x="0.5" y="0.5" width="31" height="31" rx="9" fill="none" stroke="white" strokeOpacity="0.18" />
-      <rect className="logo-bar" x="6.5" y="17" width="4.6" height="8.5" rx="2.3" fill="white" fillOpacity="0.62" />
-      <rect className="logo-bar" x="13.7" y="12.5" width="4.6" height="13" rx="2.3" fill="white" fillOpacity="0.82" style={{ animationDelay: "0.12s" }} />
-      <rect className="logo-bar" x="20.9" y="8" width="4.6" height="17.5" rx="2.3" fill="white" style={{ animationDelay: "0.24s" }} />
-      <path className="logo-spark" d="M26.6 3.6 l0.75 1.85 1.85 0.75 -1.85 0.75 -0.75 1.85 -0.75 -1.85 -1.85 -0.75 1.85 -0.75z" style={{ fill: "var(--brand-spark)" }} />
+      <rect width="32" height="32" rx="8" style={{ fill: "var(--brand-ink)" }} />
+      <path fillRule="evenodd" style={{ fill: "var(--brand-paper)" }}
+        d="M10.3 5.5a2.3 2.3 0 0 1 2.3 2.3v4.7h4.9a6.75 6.75 0 0 1 0 13.5H9.9A1.9 1.9 0 0 1 8 24.1V7.8a2.3 2.3 0 0 1 2.3-2.3ZM12.6 16.6v5.3h4.9a2.65 2.65 0 0 0 0-5.3Z" />
+      <rect className="logo-card" x="19.6" y="4.6" width="7.2" height="5.6" rx="1.5" transform="rotate(14 23.2 7.4)" style={{ fill: "var(--brand-mark)" }} />
     </svg>
   );
 }
@@ -41,13 +27,12 @@ export function Logo({ size = 28, subtitle }: { size?: number; subtitle?: string
   );
 }
 
-// Loading state: the columns rise and the spark twinkles.
+// Loading state: the card lifts off and settles, over and over.
 export function BrandLoader({ label = "Loading your board…" }: { label?: string }) {
   return (
     <div role="status" aria-live="polite" className="grid flex-1 place-items-center p-10">
       <div className="flex flex-col items-center gap-4">
         <span className="relative">
-          <span className="absolute inset-0 -z-10 rounded-3xl bg-primary/35 blur-2xl" aria-hidden />
           <LogoMark size={56} animated />
         </span>
         <span className="text-sm text-muted-foreground">{label}</span>
