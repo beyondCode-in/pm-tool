@@ -8,10 +8,11 @@ import { markDone } from "./onboarding";
 import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
-import { plain, today } from "./board";
+import { plain, today, iterationField } from "./board";
 import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
 import { bindBoard, isDoneStatus, priorityIndex, workspace } from "./workspace";
 import { nextOccurrence, repeatOf, REPEATS } from "./recurring";
+import { auditBody } from "./audit";
 
 const BOARD_KEY = ["board"] as const;
 // undefined = not known yet (pre-render), null = signed out.
@@ -108,9 +109,23 @@ export function useActions() {
       return runThenSync(t.itemId, field, value, () => run(
         `#${t.number} → ${field}: ${pretty}`,
         () => patchTicket(t.itemId, (x) => ({ ...x, fields: { ...x.fields, [field]: value ?? undefined } })),
-        () => source!.setField(board(), t, field, value),
+        async () => { await source!.setField(board(), t, field, value); await recordChange(t, field, previous, value); },
         opts.silent ? undefined : () => void setField({ ...t, fields: { ...t.fields, [field]: value ?? undefined } }, field, previous, { silent: true }),
       ));
+    };
+    // History for board fields: GitHub doesn't record project field changes, so
+    // leave a signed note on the issue (lib/audit.ts). Demo boards record their own.
+    const recordChange = async (t: Ticket, field: FieldName, from: FieldValue, to: FieldValue) => {
+      if (source?.mode !== "github") return;
+      const show = (v: FieldValue) => {
+        if (v === null || v === undefined || v === "") return null;
+        if (field === "Sprint") return iterationField(board())?.iterations.find((i) => i.id === v)?.title ?? String(v);
+        return String(v);
+      };
+      try {
+        await source.addComment(t, auditBody(field, show(from), show(to)));
+        void qc.invalidateQueries({ queryKey: ["history", t.url] });
+      } catch { /* the change itself succeeded; a missing note is not worth an error */ }
     };
     const runThenSync = async (id: string, field: FieldName, value: FieldValue, write: () => Promise<boolean>) => {
       const ok = await write();

@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Checkbox } from "@/components/ui/checkbox";
 import { joinChecklist, splitChecklist, type CheckItem } from "@/lib/checklist";
 import { repeatOf, REPEATS, withRepeat, type Repeat } from "@/lib/recurring";
+import { isAudit } from "@/lib/audit";
 import { useGoalActions, useMilestones } from "@/lib/goals";
 import { Target as TargetIcon } from "@/components/icons";
 import { Repeat as RepeatIcon } from "@/components/icons";
@@ -524,7 +525,7 @@ function Activity({ ticket: t }: { ticket: Ticket }) {
   const [filter, setFilter] = useState<"all" | "comments" | "history" | "time">("all");
   const { data: history } = useHistory(t);
   const endRef = useRef<HTMLDivElement>(null);
-  const shown = (comments ?? []).filter((c) => filter === "all" || (filter === "time" ? c.body.startsWith("⏱️") : filter === "comments" && !c.body.startsWith("⏱️") && !ATTACHMENT.test(c.body)));
+  const shown = (comments ?? []).filter((c) => !isAudit(c.body)).filter((c) => filter === "all" || (filter === "time" ? c.body.startsWith("⏱️") : filter === "comments" && !c.body.startsWith("⏱️") && !ATTACHMENT.test(c.body)));
   const events = filter === "all" || filter === "history" ? (history ?? []) : [];
   // Comments and changes in one timeline, oldest first like a conversation.
   const feed = [...shown.map((c) => ({ at: c.createdAt, c, e: null as HistoryEvent | null })), ...events.map((e) => ({ at: e.at, c: null as Comment | null, e }))]
