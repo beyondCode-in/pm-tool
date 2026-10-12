@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { isDone, isOverdue, plain, today } from "./board";
-import type { Board } from "./types";
+import type { Activity, Board, Person } from "./types";
 
 // Notifications are derived on the device: each time the board refreshes we
 // compare it with the last snapshot we saw and record what changed for this
@@ -10,7 +10,7 @@ import type { Board } from "./types";
 // cross-device inbox needs the server version (see docs/BUILD-PROMPT.md).
 
 export type NoticeKind = "assigned" | "status" | "comment" | "triage" | "due" | "overdue";
-export type Notice = { id: string; kind: NoticeKind; ticket: number; title: string; text: string; at: string; read: boolean; later?: string; cleared?: boolean };
+export type Notice = { id: string; kind: NoticeKind; ticket: number; title: string; text: string; at: string; read: boolean; later?: string; cleared?: boolean; actor?: Person | null };
 
 type Snap = Record<string, { status?: string; assignees: string[]; comments: number; triage: boolean; state: string }>;
 const KEY = "beyondpm.notifications";
@@ -53,10 +53,52 @@ export function useNotifications(): Notice[] {
   try { return JSON.parse(s) as Notice[]; } catch { return []; }
 }
 
+// "Watch everything": notify about every ticket, not only yours. Per browser.
+const WATCH = "beyondpm.watch-all";
+const CURSOR = "beyondpm.activity-since";
+export const getWatchAll = () => { try { return localStorage.getItem(WATCH) === "1"; } catch { return false; } };
+export const setWatchAll = (on: boolean) => { try { localStorage.setItem(WATCH, on ? "1" : "0"); } catch { /* ignore */ } listeners.forEach((l) => l()); };
+export function useWatchAll() {
+  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, getWatchAll, () => false);
+}
+
+/** Where to read activity from: the last time we looked (first run: now, so there is no flood). */
+export function activityCursor(): string {
+  try { const c = localStorage.getItem(CURSOR); if (c) return c; const now = new Date().toISOString(); localStorage.setItem(CURSOR, now); return now; } catch { return new Date().toISOString(); }
+}
+
+// Turn what other people did into notices: on tickets you're assigned to or
+// opened, when you're @mentioned or assigned, or on everything if you watch it all.
+export function ingestActivity(board: Board, events: Activity[]) {
+  const me = board.viewer.login;
+  const all = getWatchAll();
+  const existing = new Set(load().map((n) => n.id));
+  const add: Notice[] = [];
+  let newest = "";
+  for (const e of events) {
+    if (e.at > newest) newest = e.at;
+    if (!e.actor || e.actor.login === me || existing.has(`act:${e.id}`)) continue;
+    const t = board.tickets.find((x) => x.number === e.ticket);
+    if (!t) continue;
+    const mentioned = e.mentions?.some((m) => m.toLowerCase() === me.toLowerCase());
+    const assignedMe = e.kind === "assigned" && e.assignee === me;
+    const mine = t.assignees.some((a) => a.login === me) || t.author?.login === me;
+    if (!(all || mine || mentioned || assignedMe)) continue;
+    const kind: NoticeKind = assignedMe ? "assigned" : e.kind === "comment" ? "comment" : "status";
+    const text = assignedMe ? "assigned it to you" : mentioned ? e.text.replace(/^commented/, "mentioned you") : e.text;
+    add.push({ id: `act:${e.id}`, kind, ticket: t.number, title: `#${t.number} ${clean(t.title)}`, text, at: e.at, read: false, actor: e.actor });
+  }
+  if (newest) { try { localStorage.setItem(CURSOR, newest); } catch { /* ignore */ } }
+  if (add.length) save([...add, ...load()].sort((a, b) => b.at.localeCompare(a.at)));
+  return add;
+}
+
 const clean = (t: string) => t.replace(/^\[[^\]]+\]:?\s*/, "");
 
 // Compare the board with the last snapshot and add notices for this person.
-export function digest(board: Board) {
+// With live activity (GitHub) assignments, moves and comments come from
+// ingestActivity, with the person who did them; the diff only adds reminders.
+export function digest(board: Board, live = false) {
   const me = board.viewer.login;
   let prev: Snap | null = null;
   try { prev = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch { prev = null; }
@@ -73,7 +115,7 @@ export function digest(board: Board) {
     const mine = assignees.includes(me) || t.author?.login === me;
     const was = prev?.[t.url];
     const title = `#${t.number} ${clean(t.title)}`;
-    if (prev && was) {
+    if (prev && was && !live) {
       if (assignees.includes(me) && !was.assignees.includes(me))
         push({ id: `assigned:${t.url}:${now.slice(0, 16)}`, kind: "assigned", ticket: t.number, title, text: "was assigned to you" });
       if (mine && was.status !== t.fields.Status && t.fields.Status)

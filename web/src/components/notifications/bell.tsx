@@ -3,7 +3,9 @@
 import * as P from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useBoard } from "@/lib/data";
+import { useBoard, useSource } from "@/lib/data";
+import { Avatar } from "../ticket/bits";
+import { activityCursor, ingestActivity, setWatchAll, useWatchAll } from "@/lib/notifications";
 import { clearAll, clearNotice, digest, isWaiting, laterNotice, markAllRead, markRead, restoreNotice, useNotifications, wakeLater, type Notice, type NoticeKind } from "@/lib/notifications";
 import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,8 @@ const nowMs = () => Date.now();
 export function NotificationBell({ compact }: { compact?: boolean }) {
   const { data: board, dataUpdatedAt } = useBoard();
   const list = useNotifications();
+  const source = useSource();
+  const watchAll = useWatchAll();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"inbox" | "later" | "cleared">("inbox");
   const [, openTicket] = useOpenTicket();
@@ -41,10 +45,14 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
   useEffect(() => {
     if (!board) return;
     wakeLater();
-    const added = digest(board);
-    if (added.length === 1) toast(added[0].title, { description: added[0].text, icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
-    else if (added.length > 1) toast(`${added.length} new notifications`, { icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
-  }, [board, dataUpdatedAt]);
+    const live = !!source?.activity;
+    const announce = (added: Notice[]) => {
+      if (added.length === 1) toast(added[0].title, { description: `${added[0].actor ? added[0].actor.login + " " : ""}${added[0].text}`, icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
+      else if (added.length > 1) toast(`${added.length} new notifications`, { icon: <span className="toast-tile" aria-hidden><P.BellRinging size={18} weight="fill" /></span> });
+    };
+    announce(digest(board, live));
+    if (live) source!.activity!(activityCursor()).then((ev) => announce(ingestActivity(board, ev))).catch(() => { /* try again on the next refresh */ });
+  }, [board, dataUpdatedAt, source]);
 
   const shown = tab === "inbox" ? inbox : tab === "later" ? later : cleared;
   const go = (n: Notice) => { markRead(n.id); setOpen(false); void openTicket(n.ticket); };
@@ -78,12 +86,15 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
               return (
                 <motion.li key={n.id} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }} className="group/n relative">
                   <button onClick={() => go(n)} className={cn("flex w-full gap-3 px-4 py-3 pr-20 text-left transition-colors hover:bg-muted/60", !n.read && "bg-accent/40")}>
-                    <span className="ico grid size-8 shrink-0 place-items-center rounded-lg" style={{ background: `oklch(0.94 ${k.chroma * 0.4} ${k.hue})`, color: `oklch(0.5 ${k.chroma} ${k.hue})` }}>
-                      <Icon size={17} weight="duotone" />
+                    <span className="relative shrink-0">
+                      {n.actor ? <Avatar person={n.actor} size={32} /> : (
+                        <span className="ico grid size-8 place-items-center rounded-lg" style={{ background: `oklch(0.94 ${k.chroma * 0.4} ${k.hue})`, color: `oklch(0.5 ${k.chroma} ${k.hue})` }}><Icon size={17} weight="duotone" /></span>
+                      )}
+                      {n.actor && <span className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full ring-2 ring-popover" style={{ background: `oklch(0.94 ${k.chroma * 0.4} ${k.hue})`, color: `oklch(0.5 ${k.chroma} ${k.hue})` }}><Icon size={10} weight="bold" /></span>}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{n.title}</span>
-                      <span className="block text-xs text-muted-foreground">{n.text} · {formatDistanceToNow(parseISO(n.at))} ago</span>
+                      <span className="block text-xs text-muted-foreground">{n.actor && <span className="font-medium text-foreground">{n.actor.login} </span>}{n.text} · {formatDistanceToNow(parseISO(n.at))} ago</span>
                     </span>
                     {!n.read && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-label="unread" />}
                   </button>
@@ -109,6 +120,12 @@ export function NotificationBell({ compact }: { compact?: boolean }) {
             </li>
           )}
         </ul>
+        {source?.activity && (
+          <label className="flex cursor-pointer items-center gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
+            <input type="checkbox" className="accent-[var(--primary)]" checked={watchAll} onChange={(e) => setWatchAll(e.target.checked)} />
+            Watch everything (every ticket, not only yours)
+          </label>
+        )}
         {list.length > 0 && (
           <div className="flex justify-between border-t px-2 py-1.5">
             <Button size="xs" variant="ghost" disabled={!unread} onClick={markAllRead}><P.Checks />Mark all read</Button>

@@ -1,5 +1,5 @@
 import { config } from "./config";
-import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent } from "./types";
+import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent, Activity } from "./types";
 import { timeBody } from "./time-entry";
 import { parseAudit } from "./audit";
 import { workspace } from "./workspace";
@@ -134,6 +134,32 @@ export function createGitHubSource(token: string): DataSource {
 
     async addComment(t, body) {
       return toComment(await rest<RestComment>(`${at(t)}/issues/${t.number}/comments`, { method: "POST", body: JSON.stringify({ body }) }));
+    },
+
+    // Who did what across the repository since a time: comments (including the
+    // field-change notes from lib/audit.ts) and assign / close / reopen events.
+    async activity(since) {
+      type U = { login: string; avatar_url: string } | null;
+      const person = (u: U | undefined) => (u ? { login: u.login, avatarUrl: u.avatar_url } : null);
+      const num = (url: string) => Number(url.split("/").pop());
+      const [comments, events] = await Promise.all([
+        rest<{ id: number; user: U; body: string; created_at: string; issue_url: string }[]>(`${repoPath}/issues/comments?since=${encodeURIComponent(since)}&sort=created&direction=desc&per_page=100`),
+        rest<{ id: number; event: string; actor: U; created_at: string; assignee?: U; issue?: { number: number } }[]>(`${repoPath}/issues/events?per_page=100`),
+      ]);
+      const out: Activity[] = [];
+      for (const c of comments) {
+        if (c.created_at <= since) continue;
+        const a = parseAudit(c.body);
+        if (a) { out.push({ id: `c${c.id}`, at: c.created_at, actor: person(c.user), ticket: num(c.issue_url), kind: a.field === "Status" ? "status" : "field", text: a.field === "Status" ? `moved it to ${a.to ?? "no status"}` : a.to ? `set ${a.field} to ${a.to}` : `cleared ${a.field}` }); continue; }
+        const text = c.body.replace(/\s+/g, " ").trim();
+        out.push({ id: `c${c.id}`, at: c.created_at, actor: person(c.user), ticket: num(c.issue_url), kind: "comment", text: `commented: "${text.length > 90 ? text.slice(0, 90) + "…" : text}"`, mentions: [...c.body.matchAll(/@([\w-]+)/g)].map((m) => m[1]) });
+      }
+      for (const e of events) {
+        if (e.created_at <= since || !e.issue) continue;
+        if (e.event === "assigned") out.push({ id: `e${e.id}`, at: e.created_at, actor: person(e.actor), ticket: e.issue.number, kind: "assigned", assignee: e.assignee?.login, text: `assigned it to ${e.assignee?.login ?? "someone"}` });
+        else if (e.event === "closed" || e.event === "reopened") out.push({ id: `e${e.id}`, at: e.created_at, actor: person(e.actor), ticket: e.issue.number, kind: e.event, text: e.event === "closed" ? "closed it" : "reopened it" });
+      }
+      return out.sort((a, b) => b.at.localeCompare(a.at));
     },
 
     // GitHub's issue timeline: labels, assignees, renames, closes, links.
