@@ -63,6 +63,10 @@ export type MilestoneInput = { number?: number; title: string; description: stri
 export type HistoryKind = "created" | "status" | "field" | "assigned" | "unassigned" | "labeled" | "unlabeled" | "renamed" | "closed" | "reopened" | "parent" | "linked" | "other";
 export type HistoryEvent = { id: string; at: string; actor: Person | null; kind: HistoryKind; field?: string; from?: string; to?: string; text?: string };
 
+// One thing someone did anywhere on the board, for notifications.
+export type ActivityKind = "comment" | "status" | "field" | "assigned" | "closed" | "reopened";
+export type Activity = { id: string; at: string; actor: Person | null; ticket: number; kind: ActivityKind; text: string; mentions?: string[]; assignee?: string };
+
 export type Comment = { id: string; restId?: number; author: Person | null; body: string; createdAt: string; editedAt?: string };
 
 export type Board = {
@@ -102,6 +106,8 @@ export interface DataSource {
   addComment(t: Ticket, body: string): Promise<Comment>;
   updateComment(t: Ticket, c: Comment, body: string): Promise<void>;
   history(t: Ticket): Promise<HistoryEvent[]>;
+  /** Recent activity across the repository, newest first (GitHub only). */
+  activity?(since: string): Promise<Activity[]>;
   deleteComment(t: Ticket, c: Comment): Promise<void>;
   create(board: Board, input: NewTicket): Promise<number>;
   // Relationships: Jira's "blocks / is blocked by", plus the parent link.
