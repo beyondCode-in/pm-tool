@@ -5,7 +5,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CHECKLIST, markDone, useOnboarding } from "@/lib/onboarding";
 import { useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
-import { Check, Compass, Keyboard, Lightbulb, Sparkles } from "@/components/icons";
+import Link from "next/link";
+import { BookOpen, Check, Compass, Keyboard, Lightbulb, Sparkles } from "@/components/icons";
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -24,7 +25,7 @@ const TIPS: Record<string, string[]> = {
   "/dashboard": ["The dashed line is the even pace for the sprint.", "Click anything in 'Needs attention' to open it."],
 };
 
-const SHORTCUTS: [string, string][] = [["C", "New ticket"], ["/", "Search"], ["Ctrl K", "Jump anywhere"], ["G B", "Go to Board"], ["?", "All shortcuts"]];
+const SHORTCUTS: [string, string][] = [["C", "New ticket"], ["/", "Search"], ["Ctrl K", "Jump anywhere"], ["R", "Reminder"], ["G B", "Go to Board"], ["?", "All shortcuts"]];
 
 export function Guide() {
   const [open, setOpen] = useState(false);
@@ -96,7 +97,10 @@ export function Guide() {
                 ))}
               </div>
             </div>
-            <Button className="w-full" variant="outline" onClick={startTour}><Compass />Take the tour</Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={startTour}><Compass />Take the tour</Button>
+              <Button variant="outline" nativeButton={false} render={<Link href="/help/" onClick={() => setOpen(false)} />}><BookOpen />Full guide</Button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>
