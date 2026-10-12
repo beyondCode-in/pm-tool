@@ -7,6 +7,7 @@ import { useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { BookOpen, Check, Compass, Keyboard, Lightbulb } from "@/components/icons";
+import { GuideIcon } from "@/components/brand/guide-icon";
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -57,7 +58,7 @@ export function Guide() {
             <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
               className={cn("glow fixed right-4 bottom-20 z-40 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground md:right-6", pathname.startsWith("/chat") ? "bottom-36 md:bottom-28" : "md:bottom-6")} />
           }>
-          <Compass className="size-[22px]" />
+          <GuideIcon className="size-6" board="currentColor" />
           {count < CHECKLIST.length && (
             <span className="absolute -top-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-background bg-foreground text-[10px] font-bold text-background">
               {CHECKLIST.length - count}
@@ -66,7 +67,7 @@ export function Guide() {
         </PopoverTrigger>
         <PopoverContent side="top" align="end" sideOffset={12} className="w-80 overflow-hidden p-0">
           <div className="relative overflow-hidden border-b bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)] p-4 text-white">
-            <p className="flex items-center gap-1.5 text-sm font-semibold"><Compass className="size-4" />Guide</p>
+            <p className="flex items-center gap-1.5 text-sm font-semibold"><GuideIcon className="size-4" board="currentColor" />Guide</p>
             <p className="mt-0.5 text-xs text-white/80">Getting started · {pct}% done</p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/25"><motion.div className="h-full rounded-full bg-white" animate={{ width: `${pct}%` }} /></div>
           </div>

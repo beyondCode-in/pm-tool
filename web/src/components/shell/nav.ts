@@ -1,4 +1,5 @@
-import { BookOpen, Compass, CalendarDays, Chats, Scribble, Clock, House, Target, Users, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
+import { GuideIcon } from "@/components/brand/guide-icon";
+import { BookOpen, CalendarDays, Chats, Scribble, Clock, House, Target, Users, ChartNoAxesColumn, Inbox, KanbanSquare, ListTodo, Map, Network, Rows3, Settings, Timer } from "@/components/icons";
 
 // The same seven views as the GitHub project, plus a calendar and a dashboard.
 export const NAV = [
@@ -18,6 +19,6 @@ export const NAV = [
   { href: "/docs/", label: "Docs", icon: BookOpen, hint: "Specs, how-tos and decisions", key: "k" },
   { href: "/whiteboards/", label: "Whiteboards", icon: Scribble, hint: "Sketch flows and ideas together", key: "x" },
   { href: "/dashboard/", label: "Dashboard", icon: ChartNoAxesColumn, hint: "Progress, workload, risks", key: "d" },
-  { href: "/help/", label: "Guide", icon: Compass, hint: "How everything works, in detail", key: "u" },
+  { href: "/help/", label: "Guide", icon: GuideIcon, hint: "How everything works, in detail", key: "u" },
   { href: "/settings/", label: "Settings", icon: Settings, hint: "Tags, sidebar, appearance", key: "p" },
 ] as const;

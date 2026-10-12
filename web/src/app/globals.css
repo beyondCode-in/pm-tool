@@ -189,6 +189,8 @@
    One accent at a time, chosen per person (data-accent on <html>).
    Each preset sets the primary, focus ring, first chart colour and the
    logo gradient; light and dark get their own lightness steps. */
+:root { --brand-ink: #211a16; --brand-paper: #f7efe4; --brand-mark: #e2622f; }
+.dark { --brand-ink: #f7efe4; --brand-paper: #211a16; }
 :root { --brand-from: oklch(0.62 0.14 40); --brand-to: oklch(0.72 0.13 65); --brand-spark: oklch(0.96 0.03 85); }
 :root[data-accent="cocoa"]   { --primary: oklch(0.47 0.075 48); --ring: oklch(0.47 0.075 48); --chart-1: oklch(0.47 0.075 48); --accent: oklch(0.92 0.025 55); --accent-foreground: oklch(0.34 0.06 48); --brand-from: oklch(0.42 0.07 45); --brand-to: oklch(0.6 0.1 60); }
 :root[data-accent="indigo"]  { --primary: oklch(0.54 0.21 277); --ring: oklch(0.54 0.21 277); --chart-1: oklch(0.54 0.21 277); --accent: oklch(0.94 0.03 277); --accent-foreground: oklch(0.38 0.16 277); --brand-from: oklch(0.56 0.22 277); --brand-to: oklch(0.66 0.2 320); }
@@ -239,10 +241,8 @@
 ::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
 
 /* ── Logo loader: the progress ring fills, the spark twinkles ── */
-@keyframes logo-rise { 0% { transform: scaleY(0.25); } 55%, 100% { transform: scaleY(1); } }
-@keyframes logo-twinkle { 0%, 60% { transform: scale(0.4) rotate(0deg); opacity: 0.4; } 80% { transform: scale(1.25) rotate(45deg); opacity: 1; } 100% { transform: scale(1) rotate(90deg); opacity: 1; } }
-.logo-animated .logo-bar { animation: logo-rise 1.6s cubic-bezier(.65,0,.35,1) infinite alternate; transform-box: fill-box; transform-origin: bottom; }
-.logo-animated .logo-spark { animation: logo-twinkle 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes logo-card { 0%, 100% { transform: rotate(14deg); } 45% { transform: translate(1.6px, -1.6px) rotate(26deg); } }
+.logo-animated .logo-card { animation: logo-card 1.4s cubic-bezier(.45,0,.25,1) infinite; transform-box: fill-box; transform-origin: center; }
 
 /* ── Shimmering skeletons ── */
 @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
