@@ -18,7 +18,7 @@ async function gql<T>(query: string, variables: Record<string, unknown> = {}): P
 }
 
 async function rest<T>(path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: T }> {
-  const res = await fetch(`${api}${path}`, { ...init, headers: { ...headers(), ...(init.headers ?? {}) } });
+  const res = await fetch(`${api}${path}`, { cache: "no-cache", ...init, headers: { ...headers(), ...(init.headers ?? {}) } });
   return { ok: res.ok, status: res.status, data: (await res.json().catch(() => null)) as T };
 }
 

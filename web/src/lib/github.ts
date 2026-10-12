@@ -40,7 +40,10 @@ export function createGitHubSource(token: string): DataSource {
   }
 
   async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const res = await fetch(`https://api.github.com${path}`, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+    // GitHub marks reads as cacheable for 60 s, so a refresh right after a write
+    // would show the old data. "no-cache" always asks GitHub, using the ETag, so
+    // unchanged answers are still cheap (304s don't count against the rate limit).
+    const res = await fetch(`https://api.github.com${path}`, { cache: "no-cache", ...init, headers: { ...headers, ...(init.headers ?? {}) } });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
       throw new GitHubError(explain(res.status, detail.message ?? `GitHub returned ${res.status}.`), res.status);

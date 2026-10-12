@@ -9,7 +9,7 @@ import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
 import { createGitHubSource, GitHubError } from "./github";
 import { plain, today, iterationField } from "./board";
-import type { Board, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
+import type { Board, Comment, DataSource, FieldName, FieldValue, NewTicket, Ticket } from "./types";
 import { bindBoard, isDoneStatus, priorityIndex, workspace } from "./workspace";
 import { nextOccurrence, repeatOf, REPEATS } from "./recurring";
 import { auditBody } from "./audit";
@@ -205,7 +205,9 @@ export function useAddComment() {
   const qc = useQueryClient();
   return async (t: Ticket, body: string) => {
     try {
-      await source!.addComment(t, body);
+      const added = await source!.addComment(t, body);
+      // Show it straight away; the refetch below then confirms it.
+      qc.setQueryData<Comment[]>(["comments", t.url], (list) => (list && !list.some((c) => c.id === added.id) ? [...list, added] : list));
       await qc.invalidateQueries({ queryKey: ["comments", t.url] });
       return true;
     } catch (e) {
