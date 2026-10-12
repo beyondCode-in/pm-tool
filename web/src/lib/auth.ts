@@ -29,6 +29,16 @@ export function startLogin() {
   window.location.assign(url.toString());
 }
 
+/** Throws unless the token's account is an active member of an allowed organisation. */
+export async function checkMembership(token: string): Promise<void> {
+  if (!config.allowedOrgs.length) return;
+  for (const org of config.allowedOrgs) {
+    const res = await fetch(`https://api.github.com/user/memberships/orgs/${encodeURIComponent(org)}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } }).catch(() => null);
+    if (res?.ok && (await res.json().catch(() => ({}))).state === "active") return;
+  }
+  throw new Error(`Only members of ${config.allowedOrgs.join(" or ")} can use this workspace. Ask an admin to add your GitHub account to the organisation.`);
+}
+
 // Called on /auth/callback: checks the state, then asks the sign-in Worker to
 // swap the one-time code for a token (the Worker holds the client secret).
 export async function finishLogin(params: URLSearchParams): Promise<void> {
@@ -47,5 +57,6 @@ export async function finishLogin(params: URLSearchParams): Promise<void> {
   const json = await res.json().catch(() => ({}));
   if (!res.ok || !json.access_token) throw new Error(json.error_description || json.error || "Sign-in failed. Please try again.");
   safe(() => sessionStorage.removeItem(STATE_KEY), undefined);
+  await checkMembership(json.access_token);
   setToken(json.access_token);
 }

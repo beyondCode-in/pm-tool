@@ -3,7 +3,8 @@
 import { Aurora } from "@/components/brand/aurora";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { setToken, startDemo, startLogin } from "@/lib/auth";
+import { toast } from "sonner";
+import { checkMembership, setToken, startDemo, startLogin } from "@/lib/auth";
 import { config, oauthEnabled } from "@/lib/config";
 import { ArrowRight, KanbanSquare, KeyRound, MousePointerClick, Sparkles, Zap } from "@/components/icons";
 import { motion } from "motion/react";
@@ -84,7 +85,7 @@ export default function Login() {
               </button>
             ) : (
               <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2.5 overflow-hidden border-t pt-5"
-                onSubmit={(e) => { e.preventDefault(); if (token.trim()) { setToken(token.trim()); go("/home/"); } }}>
+                onSubmit={(e) => { e.preventDefault(); const t = token.trim(); if (t) void checkMembership(t).then(() => { setToken(t); go("/home/"); }, (err: Error) => toast.error(err.message)); }}>
                 <label htmlFor="token" className="flex items-center gap-1.5 text-sm font-medium"><KeyRound className="size-4" />GitHub access token</label>
                 <input id="token" type="password" autoComplete="off" value={token} onChange={(e) => setTokenValue(e.target.value)} placeholder="github_pat_…"
                   className="h-11 w-full rounded-xl border bg-background/70 px-3 font-mono text-sm outline-none transition-shadow focus:border-ring focus:ring-4 focus:ring-ring/15" />

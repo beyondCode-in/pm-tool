@@ -8,6 +8,10 @@
 //   GITHUB_CLIENT_ID      (plain text)  your OAuth app's client ID
 //   GITHUB_CLIENT_SECRET  (secret)      your OAuth app's client secret
 //   ALLOWED_ORIGIN        (plain text)  e.g. https://beyondcode-in.github.io
+//   ALLOWED_ORGS          (plain text)  optional, e.g. "beyondCode-in" or "org-a,org-b".
+//                                       When set, only active members of one of these
+//                                       organisations can sign in; anyone else's new
+//                                       token is revoked straight away.
 
 export default {
   async fetch(request, env) {
@@ -41,6 +45,33 @@ export default {
     });
     const data = await res.json().catch(() => ({}));
     if (!data.access_token) return reply(400, { error: data.error || "exchange_failed", error_description: data.error_description || "GitHub didn't accept the sign-in code." });
+    const orgs = String(env.ALLOWED_ORGS || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (orgs.length && !(await isMember(data.access_token, orgs))) {
+      await revoke(env, data.access_token);
+      return reply(403, { error: "not_a_member", error_description: `Only members of ${orgs.join(" or ")} can sign in. Ask an admin to add your GitHub account to the organisation.` });
+    }
     return reply(200, { access_token: data.access_token, scope: data.scope, token_type: data.token_type });
   },
 };
+
+const gh = (token, path, init = {}) =>
+  fetch(`https://api.github.com${path}`, { ...init, headers: { Accept: "application/vnd.github+json", "User-Agent": "beyondpm-oauth-worker", Authorization: `Bearer ${token}`, ...(init.headers || {}) } });
+
+// Active membership of any allowed organisation (needs the read:org scope the app asks for).
+async function isMember(token, orgs) {
+  for (const org of orgs) {
+    const res = await gh(token, `/user/memberships/orgs/${encodeURIComponent(org)}`);
+    if (res.ok && (await res.json().catch(() => ({}))).state === "active") return true;
+  }
+  return false;
+}
+
+// Withdraw a token we won't hand out, so it can't be used anywhere.
+async function revoke(env, token) {
+  const basic = btoa(`${env.GITHUB_CLIENT_ID}:${env.GITHUB_CLIENT_SECRET}`);
+  await fetch(`https://api.github.com/applications/${env.GITHUB_CLIENT_ID}/token`, {
+    method: "DELETE",
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "beyondpm-oauth-worker", Authorization: `Basic ${basic}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ access_token: token }),
+  }).catch(() => {});
+}

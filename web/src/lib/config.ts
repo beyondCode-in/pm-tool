@@ -13,6 +13,8 @@ export const config = {
   // login code for a token (it holds the client secret).
   oauthClientId: process.env.NEXT_PUBLIC_OAUTH_CLIENT_ID ?? "",
   authWorkerUrl: process.env.NEXT_PUBLIC_AUTH_WORKER_URL ?? "",
+  /** Only members of these organisations may use the app (comma-separated; empty = anyone). */
+  allowedOrgs: (process.env.NEXT_PUBLIC_ALLOWED_ORGS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? "",
 };
 
