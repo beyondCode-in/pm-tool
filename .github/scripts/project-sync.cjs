@@ -10,7 +10,9 @@ function parseForm(body = '') {
   const answers = {};
   for (const part of body.split(/^### /m).slice(1)) {
     const [heading, ...rest] = part.split('\n');
-    const value = rest.join('\n').trim();
+    // An answer ends at a divider line (e.g. the app's "Created in BeyondPM" footer),
+    // and hidden HTML comments are never part of it.
+    const value = rest.join('\n').split(/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/m)[0].replace(/<!--[\s\S]*?-->/g, '').trim();
     if (value && value !== '_No response_') answers[heading.trim()] = value;
   }
   return answers;
