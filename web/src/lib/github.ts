@@ -154,7 +154,8 @@ export function createGitHubSource(token: string): DataSource {
         if (c.created_at <= since) continue;
         const a = parseAudit(c.body);
         if (a) { out.push({ id: `c${c.id}`, at: c.created_at, actor: person(c.user), ticket: num(c.issue_url), kind: a.field === "Status" ? "status" : "field", text: a.field === "Status" ? `moved it to ${a.to ?? "no status"}` : a.to ? `set ${a.field} to ${a.to}` : `cleared ${a.field}` }); continue; }
-        const text = c.body.replace(/\s+/g, " ").trim();
+        // A readable one-line preview: no hidden notes, Markdown symbols or link targets.
+        const text = c.body.replace(/<!--[\s\S]*?(-->|$)/g, "").replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim();
         out.push({ id: `c${c.id}`, at: c.created_at, actor: person(c.user), ticket: num(c.issue_url), kind: "comment", text: `commented: "${text.length > 90 ? text.slice(0, 90) + "…" : text}"`, mentions: [...c.body.matchAll(/@([\w-]+)/g)].map((m) => m[1]) });
       }
       for (const e of events) {
