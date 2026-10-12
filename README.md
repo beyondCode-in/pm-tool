@@ -28,7 +28,7 @@
 
 ## The web app
 
-Sign in with **Continue with GitHub** and pick your board, or try the demo board without signing in. The in-app **Guide** (`G` then `U`, or the ✨ button → Full guide) explains every feature in detail. The essentials:
+Sign in with **Continue with GitHub** and pick your board, or try the demo board without signing in. The in-app **Guide** (`G` then `U`, or the compass button → Full guide) explains every feature in detail. The essentials:
 
 - **Who sees what:** GitHub access decides it. The app shows only what your own GitHub account can open, so members of another organisation can't see your board. Keep company work in a **private** repository and project: a public repository is readable by anyone.
 - **History:** every ticket has a History tab saying who changed what, and when. GitHub records tags, assignees, closes and status changes itself; for other board fields the app leaves a short note on the issue from the person's account.

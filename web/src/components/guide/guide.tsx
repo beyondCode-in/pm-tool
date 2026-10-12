@@ -6,7 +6,7 @@ import { CHECKLIST, markDone, useOnboarding } from "@/lib/onboarding";
 import { useNewTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { BookOpen, Check, Compass, Keyboard, Lightbulb, Sparkles } from "@/components/icons";
+import { BookOpen, Check, Compass, Keyboard, Lightbulb } from "@/components/icons";
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -55,7 +55,7 @@ export function Guide() {
             <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
               className={cn("glow fixed right-4 bottom-20 z-40 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground md:right-6", pathname.startsWith("/chat") ? "bottom-36 md:bottom-28" : "md:bottom-6")} />
           }>
-          <Sparkles className="size-5" />
+          <Compass className="size-[22px]" />
           {count < CHECKLIST.length && (
             <span className="absolute -top-0.5 -right-0.5 grid size-5 place-items-center rounded-full border-2 border-background bg-foreground text-[10px] font-bold text-background">
               {CHECKLIST.length - count}
