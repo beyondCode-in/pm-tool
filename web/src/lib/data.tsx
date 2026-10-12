@@ -111,7 +111,8 @@ export function useActions() {
       return runThenSync(t.itemId, field, value, () => run(
         `#${t.number} → ${field}: ${pretty}`,
         () => patchTicket(t.itemId, (x) => ({ ...x, fields: { ...x.fields, [field]: value ?? undefined } })),
-        async () => { await source!.setField(board(), t, field, value); await recordChange(t, field, previous, value); },
+        // The history note follows in the background, so the change feels instant.
+        async () => { await source!.setField(board(), t, field, value); void recordChange(t, field, previous, value); },
         opts.silent ? undefined : () => void setField({ ...t, fields: { ...t.fields, [field]: value ?? undefined } }, field, previous, { silent: true }),
       ));
     };
@@ -131,7 +132,7 @@ export function useActions() {
     };
     const runThenSync = async (id: string, field: FieldName, value: FieldValue, write: () => Promise<boolean>) => {
       const ok = await write();
-      if (ok) await syncTag(id, field, value);
+      if (ok) void syncTag(id, field, value);
       return ok;
     };
 

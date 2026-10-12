@@ -378,14 +378,15 @@ export function createGitHubSource(token: string): DataSource {
         { p: board.projectId, c: issue.node_id },
       );
       const ticket = { itemId: added.addProjectV2ItemById.item.id, number: issue.number } as Ticket;
-      for (const [name, value] of Object.entries(input.fields) as [FieldName, FieldValue][]) {
-        if (value !== undefined && value !== null && value !== "") await setField(board, ticket, name, value);
-      }
-      if (input.parent) {
-        await rest(`${repoPath}/issues/${input.parent}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: issue.id }) }).catch(() => {
+      // Fields and the parent link are independent, so save them all at once.
+      await Promise.all([
+        ...(Object.entries(input.fields) as [FieldName, FieldValue][])
+          .filter(([, value]) => value !== undefined && value !== null && value !== "")
+          .map(([name, value]) => setField(board, ticket, name, value)),
+        input.parent ? rest(`${repoPath}/issues/${input.parent}/sub_issues`, { method: "POST", body: JSON.stringify({ sub_issue_id: issue.id }) }).catch(() => {
           /* the parent may be in another repository; the link is still in the body */
-        });
-      }
+        }) : null,
+      ]);
       return issue.number;
     },
   };
