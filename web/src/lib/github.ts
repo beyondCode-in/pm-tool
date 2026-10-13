@@ -96,6 +96,7 @@ export function createGitHubSource(token: string): DataSource {
       return {
         projectId: project.id,
         projectTitle: project.title,
+        owner: head.repositoryOwner ? { login: head.repositoryOwner.login, avatarUrl: head.repositoryOwner.avatarUrl } : undefined,
         repoId: head.repository.id,
         fields: project.fields.nodes.map(toField).filter((f): f is Field => f !== null),
         labels: head.repository.labels.nodes,
@@ -400,7 +401,7 @@ const HEAD_QUERY = `query($owner:String!,$repo:String!,$number:Int!){
   repository(owner:$owner,name:$repo){ id
     labels(first:100){nodes{name color description}}
     assignableUsers(first:100){nodes{login avatarUrl name}} }
-  repositoryOwner(login:$owner){ ... on ProjectV2Owner{ projectV2(number:$number){ id title
+  repositoryOwner(login:$owner){ login avatarUrl ... on ProjectV2Owner{ projectV2(number:$number){ id title
     fields(first:50){nodes{ __typename
       ... on ProjectV2FieldCommon{id name dataType}
       ... on ProjectV2SingleSelectField{options{id name color description}}
@@ -421,7 +422,7 @@ const ITEMS_QUERY = `query($id:ID!,$after:String){ node(id:$id){ ... on ProjectV
 type HeadResult = {
   viewer: Person;
   repository: { id: string; labels: { nodes: Label[] }; assignableUsers: { nodes: Person[] } };
-  repositoryOwner: { projectV2?: { id: string; title: string; fields: { nodes: RawField[] } } | null } | null;
+  repositoryOwner: { login: string; avatarUrl: string; projectV2?: { id: string; title: string; fields: { nodes: RawField[] } } | null } | null;
 };
 type RawField = {
   __typename: string; id: string; name: string; dataType: string;

@@ -79,6 +79,23 @@ const SECTIONS: Section[] = [
     </>,
   },
   {
+    id: "org", title: "Setting up your organisation", icon: P.Buildings,
+    words: "organisation org onboarding setup private repository repo multiple repos logo team access saas install",
+    body: <>
+      <p>For an organisation owner, about 15 minutes. Members only need to sign in. The full step-by-step guide is <code>docs/ORG-ONBOARDING.md</code> in the BeyondPM repository.</p>
+      <ol className="list-decimal pl-5">
+        <li><b>Home repository:</b> create a <b>private</b> repository (or pick one) and switch on Discussions. New tickets, docs, whiteboards, chat, goals and tags live here.</li>
+        <li><b>Board:</b> create a GitHub Project in the organisation and set it to <b>Private</b>.</li>
+        <li><b>Approve BeyondPM:</b> if the organisation restricts third-party apps, an owner approves BeyondPM under Settings → Third-party access.</li>
+        <li><b>Get enabled:</b> send your organisation's GitHub name to the BeyondPM administrator so it is added to the members-only list.</li>
+        <li><b>Access:</b> give GitHub teams a role on the repository (Read, Triage or Write) and add them to the project.</li>
+        <li><b>Connect:</b> on Connect, pick the organisation, project and home repository, then press <b>Set up board</b> and share the board link.</li>
+      </ol>
+      <p><b>Your logo:</b> the sidebar shows your organisation's GitHub profile picture. Change it in your organisation's GitHub settings; there is nothing to upload here.</p>
+      <p><b>Several repositories:</b> one board can show tickets from many private repositories. Add them to the project (the project's <i>Auto-add</i> workflow does it automatically). Edits go to each ticket's own repository, new tickets go to the home repository, and each person only sees tickets from repositories GitHub lets them read. For separate teams or products, make one project per team and switch between them from the workspace menu.</p>
+    </>,
+  },
+  {
     id: "setup", title: "Setting up a board", icon: P.Wrench,
     words: "connect set up board project fields create blueprint",
     body: <>

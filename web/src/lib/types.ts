@@ -72,6 +72,8 @@ export type Comment = { id: string; restId?: number; author: Person | null; body
 export type Board = {
   projectId: string;
   projectTitle: string;
+  /** The organisation (or person) that owns the board; its GitHub picture is the workspace logo. */
+  owner?: { login: string; avatarUrl: string };
   repoId: string;
   fields: Field[];
   labels: Label[];
