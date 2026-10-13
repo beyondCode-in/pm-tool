@@ -8,7 +8,7 @@ import { checkMembership, setToken, startDemo, startLogin } from "@/lib/auth";
 import { config, oauthEnabled } from "@/lib/config";
 import { ArrowRight, KanbanSquare, KeyRound, MousePointerClick, Sparkles, Zap } from "@/components/icons";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 const go = (path: string) => window.location.assign(`${config.basePath}${path}`);
 
@@ -31,6 +31,8 @@ const rise = (i: number) => ({
 export default function Login() {
   const [token, setTokenValue] = useState("");
   const [showToken, setShowToken] = useState(!oauthEnabled);
+  // Read after hydration (the page is pre-rendered without a URL).
+  const expired = useSyncExternalStore(() => () => {}, () => new URLSearchParams(window.location.search).has("expired"), () => false);
   return (
     <main className="relative grid min-h-dvh overflow-hidden lg:grid-cols-[1.1fr_1fr]">
       <Aurora />
@@ -64,7 +66,8 @@ export default function Login() {
               <span className="absolute inset-0 -z-10 rounded-2xl bg-primary/50 blur-xl" aria-hidden />
               <LogoMark size={52} />
             </span>
-            <h2 className="text-2xl font-semibold tracking-tight">Welcome</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{expired ? "Please sign in again" : "Welcome"}</h2>
+            {expired && <p role="status" className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">Your GitHub sign-in expired or was withdrawn. Sign in again to pick up where you left off.</p>}
             <p className="mt-1.5 text-sm text-muted-foreground">{config.owner ? <>Sign in to see {config.owner}&apos;s board.</> : "Sign in with GitHub, then pick your team's board."}</p>
           </div>
 
