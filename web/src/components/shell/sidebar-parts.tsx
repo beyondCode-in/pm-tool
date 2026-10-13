@@ -25,7 +25,7 @@ export function WorkspaceCard() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<button className="ws-card group/ws flex w-full min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors" aria-label={`Workspace: ${title}. Open workspace menu`} />}>
-        <span className="relative shrink-0"><LogoMark size={30} /></span>
+        <span className="relative shrink-0">{board?.owner ? <OrgLogo owner={board.owner} /> : <LogoMark size={30} />}</span>
         <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-[13.5px] font-semibold tracking-tight">{title}</span>
           <span className="block truncate text-[11px] text-muted-foreground">{where}</span>
@@ -91,3 +91,17 @@ export function SyncLine({ className }: { className?: string }) {
 }
 
 export { Button };
+
+// The organisation's own GitHub picture is its workspace logo, so every
+// company sees its brand without uploading anything. BeyondPM's mark sits
+// in the corner so it's still clear which app this is.
+function OrgLogo({ owner }: { owner: { login: string; avatarUrl: string } }) {
+  const src = `${owner.avatarUrl}${owner.avatarUrl.includes("?") ? "&" : "?"}s=64`;
+  return (
+    <span className="relative block size-[30px]">
+      {/* eslint-disable-next-line @next/next/no-img-element -- remote avatar in a static export */}
+      <img src={src} alt="" className="size-[30px] rounded-[9px] object-cover ring-1 ring-border" />
+      <span className="absolute -right-1 -bottom-1 rounded-[5px] ring-2 ring-sidebar"><LogoMark size={13} /></span>
+    </span>
+  );
+}
