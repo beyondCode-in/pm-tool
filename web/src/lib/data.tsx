@@ -1,9 +1,10 @@
 "use client";
 
-import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { toast } from "sonner";
-import { getToken, isDemo } from "./auth";
+import { getToken, isDemo, signOut } from "./auth";
+import { config } from "./config";
 import { markDone } from "./onboarding";
 import { celebrate } from "./celebrate";
 import { createDemoSource } from "./demo";
@@ -29,11 +30,25 @@ function browserSource(): DataSource | null {
   return cached;
 }
 
+// GitHub says the saved sign-in is no longer valid (expired, revoked, or the
+// app's access was withdrawn). Retrying can't help, so sign out and go to the
+// login page, which explains what happened.
+const isExpired = (e: unknown) => e instanceof GitHubError && e.status === 401;
+let leaving = false;
+function onAuthError(e: unknown) {
+  if (!isExpired(e) || leaving || isDemo()) return;
+  leaving = true;
+  signOut();
+  window.location.assign(`${config.basePath}/login/?expired=1`);
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient({
     // Live feel: refresh every 15 s while the tab is visible, and at once on return.
     // Reads revalidate with ETags, so unchanged answers are cheap 304s.
-    defaultOptions: { queries: { staleTime: 10_000, refetchInterval: 15_000, refetchOnWindowFocus: true, retry: 1 } },
+    defaultOptions: { queries: { staleTime: 10_000, refetchInterval: 15_000, refetchOnWindowFocus: true, retry: (n, e) => !isExpired(e) && n < 1 } },
+    queryCache: new QueryCache({ onError: onAuthError }),
+    mutationCache: new MutationCache({ onError: onAuthError }),
   }));
   // The pre-rendered HTML has no source (no browser storage on the server);
   // the browser value is swapped in right after hydration, without a mismatch.
