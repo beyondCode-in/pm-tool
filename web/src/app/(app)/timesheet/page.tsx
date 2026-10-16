@@ -17,9 +17,10 @@ import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Play, Plus, Trash2 } from "@/components/icons";
 import * as P from "@phosphor-icons/react";
+import { ViewTabs } from "@/components/shell/view-tabs";
 import { useQueries } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Timesheet (ClickUp): tickets × days for one week, with totals. Click a cell
@@ -81,6 +82,7 @@ function Timesheet({ board }: { board: Board }) {
           <Segmented size="sm" label="Show" value={view} onChange={setView} options={[["grid", "Timesheet"], ["entries", "Time entries"]] as const} />
         </div>
       </header>
+      <Suspense fallback={null}><ViewTabs /></Suspense>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center rounded-lg border bg-card p-0.5">

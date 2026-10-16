@@ -12,7 +12,9 @@ import { NAV } from "./nav";
 // ClickUp-style view tabs: every way of looking at the same work, one click
 // apart, each with its own coloured icon. "+ View" pins or unpins tabs; the
 // choice is remembered in this browser. Filters carry over between tabs.
-const VIEWS = NAV.filter((n) => !["/home/", "/my-work/", "/inbox/", "/settings/"].includes(n.href));
+// Only views of the board belong here. Chat, Docs and Whiteboards are their own
+// spaces (in the sidebar), so a tab never swaps the whole screen out from under you.
+const VIEWS = NAV.filter((n) => !["/home/", "/my-work/", "/inbox/", "/settings/", "/help/", "/chat/", "/docs/", "/whiteboards/"].includes(n.href));
 // Spread the views around the colour wheel so each tab has its own hue.
 const hueOf = (i: number) => (260 + i * (360 / VIEWS.length)) % 360;
 
