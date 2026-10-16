@@ -56,6 +56,10 @@ You don't need to add any fields: BeyondPM adds them in step 6.
 
 ## Step 3: Let BeyondPM into the organisation
 
+> **If BeyondPM signs in with a GitHub App** (see [SIGN-IN-SETUP.md](SIGN-IN-SETUP.md) → *Switching sign-in to a GitHub App*), this step is instead: an owner opens the **Install BeyondPM on an organisation** link on the Connect page, chooses the organisation and picks **only the repositories BeyondPM should use**. Repositories not picked stay invisible to BeyondPM, even for members.
+
+With the classic OAuth app:
+
 GitHub organisations can block third-party apps. If yours does (look under
 **Settings → Third-party access → OAuth application policy**):
 
