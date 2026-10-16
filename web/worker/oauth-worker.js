@@ -1,4 +1,6 @@
-// Cloudflare Worker: swaps a GitHub OAuth code for an access token.
+// Cloudflare Worker: swaps a GitHub sign-in code for an access token, and
+// renews expiring tokens. Works for a GitHub App (tokens last 8 hours and come
+// with a refresh token) as well as a classic OAuth app (tokens don't expire).
 //
 // GitHub Pages can't keep a secret, and GitHub's token endpoint doesn't allow
 // browser requests, so this tiny Worker does that one step. It stores no
@@ -33,15 +35,23 @@ export default {
 
     let input;
     try { input = await request.json(); } catch { return reply(400, { error: "invalid_json" }); }
-    const { code, redirect_uri } = input || {};
-    if (typeof code !== "string" || !/^[\w-]{10,64}$/.test(code)) return reply(400, { error: "invalid_code" });
-    // Only send tokens back to callback pages on the allowed site.
-    if (typeof redirect_uri !== "string" || !redirect_uri.startsWith(`${env.ALLOWED_ORIGIN}/`)) return reply(400, { error: "invalid_redirect_uri" });
+    const { code, redirect_uri, refresh_token } = input || {};
+    let grant;
+    if (typeof refresh_token === "string") {
+      // Renewing a GitHub App token: the refresh token is single-use and lasts six months.
+      if (!/^[\w-]{20,200}$/.test(refresh_token)) return reply(400, { error: "invalid_refresh_token" });
+      grant = { grant_type: "refresh_token", refresh_token };
+    } else {
+      if (typeof code !== "string" || !/^[\w-]{10,64}$/.test(code)) return reply(400, { error: "invalid_code" });
+      // Only send tokens back to callback pages on the allowed site.
+      if (typeof redirect_uri !== "string" || !redirect_uri.startsWith(`${env.ALLOWED_ORIGIN}/`)) return reply(400, { error: "invalid_redirect_uri" });
+      grant = { code, redirect_uri };
+    }
 
     const res = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "beyondpm-oauth-worker" },
-      body: JSON.stringify({ client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET, code, redirect_uri }),
+      body: JSON.stringify({ client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET, ...grant }),
     });
     const data = await res.json().catch(() => ({}));
     if (!data.access_token) return reply(400, { error: data.error || "exchange_failed", error_description: data.error_description || "GitHub didn't accept the sign-in code." });
@@ -50,7 +60,11 @@ export default {
       await revoke(env, data.access_token);
       return reply(403, { error: "not_a_member", error_description: `Only members of ${orgs.join(" or ")} can sign in. Ask an admin to add your GitHub account to the organisation.` });
     }
-    return reply(200, { access_token: data.access_token, scope: data.scope, token_type: data.token_type });
+    return reply(200, {
+      access_token: data.access_token, scope: data.scope, token_type: data.token_type,
+      // Present only for GitHub Apps with expiring tokens.
+      expires_in: data.expires_in, refresh_token: data.refresh_token, refresh_token_expires_in: data.refresh_token_expires_in,
+    });
   },
 };
 

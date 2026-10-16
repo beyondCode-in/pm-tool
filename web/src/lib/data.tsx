@@ -3,7 +3,7 @@
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { toast } from "sonner";
-import { getToken, isDemo, signOut } from "./auth";
+import { canRenew, expiresSoon, getToken, isDemo, renewSession, signOut } from "./auth";
 import { config } from "./config";
 import { markDone } from "./onboarding";
 import { celebrate } from "./celebrate";
@@ -38,23 +38,31 @@ let leaving = false;
 function onAuthError(e: unknown) {
   if (!isExpired(e) || leaving || isDemo()) return;
   leaving = true;
-  signOut();
-  window.location.assign(`${config.basePath}/login/?expired=1`);
+  // A GitHub App sign-in may only need renewing; then carry on where we were.
+  void (canRenew() ? renewSession() : Promise.resolve(false)).then((ok) => {
+    if (ok) { leaving = false; void client?.invalidateQueries(); return; }
+    signOut();
+    window.location.assign(`${config.basePath}/login/?expired=1`);
+  });
 }
+let client: QueryClient | null = null;
+// Renew a few minutes before the 8-hour expiry, so requests never fail mid-way.
+if (typeof window !== "undefined") setInterval(() => { if (expiresSoon()) void renewSession(); }, 60_000);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [client] = useState(() => new QueryClient({
+  const [qc] = useState(() => (client = new QueryClient({
     // Live feel: refresh every 15 s while the tab is visible, and at once on return.
     // Reads revalidate with ETags, so unchanged answers are cheap 304s.
     defaultOptions: { queries: { staleTime: 10_000, refetchInterval: 15_000, refetchOnWindowFocus: true, retry: (n, e) => !isExpired(e) && n < 1 } },
     queryCache: new QueryCache({ onError: onAuthError }),
     mutationCache: new MutationCache({ onError: onAuthError }),
-  }));
+  })));
+
   // The pre-rendered HTML has no source (no browser storage on the server);
   // the browser value is swapped in right after hydration, without a mismatch.
   const source = useSyncExternalStore(noop, browserSource, () => undefined);
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={qc}>
       <SourceContext.Provider value={source}>{children}</SourceContext.Provider>
     </QueryClientProvider>
   );
