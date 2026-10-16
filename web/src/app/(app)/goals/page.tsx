@@ -15,8 +15,9 @@ import { useOpenTicket } from "@/lib/url-state";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Pencil, Plus, X } from "@/components/icons";
 import * as P from "@phosphor-icons/react";
+import { ViewTabs } from "@/components/shell/view-tabs";
 import { format, parseISO } from "date-fns";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 // Goals & milestones (ClickUp Goals, on GitHub milestones): each goal is a
 // target date plus the tickets that reach it, with progress and health.
@@ -51,6 +52,7 @@ function Goals({ board, milestones }: { board: Board; milestones: Milestone[] })
         </div>
         <Button size="sm" className="ml-auto" onClick={() => setAdding(true)}><Plus />New goal</Button>
       </header>
+      <Suspense fallback={null}><ViewTabs /></Suspense>
 
       {adding && <GoalForm onDone={() => setAdding(false)} />}
 

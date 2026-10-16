@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { getToken } from "./auth";
 import type { Board, Comment, DataSource, Field, FieldName, FieldValue, FieldValues, Label, NewTicket, Person, Ticket, HistoryEvent, Activity } from "./types";
 import { timeBody } from "./time-entry";
 import { parseAudit } from "./audit";
@@ -29,10 +30,12 @@ function explain(status: number, fallback: string) {
 }
 
 export function createGitHubSource(token: string): DataSource {
-  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/vnd.github+json" };
+  // Read the token per request: a renewed sign-in replaces it in place.
+  const auth = () => `Bearer ${getToken() ?? token}`;
+  const base = { "Content-Type": "application/json", Accept: "application/vnd.github+json" };
 
   async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
-    const res = await fetch("https://api.github.com/graphql", { method: "POST", headers, body: JSON.stringify({ query, variables }) });
+    const res = await fetch("https://api.github.com/graphql", { method: "POST", headers: { ...base, Authorization: auth() }, body: JSON.stringify({ query, variables }) });
     if (!res.ok) throw new GitHubError(explain(res.status, `GitHub returned ${res.status}.`), res.status);
     const json = await res.json();
     if (json.errors?.length) throw new GitHubError(json.errors[0].message);
@@ -43,7 +46,7 @@ export function createGitHubSource(token: string): DataSource {
     // GitHub marks reads as cacheable for 60 s, so a refresh right after a write
     // would show the old data. "no-cache" always asks GitHub, using the ETag, so
     // unchanged answers are still cheap (304s don't count against the rate limit).
-    const res = await fetch(`https://api.github.com${path}`, { cache: "no-cache", ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+    const res = await fetch(`https://api.github.com${path}`, { cache: "no-cache", ...init, headers: { ...base, Authorization: auth(), ...(init.headers ?? {}) } });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
       throw new GitHubError(explain(res.status, detail.message ?? `GitHub returned ${res.status}.`), res.status);

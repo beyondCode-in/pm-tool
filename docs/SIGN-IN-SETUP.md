@@ -113,3 +113,72 @@ GitHub shows the OAuth app's logo on the "Authorize BeyondPM" screen. To set it:
 3. Set **Badge background color** to `#211a16`, then click **Update application**.
 
 The other brand files are in `docs/brand/`: `beyondpm-mark.svg` (the app icon) and `beyondpm-mark-512.png`.
+
+## Switching sign-in to a GitHub App (recommended)
+
+A GitHub App is what organisations install: an owner picks which repositories
+BeyondPM may use, it only gets the permissions below, and it works in
+organisations that block OAuth apps. The website and the sign-in helper already
+support it; the switch is a configuration change.
+
+**1. Create the app** (an organisation owner): **Organisation → Settings →
+Developer settings → GitHub Apps → New GitHub App**.
+
+| Setting | Value |
+| --- | --- |
+| GitHub App name | `BeyondPM` (or `BeyondPM <your org>` if the name is taken) |
+| Homepage URL | `https://beyondcode-in.github.io/pm-tool/` |
+| Callback URL | `https://beyondcode-in.github.io/pm-tool/auth/callback/` |
+| Expire user authorization tokens | **On** (the app renews them automatically) |
+| Request user authorization (OAuth) during installation | **On** |
+| Enable Device Flow | Off |
+| Webhook → Active | **Off** (BeyondPM needs no webhooks) |
+| Where can this GitHub App be installed? | **Any account** (to offer it to other organisations), or *Only on this account* |
+
+**Repository permissions:**
+
+| Permission | Access | Used for |
+| --- | --- | --- |
+| Issues | Read and write | Tickets, comments, tags, assignees, history |
+| Contents | Read and write | Docs, whiteboards, attachments |
+| Discussions | Read and write | Chat |
+| Metadata | Read-only | Required by GitHub |
+
+**Organisation permissions:**
+
+| Permission | Access | Used for |
+| --- | --- | --- |
+| Projects | Read and write | The board and its fields |
+| Members | Read-only | The members-only check, @mentions and the people list |
+
+Leave every other permission at *No access*. Then click **Create GitHub App**.
+
+**2. Collect three values** from the app's page: the **Client ID**, a new
+**client secret** (*Generate a new client secret*), and the app's URL name (the
+last part of `https://github.com/apps/<name>`). Upload
+`docs/brand/beyondpm-oauth-logo.png` as its logo too.
+
+**3. Install it:** on the app's page, **Install App → beyondCode-in**, and pick the
+repositories BeyondPM may use (for example *Only select repositories* → the
+private workspace repository).
+
+**4. Point BeyondPM at it**, from `web/worker`:
+```
+npx wrangler secret put GITHUB_CLIENT_ID       # the GitHub App's Client ID
+npx wrangler secret put GITHUB_CLIENT_SECRET   # its client secret
+gh variable set OAUTH_CLIENT_ID --body "<the GitHub App's Client ID>"
+gh variable set GITHUB_APP_SLUG --body "<the app's URL name>"
+```
+Then rerun the **Publish web app** workflow. Everyone signs in again once. The
+old OAuth app can be deleted after that.
+
+**How sign-in behaves with a GitHub App:**
+- Sign-ins last 8 hours and are renewed in the background with a refresh token
+  (valid six months), so people stay signed in. Each renewal re-checks
+  organisation membership, so removing someone takes effect within hours even
+  if their browser stays open.
+- BeyondPM only sees repositories where the app is installed **and** the person
+  has access. Organisations add or remove repositories under
+  **Settings → GitHub Apps → BeyondPM → Configure**.
+- New organisations use the **Install BeyondPM on an organisation** link on the
+  Connect page.

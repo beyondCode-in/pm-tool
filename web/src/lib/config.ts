@@ -16,6 +16,8 @@ export const config = {
   /** Only members of these organisations may use the app (comma-separated; empty = anyone). */
   allowedOrgs: (process.env.NEXT_PUBLIC_ALLOWED_ORGS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? "",
+  /** The GitHub App's URL name, when sign-in uses a GitHub App (for the install link). */
+  githubAppSlug: process.env.NEXT_PUBLIC_GITHUB_APP_SLUG ?? "",
 };
 
 export const oauthEnabled = Boolean(config.oauthClientId && config.authWorkerUrl);

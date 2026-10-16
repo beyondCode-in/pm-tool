@@ -12,7 +12,40 @@ const safe = <T,>(fn: () => T, fallback: T): T => {
 
 export const getToken = () => safe(() => localStorage.getItem(TOKEN_KEY), null);
 export const setToken = (t: string) => safe(() => { localStorage.setItem(TOKEN_KEY, t); localStorage.removeItem(DEMO_KEY); }, undefined);
-export const signOut = () => safe(() => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(DEMO_KEY); }, undefined);
+export const signOut = () => safe(() => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(DEMO_KEY); localStorage.removeItem(RENEW_KEY); }, undefined);
+
+// GitHub App sign-ins expire after 8 hours. The refresh token (single use,
+// six months) renews them through the sign-in Worker, so people stay signed in.
+const RENEW_KEY = "beyondpm.renew";
+type Renew = { refresh: string; expiresAt: number };
+const readRenew = (): Renew | null => safe(() => JSON.parse(localStorage.getItem(RENEW_KEY) || "null") as Renew | null, null);
+function keepSession(json: { access_token: string; refresh_token?: string; expires_in?: number }) {
+  setToken(json.access_token);
+  safe(() => {
+    if (json.refresh_token && json.expires_in) localStorage.setItem(RENEW_KEY, JSON.stringify({ refresh: json.refresh_token, expiresAt: Date.now() + json.expires_in * 1000 }));
+    else localStorage.removeItem(RENEW_KEY);
+  }, undefined);
+}
+/** True when the token expires within the next few minutes (or already has). */
+export const expiresSoon = (withinMs = 10 * 60_000) => { const r = readRenew(); return !!r && r.expiresAt - Date.now() < withinMs; };
+export const canRenew = () => !!readRenew() && !!config.authWorkerUrl;
+
+let renewing: Promise<boolean> | null = null;
+/** Swap the refresh token for a fresh sign-in. Resolves false if that's not possible. */
+export function renewSession(): Promise<boolean> {
+  const r = readRenew();
+  if (!r || !config.authWorkerUrl) return Promise.resolve(false);
+  renewing ??= fetch(config.authWorkerUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: r.refresh }) })
+    .then(async (res) => {
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.access_token) return false;
+      keepSession(json);
+      return true;
+    })
+    .catch(() => false)
+    .finally(() => { renewing = null; });
+  return renewing;
+}
 export const isDemo = () => safe(() => localStorage.getItem(DEMO_KEY) === "1", false);
 export const startDemo = () => safe(() => localStorage.setItem(DEMO_KEY, "1"), undefined);
 
@@ -58,5 +91,5 @@ export async function finishLogin(params: URLSearchParams): Promise<void> {
   if (!res.ok || !json.access_token) throw new Error(json.error_description || json.error || "Sign-in failed. Please try again.");
   safe(() => sessionStorage.removeItem(STATE_KEY), undefined);
   await checkMembership(json.access_token);
-  setToken(json.access_token);
+  keepSession(json);
 }

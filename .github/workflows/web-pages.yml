@@ -51,6 +51,7 @@ jobs:
           NEXT_PUBLIC_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID }}
           NEXT_PUBLIC_AUTH_WORKER_URL: ${{ vars.AUTH_WORKER_URL }}
           NEXT_PUBLIC_ALLOWED_ORGS: ${{ vars.ALLOWED_ORGS }}
+          NEXT_PUBLIC_GITHUB_APP_SLUG: ${{ vars.GITHUB_APP_SLUG }}
           NEXT_PUBLIC_PIN_BOARD: ${{ vars.PIN_BOARD }}
       # Static hosts need a real file for unknown paths; Next exports 404.html.
       - run: touch out/.nojekyll

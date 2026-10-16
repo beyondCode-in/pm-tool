@@ -140,7 +140,11 @@ function PickOwner({ query, value, onPick }: { query: ReturnType<typeof useQuery
           </Choice>
         ))}
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Organisation missing? Its owners may need to approve this app under the organisation&apos;s third-party access settings.</p>
+      {config.githubAppSlug ? (
+        <p className="mt-3 text-xs text-muted-foreground">Organisation missing? An owner installs BeyondPM on it and picks its repositories: <a className="font-medium text-primary underline underline-offset-2" href={`https://github.com/apps/${config.githubAppSlug}/installations/new`} target="_blank" rel="noreferrer">Install BeyondPM on an organisation</a>.</p>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">Organisation missing? Its owners may need to approve this app under the organisation&apos;s third-party access settings.</p>
+      )}
     </div>
   );
 }
